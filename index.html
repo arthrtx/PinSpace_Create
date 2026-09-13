@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PinSpace Create</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="preconnect" href="https://i.pinimg.com">
+        <link rel="dns-prefetch" href="https://i.pinimg.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;600;700&family=Open+Sans&family=Roboto&family=Lato&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Lora&family=Merriweather&family=Oswald:wght@400;500;600&family=Bebas+Neue&family=Archivo+Black&family=Abril+Fatface&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;600;700&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Advent+Pro:wght@400;600&family=Courier+Prime&family=Goudy+Bookletter+1911&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/toolbar.css">
+    <link rel="stylesheet" href="css/board.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+    <body>
+
+    <div id="scroll-progress" aria-hidden="true"></div>
+    <div class="ms-grain" aria-hidden="true"></div>
+
+    <!-- INTRO — letras que surgem ao abrir -->
+    <div class="ms-intro" id="ms-intro" aria-hidden="true">
+        <div class="ms-intro-word">
+            <span class="mi-i" style="--i:0">p</span><span class="mi-i" style="--i:1">i</span><span class="mi-i" style="--i:2">n</span><span class="mi-i" style="--i:3">&nbsp;&nbsp;space</span><span class="mi-i mi-dot" style="--i:4">.</span>
+        </div>
+        <span class="ms-intro-sub" style="--i:5">start creating</span>
+    </div>
+
+    <!-- Coordenadas do cursor (detalhe ao vivo) -->
+    <div class="ms-coords" aria-hidden="true">0000 X · 0000 Y</div>
+
+    <!-- ===================== TELA INICIAL ===================== -->
+    <div id="home-view" class="view active">
+        <div class="home-container">
+
+            <!-- NAV + HERO -->
+            <header class="ms-hero">
+                <img class="ms-hero-bg" src="https://i.pinimg.com/originals/a8/be/00/a8be002065390491cd1c67a3902333d5.jpg" alt="" aria-hidden="true" loading="eager" fetchpriority="high">
+                <nav class="ms-nav" data-reveal>
+                    <a href="#projetos-recentes" class="ms-nav-brand">
+                        <span class="logo-mark" aria-hidden="true">
+                            <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+                                <circle cx="16" cy="16" r="15" fill="currentColor"/>
+                                <path d="M16 9c-2 0-3.6 1.6-3.6 3.6 0 2.4 3.6 8.1 3.6 8.1s3.6-5.7 3.6-8.1C19.6 10.6 18 9 16 9z" fill="#fff"/>
+                            </svg>
+                        </span>
+                        <span>pin space.</span>
+                    </a>
+                    <div class="ms-nav-right">
+                        <button type="button" id="btn-abrir-projeto" class="ms-nav-link">Abrir quadro</button>
+                        <button type="button" id="btn-novo-projeto" class="ms-nav-cta ms-magnetic">
+                            <span>Start a collage</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                </nav>
+
+                <div class="ms-hero-shade" aria-hidden="true"></div>
+
+                <div class="ms-hero-inner" data-parallax="0.12">
+                    <p class="ms-hero-topline" data-reveal data-reveal-delay="3">The studio for creative matters.</p>
+                    <h1 class="ms-hero-word">
+                        <span class="ms-word-line" data-scroll-text data-reveal-delay="6">CREATE</span>
+                        <span class="ms-word-sub" data-reveal-mask data-reveal-delay="4"><em>pin space</em></span>
+                    </h1>
+                    <div class="ms-hero-meta">
+                        <p class="ms-hero-pills" data-reveal data-reveal-delay="2"><span class="pdot" aria-hidden="true"></span>Vision boards<span class="pdot" aria-hidden="true"></span>Moodboards<span class="pdot" aria-hidden="true"></span>Collage</p>
+                        <div class="ms-stats">
+                            <div class="ms-stat" data-reveal data-reveal-delay="3"><b>∞</b><span>ideias guardadas</span></div>
+                            <div class="ms-stat" data-reveal data-reveal-delay="4"><b>22°C</b><span>Lisboa · Now</span></div>
+                            <div class="ms-stat" data-reveal data-reveal-delay="5"><b>0</b><span>limites</span></div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- FAIXA PRESA — palavra gigante que fica presa no scroll (à la haoqi) -->
+            <section class="ms-pin">
+                <div class="ms-pin-inner">
+                    <div class="ms-pin-wall" aria-hidden="true"></div>
+                    <h2 class="ms-pin-h2" data-pin-text data-reveal-delay="2">Comece a criar.</h2>
+                    <p class="ms-pin-line" data-reveal data-reveal-delay="2">escolha um modelo pronto ou crie um do zero</p>
+                    <span class="ms-pin-tag" data-reveal data-reveal-delay="3">scroll to begin</span>
+                </div>
+            </section>
+
+            <!-- OS TEUS QUADROS -->
+            <section class="ms-feature">
+                <div class="ms-mask ms-feature-mask" data-reveal-mask>
+                    <div class="section-header">
+                        <h3>Os teus quadros</h3>
+                        <span class="section-subtitle">guardados localmente</span>
+                    </div>
+                </div>
+
+                <div class="home-search" data-reveal data-reveal-delay="1">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input type="search" id="search-projetos" placeholder="Pesquisar projetos..." autocomplete="off">
+                </div>
+
+                <section class="home-public" id="quadros-publicos" data-reveal data-reveal-delay="2">
+                        <div class="section-header">
+                            <h4>Quadros públicos</h4>
+                            <span class="section-subtitle">escolhe, copia e edita</span>
+                        </div>
+                        <div id="lista-publicos" class="projects-grid">
+                            <p class="empty-state" id="empty-publicos">A carregar quadros públicos…</p>
+                        </div>
+                    </section>
+
+                    <section class="home-recent" id="projetos-recentes" data-reveal data-reveal-delay="3">
+                        <div class="section-header">
+                            <h4>Projetos recentes</h4>
+                            <span class="section-subtitle">os teus murais criativos</span>
+                        </div>
+                        <div id="lista-projetos" class="projects-grid">
+                            <p class="empty-state" id="empty-projects">Nenhum projeto ainda. Crie o seu primeiro quadro!</p>
+                        </div>
+                    </section>
+            </section>
+
+            <!-- FAIXA MARQUEE — scroll automático para a direita no fim da página -->
+            <div class="ms-marquee" aria-hidden="true">
+                <div class="ms-marquee-track">
+                    <div class="ms-marquee-run">
+                        <span class="ms-marquee-word">pin space</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">create</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">stay curious</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">collage</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">vision boards</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">mood boards</span><span class="ms-marquee-dot">·</span>
+                    </div>
+                    <div class="ms-marquee-run" aria-hidden="true">
+                        <span class="ms-marquee-word">pin space</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">create</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">stay curious</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">collage</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">vision boards</span><span class="ms-marquee-dot">·</span>
+                        <span class="ms-marquee-word">mood boards</span><span class="ms-marquee-dot">·</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RODAPÉ -->
+            <footer class="ms-footer">
+                <div class="ms-footer-top" data-reveal>
+                    <div>
+                        <span class="ms-kicker">Mais projetos em</span>
+                        <a class="ms-footer-link" href="https://github.com/arthrtx" target="_blank" rel="noopener">
+                            github.com/arthrtx
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
+                        </a>
+                    </div>
+                    <div class="ms-footer-icons" aria-hidden="true">
+                        <svg class="spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="48 15"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="15" fill="currentColor"/><path d="M16 9c-2 0-3.6 1.6-3.6 3.6 0 2.4 3.6 8.1 3.6 8.1s3.6-5.7 3.6-8.1C19.6 10.6 18 9 16 9z" fill="#0A0A0A"/></svg>
+                    </div>
+                </div>
+                <div class="ms-mask" data-reveal-mask data-reveal-delay="1">
+                    <div class="ms-footer-word" data-reveal-cycle>pin space.</div>
+                </div>
+                <div class="ms-footer-tags" data-reveal data-reveal-delay="2">
+                    <span class="ms-tag">vision boards</span>
+                    <span class="ms-tag">mood boards</span>
+                    <span class="ms-tag">collage</span>
+                    <span class="ms-tag">inspiração</span>
+                </div>
+                <div class="ms-footer-bottom" data-reveal data-reveal-delay="3">
+                    <span>© PinSpace Create — o teu espaço para guardar ideias.</span>
+                    <span>Feito para criar, sem limites.</span>
+                </div>
+            </footer>
+
+        </div>
+    </div>
+
+    <!-- ===================== EDITOR ===================== -->
+    <div id="editor-view" class="view">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button id="btn-voltar-home" class="btn-icon-only" title="Voltar ao início">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="topbar-brand">
+                    <div class="topbar-logo-mark" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+                            <circle cx="16" cy="16" r="16" fill="currentColor"/>
+                            <path d="M16 8c-2.2 0-4 1.8-4 4 0 2.7 4 9 4 9s4-6.3 4-9c0-2.2-1.8-4-4-4z" fill="#fff"/>
+                        </svg>
+                    </div>
+                    <span class="topbar-brand-name">PinSpace</span>
+                </div>
+                <span class="topbar-sep"></span>
+                <span id="project-title" class="project-title" contenteditable="true" spellcheck="false">Sem título</span>
+            </div>
+            <div class="topbar-center">
+                <button id="btn-novo" class="topbar-btn" title="Novo">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/></svg>
+                    <span>Novo</span>
+                </button>
+                <button id="btn-guardar" class="topbar-btn topbar-btn-accent" title="Guardar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                    <span>Guardar</span>
+                </button>
+                <button id="btn-abrir" class="topbar-btn" title="Abrir">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                    <span>Abrir</span>
+                </button>
+                <button id="btn-exportar" class="topbar-btn" title="Exportar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    <span>Exportar</span>
+                </button>
+                <span class="topbar-divider"></span>
+                <button id="btn-desfazer" class="topbar-btn topbar-btn-icon" title="Desfazer (Ctrl+Z)" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6M3 13a9 9 0 109-9 9 9 0 00-9 9"/></svg>
+                    <span>Desfazer</span>
+                </button>
+                <button id="btn-refazer" class="topbar-btn topbar-btn-icon" title="Refazer (Ctrl+Y)" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6M21 13a9 9 0 11-9-9 9 9 0 019 9"/></svg>
+                    <span>Refazer</span>
+                </button>
+            </div>
+            <div class="topbar-right">
+                <div class="zoom-controls">
+                    <button id="btn-zoom-out" class="btn-icon-only" title="Diminuir zoom">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+                    </button>
+                    <span id="zoom-level">100%</span>
+                    <button id="btn-zoom-in" class="btn-icon-only" title="Aumentar zoom">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                    <button id="btn-zoom-fit" class="btn-icon-only" title="Ajustar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="editor-body">
+            <aside class="toolbar">
+                <div class="toolbar-section">
+                    <button class="tool-btn active" data-tool="select" title="Selecionar">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+                        </span>
+                        <span class="tool-label">Selecionar</span>
+                    </button>
+                    <button class="tool-btn" data-tool="image" title="Imagem">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                        </span>
+                        <span class="tool-label">Imagem</span>
+                    </button>
+                    <button class="tool-btn" data-tool="text" title="Texto">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+                        </span>
+                        <span class="tool-label">Texto</span>
+                    </button>
+                    <button class="tool-btn" data-tool="shapes" title="Formas">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                        </span>
+                        <span class="tool-label">Formas</span>
+                    </button>
+                    <button class="tool-btn" data-tool="brush" title="Ferramentas">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.4 1.4a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                        </span>
+                        <span class="tool-label">Ferramentas</span>
+                    </button>
+                    <button class="tool-btn" data-tool="design" title="Design">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                        </span>
+                        <span class="tool-label">Design</span>
+                    </button>
+                    <button class="tool-btn" data-tool="ideas" title="Ideias">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0012 2z"/></svg>
+                        </span>
+                        <span class="tool-label">Ideias</span>
+                    </button>
+                </div>
+                <div class="toolbar-divider"></div>
+                <div class="toolbar-section">
+                    <button class="tool-btn" data-tool="background" title="Fundo">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0L12 2.69z"/></svg>
+                        </span>
+                        <span class="tool-label">Fundo</span>
+                    </button>
+                    <button class="tool-btn" data-tool="layers" title="Camadas">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        </span>
+                        <span class="tool-label">Camadas</span>
+                    </button>
+                    <button class="tool-btn" data-tool="settings" title="Configurações">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                        </span>
+                        <span class="tool-label">Ajustes</span>
+                    </button>
+                </div>
+            </aside>
+
+            <aside id="tool-panel" class="tool-panel">
+                <div class="panel-header">
+                    <h3 id="panel-title">Selecionar</h3>
+                    <button id="panel-close" class="btn-icon-only panel-close" aria-label="Fechar painel">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div id="panel-content" class="panel-content"></div>
+            </aside>
+
+            <main class="board-area">
+                <div id="board-viewport" class="board-viewport">
+                    <div class="board-desk">
+                        <div id="board-canvas" class="board-canvas">
+                            <div id="board-grid" class="board-grid hidden"></div>
+                            <div id="snap-guide-v"></div>
+                            <div id="snap-guide-h"></div>
+                            <div id="board-elements" class="board-elements"></div>
+                        </div>
+                    </div>
+                    <div id="selection-box" class="selection-box hidden">
+                        <div class="handle handle-nw" data-handle="nw"></div>
+                        <div class="handle handle-n" data-handle="n"></div>
+                        <div class="handle handle-ne" data-handle="ne"></div>
+                        <div class="handle handle-e" data-handle="e"></div>
+                        <div class="handle handle-se" data-handle="se"></div>
+                        <div class="handle handle-s" data-handle="s"></div>
+                        <div class="handle handle-sw" data-handle="sw"></div>
+                        <div class="handle handle-w" data-handle="w"></div>
+                        <div class="handle handle-rotate" data-handle="rotate" title="Rodar">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                        </div>
+                    </div>
+                    <div id="drop-overlay" class="drop-overlay hidden">
+                        <div class="drop-overlay-inner">
+                            <svg width="34" height="34" viewBox="0 0 32 32" fill="none">
+                                <circle cx="16" cy="16" r="16" fill="currentColor"/>
+                                <path d="M16 8c-2.2 0-4 1.8-4 4 0 2.7 4 9 4 9s4-6.3 4-9c0-2.2-1.8-4-4-4z" fill="#fff"/>
+                            </svg>
+                            <strong>Solte a imagem aqui</strong>
+                            <span>Arraste do seu computador ou de uma página</span>
+                        </div>
+                    </div>
+                    <div class="board-size-badge" id="board-size-badge">3000 × 3000 px</div>
+                    <div id="drop-chip" class="drop-chip hidden">
+                        <img id="drop-chip-img" alt="">
+                        <span>Solte para adicionar</span>
+                    </div>
+                </div>
+            </main>
+            <aside id="side-panel" class="side-panel">
+                <div class="panel-header">
+                    <h3>Ideias</h3>
+                </div>
+                <div id="side-panel-body" class="panel-content"></div>
+            </aside>
+        </div>
+    </div>
+
+    <input type="file" id="input-imagem" accept="image/*" hidden>
+    <input type="file" id="input-bg-imagem" accept="image/*" hidden>
+
+    <dialog id="modal-tamanho" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Novo quadro</h2>
+                <button class="modal-close btn-icon-only" data-close-modal aria-label="Fechar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="modal-desc">Escolha o tamanho do mural.</p>
+            <div class="size-grid" id="size-options"></div>
+            <div class="size-custom">
+                <h4>Tamanho personalizado (px)</h4>
+                <div class="form-row">
+                    <div class="form-group"><label>Largura</label><input type="number" id="custom-width" value="1600" min="1" max="8000"></div>
+                    <div class="form-group"><label>Altura</label><input type="number" id="custom-height" value="900" min="1" max="8000"></div>
+                </div>
+                <button class="btn btn-secondary" id="btn-custom-size" style="width:100%">Usar tamanho personalizado</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="modal-abrir" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Abrir projeto</h2>
+                <button class="modal-close btn-icon-only" data-close-modal aria-label="Fechar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="modal-projetos-lista" class="modal-projects-list"></div>
+        </div>
+    </dialog>
+
+    <dialog id="modal-exportar" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Exportar quadro</h2>
+                <button class="modal-close btn-icon-only" data-close-modal aria-label="Fechar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="modal-desc">Escolha o formato de exportação do seu mural.</p>
+            <div class="export-options">
+                <button class="export-card export-btn" data-format="png">
+                    <span class="export-card-icon">PNG</span>
+                    <span class="export-card-label">Alta qualidade</span>
+                </button>
+                <button class="export-card export-btn" data-format="jpeg">
+                    <span class="export-card-icon">JPG</span>
+                    <span class="export-card-label">Comprimido</span>
+                </button>
+                <button class="export-card export-btn" data-format="pdf">
+                    <span class="export-card-icon">PDF</span>
+                    <span class="export-card-label">Documento</span>
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="modal-recorte" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Recortar imagem</h2>
+                <button class="modal-close btn-icon-only" data-close-modal aria-label="Fechar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="modal-desc">Ajuste a área a manter na imagem.</p>
+            <div class="crop-preview-wrap">
+                <div class="crop-preview-container" id="crop-preview-container">
+                    <img id="crop-img" alt="Pré-visualização">
+                    <div id="crop-rect" class="crop-rect"></div>
+                </div>
+                <div class="crop-result-wrap">
+                    <span>Resultado:</span>
+                    <canvas id="crop-result" class="crop-result" width="220" height="140"></canvas>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>X (%)</label><input type="range" id="crop-x" min="0" max="80" step="1" value="0"></div>
+                <div class="form-group"><label>Y (%)</label><input type="range" id="crop-y" min="0" max="80" step="1" value="0"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Largura (%)</label><input type="range" id="crop-w" min="10" max="100" step="1" value="100"></div>
+                <div class="form-group"><label>Altura (%)</label><input type="range" id="crop-h" min="10" max="100" step="1" value="100"></div>
+            </div>
+            <button id="btn-crop-aplicar" class="btn btn-primary" style="width:100%">✂️ Aplicar recorte</button>
+        </div>
+    </dialog>
+
+    <div id="context-menu" class="context-menu hidden">
+        <button data-action="duplicate">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Duplicar
+        </button>
+        <button data-action="rotate">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/></svg>
+            Rodar 90°
+        </button>
+        <button data-action="bring-front">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+            Trazer para frente
+        </button>
+        <button data-action="send-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22l-3-7H2l5.5-4.5L6 3l6 4 6-4-1.5 7.5L22 15h-7z"/></svg>
+            Enviar para trás
+        </button>
+        <hr>
+        <button data-action="lock">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            Bloquear
+        </button>
+        <button data-action="hide">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            Ocultar
+        </button>
+        <hr>
+        <button data-action="delete" class="danger">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            Remover
+        </button>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/reveal.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/public.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/layers.js"></script>
+    <script src="js/image.js"></script>
+    <script src="js/text.js"></script>
+    <script src="js/shapes.js"></script>
+    <script src="js/assets.js"></script>
+    <script src="js/ideas.js"></script>
+    <script src="js/brush.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/board.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+/* ===== Responsividade Premium ===== */
+
+@media (max-width: 1200px) {
+    :root {
+        --panel-width: 260px;
+    }
+
+    .topbar-btn span {
+        display: none;
+    }
+
+    .topbar-btn {
+        padding: 8px 10px;
+        border-radius: var(--border-radius-sm);
+    }
+
+    .topbar-btn-accent span {
+        display: inline;
+    }
+
+    .topbar-btn-accent {
+        padding: 8px 16px;
+    }
+}
+
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-width: 68px;
+        --panel-width: 240px;
+    }
+
+    .board-viewport::before {
+        inset: var(--topbar-height) 0 0 var(--sidebar-width);
+    }
+
+    .topbar-brand-name {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --topbar-height: 56px;
+        --sidebar-width: 60px;
+    }
+
+    .side-panel {
+        width: min(360px, calc(100vw - var(--sidebar-width) - 12px));
+    }
+
+    .ms-nav {
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+
+    .ms-nav-right {
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+
+    .ms-hero-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .project-card {
+        flex-basis: clamp(206px, 66vw, 268px);
+    }
+
+    .ms-pin-line { display: none; }
+    .ms-pin-tag { bottom: 4vh; }
+    .ms-pin-inner::before { top: 9vh; }
+    .ms-pin-inner::after { bottom: 9vh; }
+
+    .toolbar {
+        padding: 12px 6px;
+    }
+
+    .tool-label {
+        display: none;
+    }
+
+    .tool-btn {
+        padding: 14px 6px;
+        border-radius: var(--border-radius-sm);
+    }
+
+    .tool-btn::before {
+        display: none;
+    }
+
+    .tool-panel {
+        position: absolute;
+        left: var(--sidebar-width);
+        top: var(--topbar-height);
+        bottom: 0;
+        z-index: 200;
+        box-shadow: var(--shadow-xl);
+        width: min(280px, calc(100vw - var(--sidebar-width) - 16px));
+        border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0;
+    }
+
+    .tool-panel.collapsed {
+        width: 0;
+        box-shadow: none;
+    }
+
+    .topbar {
+        padding: 0 12px;
+    }
+
+    .topbar-center {
+        gap: 4px;
+    }
+
+    .topbar-divider {
+        display: none;
+    }
+
+    .topbar-sep {
+        display: none;
+    }
+
+    .topbar-btn-accent span {
+        display: none;
+    }
+
+    .project-title {
+        max-width: 100px;
+        font-size: 13px;
+    }
+
+    .board-desk {
+        padding: 32px;
+    }
+
+    .export-options {
+        grid-template-columns: 1fr;
+    }
+
+    .export-card {
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: 16px 20px;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --topbar-height: 52px;
+        --sidebar-width: 52px;
+    }
+
+    .topbar-center .topbar-btn:not(#btn-guardar):not(#btn-exportar) {
+        display: none;
+    }
+
+    .zoom-controls {
+        display: none;
+    }
+
+    .board-desk {
+        padding: 20px;
+    }
+
+    .ms-nav-brand svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .ms-nav-right {
+        font-size: 12px;
+    }
+
+    .ms-nav-cta {
+        padding: 10px 16px;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .section-header h3 {
+        font-size: 18px;
+    }
+
+    .section-subtitle {
+        text-align: left;
+    }
+
+    .ms-stats {
+        gap: 24px;
+    }
+
+    .topbar-left {
+        gap: 6px;
+    }
+
+    .topbar-brand {
+        display: none;
+    }
+
+    .modal-content {
+        padding: 20px;
+    }
+}
+
+/* Sidebar recolhida em mobile — só ícones */
+@media (max-width: 768px) {
+    .toolbar-divider {
+        margin: 6px 4px;
+    }
+}
+
+/* Preferência de movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
