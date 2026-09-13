@@ -1,4 +1,4 @@
-# PinSpace Create 🎨
+# PinSpace Create 
 
 **Cria murais, vision boards e collages — estilo Canva + Pinterest.**
 
@@ -8,7 +8,7 @@ Pinterest e publica o teu quadro público.
 
 ---
 
-## 🚀 Como correr
+##  Como correr
 
 Requires **Python 3** (sem dependências externas — só a biblioteca padrão).
 
@@ -29,7 +29,7 @@ python server.py
 
 ---
 
-## ✨ Funcionalidades
+##  Funcionalidades
 
 | Módulo | O que faz |
 | --- | --- |
@@ -45,7 +45,7 @@ python server.py
 
 ---
 
-## 🗺️ Estrutura do projeto
+##  Estrutura do projeto
 
 ```
 PinSpace_Create/
@@ -77,7 +77,7 @@ PinSpace_Create/
 
 ---
 
-## 🔌 API (servidor local)
+##  API (servidor local)
 
 `server.py` serve os ficheiros estáticos e uma API JSON em `/api/`:
 
@@ -94,19 +94,6 @@ CORS está ativo (`*`) para permitir o desenvolvimento da app.
 
 ---
 
-## 🎨 Identidade visual
-
-- **Tonagens**: editorial claro — letra `#0A0A0A`, creme `#F6F5F1`,
-  off-white `#EDEBE6`, argila `#4A4640`, olive `#8B8780`, slate `#343C53`,
-  navy `#091E5B`, terracota/acento `#E60023` + moss `#6E7F47` e mustard `#D8A33B`.
-- **Tipos (Google Fonts)**:
-  `Archivo Black` (display), `Playfair Display` (accent/serif), `Poppins` (eyebrow),
-  `Inter`/`Segoe UI` (corpo), e fontes decorativas (`Lobster`, `Pacifico`,
-  `Dancing Script`…) para o menu de texto.
-- **Vidro (glass)** nas camadas, painéis e cartões — translúcido, com blur
-  e textura diagonal subtil.
-
----
 
 ## 🗺️ Roadmap (próximas versões)
 
@@ -118,4 +105,4 @@ CORS está ativo (`*`) para permitir o desenvolvimento da app.
 
 ---
 
-Feito com ❤️ para criar sem limites. ∞ ideias guardadas · 0 limites.
+Autor: Arthur Sal
