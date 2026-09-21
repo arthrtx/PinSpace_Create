@@ -97,39 +97,7 @@ PinSpace_Create/
 
 ---
 
-##  Base de dados (quadros públicos)
-
-Os quadros públicos ficam no **Supabase** (tabela `public.quadros`, REST sem SDK).
-
-Setup (2 minutos, grátis):
-
-1. Vai a https://supabase.com → *New project* (região próxima de ti).
-2. Em *Settings → API*, copia o **Project URL** e a **anon public key**.
-3. Cola-os em `js/supabase-config.js` (GUARDA as aspas).
-4. No *SQL Editor* corre o SQL (permite qualquer pessoa ver + publicar):
-
-   ```sql
-   create table if not exists public.quadros (
-     id         text primary key,
-     titulo     text default 'Sem título',
-     autor      text default 'Anónimo',
-     thumb      text default '',
-     atualizado timestamptz default now(),
-     publicado  timestamptz default now(),
-     projeto    jsonb default '{}'::jsonb
-   );
-   alter table public.quadros enable row level security;
-   create policy "ler_quadros" on public.quadros for select using (true);
-   create policy "publicar_quadros" on public.quadros for insert with check (true);
-   create policy "apagar_quadros" on public.quadros for delete using (true);
-   ```
-
-> A chave anónima é pública de propósito — quem abre o site pode ler e publicar.
-> Para impedir que apaguem quadros, muda/apaga a policy `apagar_quadros`.
-
----
-
-## 🗺️ Roadmap (próximas versões)
+##  Roadmap (próximas versões)
 
 - [ ] Menu **Formas** mais completo (mais formas, edição própria)
 - [ ] Mais modelos prontos + collage automática
