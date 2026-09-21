@@ -42,6 +42,13 @@
     --glass-border-dark: rgba(255, 255, 255, 0.2);
     --glass-blur: blur(16px) saturate(1.4);
 
+    /* Editor glass */
+    --editor-glass: rgba(246, 245, 241, 0.52);
+    --editor-glass-strong: rgba(246, 245, 241, 0.68);
+    --editor-glass-border: rgba(255, 255, 255, 0.35);
+    --editor-glass-blur: blur(20px) saturate(1.6);
+    --editor-glass-texture: rgba(255, 255, 255, 0.05);
+
     /* Acordes — cores de apoio (usadas nos quadros públicos e detalhes) */
     --terracotta: #E60023;
     --moss: #6E7F47;
@@ -122,6 +129,13 @@
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
     --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.55);
+
+    /* Editor glass (dark) */
+    --editor-glass: rgba(20, 20, 20, 0.52);
+    --editor-glass-strong: rgba(20, 20, 20, 0.68);
+    --editor-glass-border: rgba(255, 255, 255, 0.12);
+    --editor-glass-blur: blur(20px) saturate(1.6);
+    --editor-glass-texture: rgba(255, 255, 255, 0.03);
 }
 
 /* A landing (home) usa sempre a paleta editorial clara — não inverte com o tema escuro do editor */
@@ -2078,77 +2092,6 @@ html.js .ms-coords.is-on { opacity: 1; }
     letter-spacing: 0.02em;
     pointer-events: none;
     box-shadow: var(--shadow-sm);
-}
-
-/* ===== Painel Ideias (fotografias de IA) ===== */
-.ideas-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-
-.idea-card {
-    position: relative;
-    display: block;
-    width: 100%;
-    padding: 0;
-    border: none;
-    border-radius: var(--border-radius-sm);
-    overflow: hidden;
-    cursor: pointer;
-    background: var(--bg-secondary);
-    aspect-ratio: 4 / 3;
-    box-shadow: var(--shadow-xs);
-    transition: transform var(--transition-fast),
-                box-shadow var(--transition-fast);
-}
-
-.idea-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.idea-card img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    pointer-events: none;
-}
-
-.idea-card.broken img {
-    opacity: 0.25;
-}
-
-.idea-card-author {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 16px 8px 5px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #fff;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
-    text-align: left;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    pointer-events: none;
-}
-
-.idea-card-badge {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #fff;
-    background: var(--color-accent);
-    padding: 2px 7px;
-    border-radius: var(--border-radius-full);
-    pointer-events: none;
 }
 
 /* ===== Valor de range (sliders do painel) ===== */

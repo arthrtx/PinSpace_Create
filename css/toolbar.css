@@ -6,11 +6,27 @@
     justify-content: space-between;
     height: var(--topbar-height);
     padding: 0 20px;
-    background: var(--bg-primary);
-    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    background:
+        linear-gradient(115deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.035) 40%, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, 0.08) 100%),
+        var(--editor-glass);
+    -webkit-backdrop-filter: var(--editor-glass-blur);
+    backdrop-filter: var(--editor-glass-blur);
+    border-bottom: 1px solid var(--editor-glass-border);
     z-index: 100;
     flex-shrink: 0;
     gap: 12px;
+}
+
+.topbar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(105deg,
+        var(--editor-glass-texture) 0 1px,
+        transparent 1px 3px);
+    opacity: 0.55;
 }
 
 .topbar-left,
@@ -19,6 +35,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    position: relative;
+    z-index: 1;
 }
 
 .topbar-center {
@@ -149,10 +167,15 @@
     display: flex;
     align-items: center;
     gap: 2px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    position: relative;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%),
+        var(--editor-glass);
+    border: 1px solid var(--editor-glass-border);
     border-radius: var(--border-radius-full);
     padding: 3px 4px;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
 }
 
 .zoom-controls .btn-icon-only {
@@ -174,6 +197,7 @@
 .editor-body {
     display: flex;
     flex: 1;
+    position: relative;
     overflow: hidden;
     background: var(--bg-secondary);
 }
@@ -183,24 +207,41 @@
     display: flex;
     flex-direction: column;
     width: var(--sidebar-width);
-    background: var(--bg-primary);
-    border-right: 1px solid var(--border-color);
+    position: relative;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%),
+        var(--editor-glass);
+    -webkit-backdrop-filter: var(--editor-glass-blur);
+    backdrop-filter: var(--editor-glass-blur);
+    border-right: 1px solid var(--editor-glass-border);
     padding: 16px 10px;
     gap: 4px;
     flex-shrink: 0;
     overflow-y: auto;
 }
 
+.toolbar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(105deg,
+        var(--editor-glass-texture) 0 1px,
+        transparent 1px 3px);
+    opacity: 0.45;
+}
+
 .toolbar-section {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    position: relative;
+    z-index: 1;
 }
 
 .toolbar-divider {
     height: 1px;
-    background: var(--border-color);
+    background: var(--editor-glass-border);
     margin: 8px 6px;
+    position: relative;
+    z-index: 1;
 }
 
 .tool-btn {
@@ -237,14 +278,24 @@
 }
 
 .tool-btn:hover {
-    background: var(--bg-secondary);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%),
+        var(--editor-glass);
     color: var(--text-primary);
     transform: scale(1.02);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--editor-glass-border);
 }
 
 .tool-btn.active {
-    background: var(--color-accent-light);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%),
+        var(--color-accent-light);
     color: var(--color-accent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--editor-glass-border);
 }
 
 .tool-btn.active::before {
@@ -269,8 +320,13 @@
 /* ===== Painel de Ferramentas ===== */
 .tool-panel {
     width: var(--panel-width);
-    background: var(--bg-primary);
-    border-right: 1px solid var(--border-color);
+    position: relative;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%),
+        var(--editor-glass);
+    -webkit-backdrop-filter: var(--editor-glass-blur);
+    backdrop-filter: var(--editor-glass-blur);
+    border-right: 1px solid var(--editor-glass-border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -281,6 +337,21 @@
     animation: slideInPanel 0.25s var(--transition) both;
 }
 
+.tool-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(105deg,
+        var(--editor-glass-texture) 0 1px,
+        transparent 1px 3px);
+    opacity: 0.4;
+}
+
+.tool-panel.resizing {
+    transition: none;
+}
+
 .tool-panel.collapsed {
     width: 0;
     border: none;
@@ -289,13 +360,50 @@
     transform: translateX(-8px);
 }
 
+.panel-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 20;
+    touch-action: none;
+}
+
+.panel-resizer::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 2px;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 48px;
+    border-radius: 3px;
+    background: var(--border-color);
+    opacity: 0;
+    transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.panel-resizer:hover::after,
+.panel-resizer.dragging::after {
+    opacity: 1;
+    background: var(--color-accent);
+}
+
+.tool-panel.collapsed .panel-resizer {
+    display: none;
+}
+
 .panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 18px 20px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--editor-glass-border);
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 
 .panel-header h3 {
@@ -312,13 +420,20 @@
     padding: 20px;
     overflow-y: auto;
     flex: 1;
+    position: relative;
+    z-index: 1;
 }
 
 .panel-content .panel-section {
     margin-bottom: 24px;
-    background: var(--bg-secondary);
+    position: relative;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid var(--editor-glass-border);
     border-radius: var(--border-radius);
     padding: 16px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
 }
 
 .panel-content .panel-section h4 {
@@ -343,10 +458,14 @@
     align-items: center;
     gap: 6px;
     padding: 14px 8px;
-    border: 1.5px solid var(--border-color);
+    border: 1.5px solid var(--editor-glass-border);
     border-radius: var(--border-radius-sm);
-    background: var(--bg-primary);
+    position: relative;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
     cursor: grab;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     transition: border-color var(--transition-fast),
                 background var(--transition-fast),
                 transform var(--transition-fast),
@@ -363,10 +482,11 @@
 
 .shape-option:hover {
     border-color: var(--color-accent);
-    background: var(--color-accent-light);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%);
     color: var(--color-accent);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
 .shape-option .shape-preview {
@@ -457,24 +577,42 @@
     padding: 10px 12px;
     border-radius: var(--border-radius-sm);
     cursor: pointer;
-    transition: background var(--transition-fast);
+    transition: background var(--transition-fast), border-color var(--transition-fast);
     font-size: 13px;
     border: 1.5px solid transparent;
 }
 
 .layer-item:hover {
-    background: var(--bg-secondary);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%),
+        var(--editor-glass);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-color: var(--editor-glass-border);
 }
 
 .layer-item.selected {
-    background: var(--color-accent-light);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%),
+        var(--color-accent-light);
     color: var(--color-accent);
     border-color: rgba(230, 0, 35, 0.2);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
 }
 
 .layer-item .layer-icon {
-    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
+}
+
+.layer-item .layer-icon svg {
+    width: 14px;
+    height: 14px;
 }
 
 .layer-item .layer-name {
@@ -682,14 +820,18 @@
 .design-tab {
     flex: 1;
     padding: 10px 8px;
-    border: 1.5px solid var(--border-color);
+    border: 1.5px solid var(--editor-glass-border);
     border-radius: var(--border-radius-full);
-    background: var(--bg-primary);
+    position: relative;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
     cursor: pointer;
     font-family: inherit;
     font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
     transition: border-color var(--transition-fast),
                 background var(--transition-fast),
                 box-shadow var(--transition-fast);
@@ -706,10 +848,66 @@
     box-shadow: var(--shadow-xs);
 }
 
-/* ===== Autocolantes (stickers) ===== */
+/* ===== Stickers ===== */
+.sticker-packs-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+}
+
+.sticker-pack-tab {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+    padding: 8px 6px;
+    border: 1.5px solid var(--editor-glass-border);
+    border-radius: var(--border-radius-sm);
+    position: relative;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transition: border-color var(--transition-fast),
+                background var(--transition-fast),
+                color var(--transition-fast);
+}
+
+.sticker-pack-tab:hover {
+    border-color: var(--color-accent);
+    color: var(--text-primary);
+}
+
+.sticker-pack-tab.active {
+    border-color: var(--color-accent);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%),
+        var(--color-accent-light);
+    color: var(--color-accent);
+}
+
+.sticker-pack-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.sticker-pack-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.sticker-pack-label {
+    line-height: 1;
+}
 .sticker-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
 }
 
@@ -719,10 +917,14 @@
     align-items: center;
     gap: 5px;
     padding: 10px 4px;
-    border: 1.5px solid var(--border-color);
+    border: 1.5px solid var(--editor-glass-border);
     border-radius: var(--border-radius-sm);
-    background: var(--bg-primary);
+    position: relative;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
     cursor: pointer;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     transition: border-color var(--transition-fast),
                 background var(--transition-fast),
                 transform var(--transition-fast),
@@ -735,14 +937,25 @@
 
 .sticker-option:hover {
     border-color: var(--color-accent);
-    background: var(--color-accent-light);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
-.sticker-emoji {
-    font-size: 26px;
+.sticker-svg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
     line-height: 1;
+    overflow: hidden;
+}
+
+.sticker-svg svg {
+    width: 100%;
+    height: 100%;
 }
 
 .sticker-label {
@@ -764,10 +977,14 @@
     align-items: center;
     gap: 6px;
     padding: 12px 8px;
-    border: 1.5px solid var(--border-color);
+    border: 1.5px solid var(--editor-glass-border);
     border-radius: var(--border-radius-sm);
-    background: var(--bg-primary);
+    position: relative;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
     cursor: pointer;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     transition: border-color var(--transition-fast),
                 background var(--transition-fast),
                 transform var(--transition-fast),
@@ -780,10 +997,11 @@
 
 .moldura-option:hover {
     border-color: var(--color-accent);
-    background: var(--color-accent-light);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%);
     color: var(--color-accent);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
 .moldura-preview {
@@ -870,166 +1088,6 @@
 
 .crop-result.has-content {
     display: block;
-}
-
-/* ===== Menu lateral de Ideias (lado direito) ===== */
-.side-panel {
-    width: var(--panel-width);
-    min-width: 0;
-    background: var(--bg-primary);
-    border-left: 1px solid var(--border-color);
-    flex-shrink: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.side-panel .panel-content {
-    flex: 1;
-    overflow-y: auto;
-    min-width: var(--panel-width);
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-/* ===== Busca de feeds ===== */
-.ico-field {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--bg-secondary);
-    border: 1.5px solid var(--border-color);
-    border-radius: 12px;
-    padding: 6px 8px 6px 10px;
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
-}
-
-.ico-field:focus-within {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px var(--color-accent-subtle);
-    background: var(--bg-primary);
-}
-
-.ico-field .search-ico {
-    font-size: 15px;
-    opacity: 0.8;
-    flex-shrink: 0;
-}
-
-.ico-field form {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.ico-field input[type="text"] {
-    flex: 1;
-    width: auto;
-    border: none;
-    background: transparent;
-    font-size: 13px;
-    color: var(--text-primary);
-    outline: none;
-    padding: 2px 0;
-}
-
-.ico-field input::placeholder {
-    color: var(--text-muted);
-}
-
-.btn-ico {
-    flex-shrink: 0;
-    padding: 6px 12px;
-    font-size: 12px;
-}
-
-.ideias-chips,
-.feed-related {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 10px;
-}
-
-.idea-chip {
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    color: var(--text-secondary);
-    border-radius: 999px;
-    padding: 5px 12px;
-    font-size: 12px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
-}
-
-.idea-chip:hover {
-    background: var(--color-accent-light);
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-}
-
-/* ===== Cabeçalho de um feed ===== */
-.feed-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 14px 0 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px dashed var(--border-color);
-}
-
-.feed-avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: var(--border-radius-full);
-    background: linear-gradient(135deg, var(--color-accent), var(--color-clay));
-    color: #fff;
-    font-weight: 800;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: var(--shadow-sm);
-    flex-shrink: 0;
-}
-
-.feed-meta {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-.feed-handle {
-    font-weight: 700;
-    font-size: 13px;
-    color: var(--text-primary);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.feed-name {
-    font-size: 11px;
-    color: var(--text-secondary);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.feed-count {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    background: var(--bg-tertiary);
-    padding: 3px 8px;
-    border-radius: 999px;
-    flex-shrink: 0;
 }
 
 /* ===== Divisor e títulos de secção ===== */
@@ -1121,4 +1179,126 @@
     color: var(--text-muted);
     line-height: 1.45;
     flex-basis: 100%;
+}
+
+.pub-erro {
+    color: var(--color-danger);
+    margin-top: 6px;
+}
+
+.pub-termos {
+    margin-top: 14px;
+}
+
+.pub-termos-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.pub-termos-label input[type="checkbox"] {
+    margin-top: 2px;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+}
+
+.pub-termos-link {
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: var(--color-accent);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.pub-termos-detalhe {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: var(--border-radius-sm);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.pub-termos-detalhe ul {
+    margin: 0;
+    padding-left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ===== Menu de Ferramentas (atalho → Pincel / Formas) ===== */
+.tools-menu {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.tools-menu-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 10px;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--editor-glass-border);
+    position: relative;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+    cursor: pointer;
+    text-align: center;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    transition: border-color 0.18s var(--transition), transform 0.18s var(--transition), box-shadow 0.18s var(--transition);
+}
+
+.tools-menu-card:hover {
+    border-color: var(--color-accent);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.tools-menu-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    color: var(--text-secondary);
+}
+
+.tools-menu-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tools-menu-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.tools-menu-desc {
+    font-size: 11px;
+    color: var(--text-muted);
 }

@@ -74,11 +74,13 @@ function renderTextElement(dom, el) {
         dom.innerHTML = '';
         textEl = document.createElement('div');
         textEl.className = 'text-content';
-        textEl.contentEditable = !el.bloqueada;
         dom.appendChild(textEl);
     }
 
-    textEl.contentEditable = !el.bloqueada;
+    const editing = dom.dataset.editing === '1' && !el.bloqueada;
+    if (!editing) dom.dataset.editing = '0';
+    textEl.contentEditable = editing ? 'true' : 'false';
+    textEl.classList.toggle('editing', editing);
     if (document.activeElement !== textEl) {
         textEl.textContent = el.conteudo;
     }
@@ -314,6 +316,30 @@ function bindTextPanelEvents(panel, el, callbacks) {
     });
 }
 
+function startTextEdit(dom, el) {
+    if (!el || el.bloqueada) return;
+    const textEl = dom.querySelector('.text-content');
+    if (!textEl) return;
+    dom.dataset.editing = '1';
+    textEl.contentEditable = 'true';
+    textEl.classList.add('editing');
+    textEl.focus();
+    const range = document.createRange();
+    range.selectNodeContents(textEl);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+function stopTextEdit(dom, el) {
+    const textEl = dom.querySelector('.text-content');
+    if (!textEl) return;
+    dom.dataset.editing = '0';
+    textEl.contentEditable = 'false';
+    textEl.classList.remove('editing');
+    if (el) el.conteudo = textEl.textContent;
+}
+
 function bindTextContentEdit(dom, el, onUpdate) {
     if (dom.dataset.textBound === '1') return;
     dom.dataset.textBound = '1';
@@ -326,7 +352,14 @@ function bindTextContentEdit(dom, el, onUpdate) {
     });
 
     textEl.addEventListener('blur', () => {
+        stopTextEdit(dom, el);
         onUpdate(el, true);
+    });
+
+    dom.addEventListener('dblclick', (e) => {
+        if (el.bloqueada) return;
+        e.stopPropagation();
+        startTextEdit(dom, el);
     });
 }
 

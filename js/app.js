@@ -73,7 +73,6 @@ class PinSpaceApp {
         this.ui.on('onZoomOut', () => { this.board.zoomOut(); this.ui.updateZoomLevel(this.board.getZoom()); });
         this.ui.on('onZoomFit', () => { this.board.zoomFit(); this.ui.updateZoomLevel(this.board.getZoom()); });
         this.ui.on('onToolChange', (tool) => this._changeTool(tool));
-        this.ui.on('onFocusIdeias', () => this._focusIdeiasSearch());
         this.ui.on('onTitleChange', (title) => { this.project.titulo = title; this.isDirty = true; });
         this.ui.on('onExport', (format) => this._export(format));
         this.ui.on('onThemeChange', (theme) => this._setTheme(theme));
@@ -170,7 +169,7 @@ class PinSpaceApp {
             }
             const file = await getDroppedImageFile(e.dataTransfer);
             if (!file) {
-                this.ui.showToast('Arraste uma imagem para o quadro.');
+                this.ui.showToast('Arraste um ficheiro de imagem ou um link de imagem para o quadro.');
                 return;
             }
             const pos = this._dropToCanvasCoords(e.clientX, e.clientY);
@@ -238,7 +237,7 @@ class PinSpaceApp {
         document.getElementById('board-elements').addEventListener('mousedown', (e) => {
             const el = e.target.closest('.board-element');
             if (!el || e.button !== 0) return;
-            if (e.target.classList.contains('text-content')) return;
+            if (el.dataset.editing === '1') return;
 
             const data = this.project.elementos.find(item => item.id === el.dataset.id);
             if (!data || data.bloqueada) return;
@@ -295,10 +294,8 @@ class PinSpaceApp {
     async _loadPublicGallery() {
         try {
             const data = await getPublicCollages();
-            window.PUBLIC_API_OK = true;
             this.ui.renderPublicList(data.collages || []);
         } catch {
-            window.PUBLIC_API_OK = false;
             this.ui.renderPublicList(null);
         }
     }
@@ -342,15 +339,19 @@ class PinSpaceApp {
             this._loadProjectIntoEditor();
             this.ui.showToast('Quadro público copiado para os seus projetos — edite à vontade!');
         } catch {
-            window.PUBLIC_API_OK = false;
-            this.ui.showToast('Não foi possível abrir o quadro público. Verifique se o servidor está a correr.');
+            this.ui.showToast('Não foi possível abrir o quadro público. Tente novamente.');
         }
     }
 
     async _publishProject(autor, isUpdate = false) {
         if (!this.project || !this.project.id) return;
 
-        this.project.autor = (autor || '').trim() || 'Anónimo';
+        const check = validateAuthorName(autor);
+        if (!check.ok) {
+            this.ui.showToast(check.error);
+            return;
+        }
+        this.project.autor = check.value;
         this._syncAllFromDOM();
 
         let thumb = this.project.thumbnail;
@@ -362,13 +363,13 @@ class PinSpaceApp {
             publicId: this.project.publico ? this.project.publicKey : null,
             titulo: this.project.titulo || 'Sem título',
             autor: this.project.autor,
+            termosAceitos: true,
             thumb,
             projeto: JSON.parse(JSON.stringify({ ...this.project, thumbnail: undefined, publicKey: undefined }))
         };
 
         try {
             const res = await publishPublicCollage(payload);
-            window.PUBLIC_API_OK = true;
             this.project.publico = true;
             this.project.publicKey = res.id;
             this.project.publicadoAt = new Date().toISOString();
@@ -377,9 +378,9 @@ class PinSpaceApp {
             this.isDirty = false;
             this._refreshPanel();
             this.ui.showToast(isUpdate ? 'Quadro público atualizado!' : 'Quadro publicado! Já aparece no início do site.');
-        } catch {
-            window.PUBLIC_API_OK = false;
-            this.ui.showToast('Falha ao publicar. Inicie o servidor com python server.py.');
+        } catch (err) {
+            const msg = err && err.message ? String(err.message) : '';
+            this.ui.showToast(msg || 'Falha ao publicar. Tente novamente.');
         }
     }
 
@@ -388,9 +389,10 @@ class PinSpaceApp {
 
         try {
             await deletePublicCollage(this.project.publicKey);
-            window.PUBLIC_API_OK = true;
-        } catch {
-            window.PUBLIC_API_OK = false;
+        } catch (err) {
+            const msg = err && err.message ? String(err.message) : '';
+            this.ui.showToast(msg || 'Falha ao remover da base de dados. Tente novamente.');
+            return;
         }
 
         this.project.publico = false;
@@ -441,7 +443,6 @@ class PinSpaceApp {
 
     _loadProjectIntoEditor() {
         this.ui.showEditor();
-        this.ui.openSideIdeas(this._getPanelCallbacks());
         this.ui.setProjectTitle(this.project.titulo);
         this.ui.setActiveTool('select');
         this.ui.showPanel('select', null, this._getPanelCallbacks());
@@ -750,9 +751,9 @@ class PinSpaceApp {
         return el;
     }
 
-    _addSticker(emoji) {
+    _addSticker(stickerId) {
         if (!this.project) return;
-        const el = createStickerElement(emoji, this.project.elementos);
+        const el = createStickerElement(stickerId, this.project.elementos);
         el.x = (this.project.boardWidth / 2) - el.width / 2;
         el.y = (this.project.boardHeight / 2) - el.height / 2;
         this._clampElementBounds(el);
@@ -776,32 +777,6 @@ class PinSpaceApp {
     _getSelectedImage() {
         const id = this.board.getSelectedId();
         return id ? this.project.elementos.find(e => e.id === id && e.tipo === 'imagem') : null;
-    }
-
-    async _addIdeaImage(url, nome, bak) {
-        if (!this.project) return;
-        this.ui.showToast('A carregar ideia…');
-        try {
-            const src = await fetchImageDataURL([url, bak], 1400);
-            const layer = getNextLayer(this.project.elementos);
-            const el = createImageElement(src, 100, 100, layer);
-            el.nome = nome ? `Ideia (${nome})` : 'Ideia';
-            el.raio = 12;
-            const img = await loadImage(src);
-            const ratio = img.naturalWidth / img.naturalHeight || 1;
-            el.width = Math.min(420, img.naturalWidth);
-            el.height = el.width / ratio;
-            this._clampElementBounds(el);
-            this.project.elementos.push(el);
-            this._renderElement(el);
-            this._selectElement(el.id);
-            this._commitHistory();
-            this.isDirty = true;
-            this.ui.showToast('Ideia adicionada! ✨');
-        } catch (err) {
-            console.error(err);
-            this.ui.showToast('Erro a carregar a imagem da ideia.');
-        }
     }
 
     _autoColagem() {
@@ -1010,6 +985,7 @@ class PinSpaceApp {
             onAddText: (conteudo) => this._addText(conteudo),
             onAddTextPreset: (preset) => this._addTextPreset(preset),
             onAddShape: (type) => this._addShape(type),
+            onShowFormas: () => this._changeTool('shapes'),
             onUpdate: (el, commit = true) => {
                 this._renderElement(el);
                 this.board.updateSelectionBox();
@@ -1032,11 +1008,10 @@ class PinSpaceApp {
                 this._commitHistory();
                 this.isDirty = true;
             },
-            onAddSticker: (emoji) => this._addSticker(emoji),
+            onAddSticker: (stickerId) => this._addSticker(stickerId),
             onAddFrame: (frameId) => this._addFrame(frameId),
             onCropImage: () => this._openCropImage(),
             onRemoveBackground: () => this._removeBackgroundSelected(),
-            onAddIdeaImage: (url, nome, bak) => this._addIdeaImage(url, nome, bak),
             onAutoCollage: () => this._autoColagem(),
             getElements: () => this.project?.elementos || [],
             onSelectElement: (id) => this._selectElement(id),
@@ -1055,7 +1030,7 @@ class PinSpaceApp {
             getPublicInfo: () => ({
                 publico: !!(this.project && this.project.publico),
                 autor: (this.project && this.project.autor) || 'Anónimo',
-                server: !!window.PUBLIC_API_OK
+                server: publicServerAvailable()
             }),
             onPublish: (autor) => this._publishProject(autor, false),
             onUpdatePublic: (autor) => this._publishProject(autor, true),
@@ -1083,11 +1058,6 @@ class PinSpaceApp {
         if (tool === 'image') {
             // Não abrir automaticamente — utilizador clica no botão do painel
         }
-    }
-
-    _focusIdeiasSearch() {
-        if (!this.ui.isSideIdeasOpen()) this.ui.openSideIdeas(this._getPanelCallbacks());
-        this.ui.focusSideIdeasSearch(this._getPanelCallbacks());
     }
 
     _deleteElement(id) {
@@ -1298,9 +1268,18 @@ class PinSpaceApp {
 function hasDraggableImage(dataTransfer) {
     if (!dataTransfer || !dataTransfer.types) return false;
     const types = Array.from(dataTransfer.types).map(t => String(t).toLowerCase());
-    return types.includes('files')
+    if (types.includes('files')
         || types.includes('text/uri-list')
-        || types.some(t => t.includes('image'));
+        || types.some(t => t.includes('image'))) return true;
+    if (types.includes('text/plain')) {
+        try {
+            const txt = dataTransfer.getData('text/plain') || '';
+            return /^https?:\/\/\S+$/i.test(txt.trim());
+        } catch {
+            return false;
+        }
+    }
+    return false;
 }
 
 const SHAPE_DRAG_MIME = 'application/x-pinshape';
@@ -1346,24 +1325,42 @@ async function getDroppedImageFile(dataTransfer) {
     // 3. text/uri-list (imagens arrastadas de páginas web)
     try {
         const uriList = dataTransfer.getData('text/uri-list') || '';
-        return await fileFromUriList(uriList);
+        const f = await fileFromUriList(uriList);
+        if (f) return f;
+    } catch {
+        return null;
+    }
+
+    // 4. text/plain — link de imagem arrastado como texto simples
+    try {
+        const txt = dataTransfer.getData('text/plain') || '';
+        return await fileFromUrl(txt.trim());
     } catch {
         return null;
     }
 }
 
 async function fileFromUriList(uriList) {
+    if (!uriList) return null;
     const url = uriList
         .replace(/^#.*$/gm, '')
         .split(/\r?\n/)
         .map(s => s.trim())
         .find(u => u.startsWith('http'));
     if (!url) return null;
+    return fileFromUrl(url);
+}
+
+async function fileFromUrl(url) {
+    if (!url) return null;
+    if (!/^https?:\/\//i.test(url)) return null;
     try {
-        const res = await fetch(url);
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) return null;
         const blob = await res.blob();
         if (!blob.type.startsWith('image/')) return null;
-        return new File([blob], 'imagem', { type: blob.type });
+        const ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+        return new File([blob], 'imagem.' + ext, { type: blob.type });
     } catch {
         return null;
     }

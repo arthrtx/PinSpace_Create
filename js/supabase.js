@@ -1,7 +1,7 @@
 /**
  * supabase.js — Quadros públicos numa base na nuvem (Supabase REST, sem SDK).
- * Usa os mesmos 4 contratos de js/public.js para o resto do app não saber
- * (nem precisar de saber) se está a falar com server.py ou com a nuvem.
+ * Usa o contrato de js/public.js para o resto do app não saber
+ * (nem precisar de saber) os detalhes da base de dados.
  *
  * Tabela esperada: public.quadros  (ver supabase-config.js para o SQL setup).
  */
@@ -43,11 +43,16 @@ async function supabaseGetQuadro(id) {
 }
 
 async function supabasePublicarQuadro(payload, publicId) {
+    if (payload.termosAceitos !== true) {
+        throw new Error('É necessário aceitar os termos e condições para publicar.');
+    }
+    const check = validateAuthorName(payload.autor);
+    if (!check.ok) throw new Error(check.error);
     const id = publicId || ('pub_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
     const row = {
         id,
         titulo: String(payload.titulo || 'Sem título'),
-        autor: String(payload.autor || 'Anónimo'),
+        autor: check.value,
         thumb: String(payload.thumb || ''),
         projeto: payload.projeto || {},
         publicado: new Date().toISOString()

@@ -29,6 +29,6 @@
  */
 
 window.SUPABASE_CONFIG = {
-    url: '',       // ex.: 'https://xxxxx.supabase.co'
-    anonKey: ''    // ex.: 'eyJhbGciOi...'
+    url: 'https://bvhinutatusriwkywywh.supabase.co',
+    anonKey: 'sb_publishable_om5YO7UDKoYezI5YQt8tAQ_fP27cR-E'
 };

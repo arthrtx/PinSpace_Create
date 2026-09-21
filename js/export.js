@@ -319,7 +319,7 @@ async function generateThumbnailDataURL(project) {
     thumbCanvas.height = 280;
     const fullCanvas = await renderToCanvas(project);
     const ctx = thumbCanvas.getContext('2d');
-    const scale = Math.min(400 / fullCanvas.width, 280 / fullCanvas.height);
+    const scale = Math.max(400 / fullCanvas.width, 280 / fullCanvas.height);
     const w = fullCanvas.width * scale;
     const h = fullCanvas.height * scale;
     ctx.drawImage(fullCanvas, (400 - w) / 2, (280 - h) / 2, w, h);

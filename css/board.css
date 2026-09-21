@@ -2,6 +2,7 @@
 
 .board-area {
     flex: 1;
+    min-width: 0;
     position: relative;
     overflow: hidden;
     background: var(--bg-secondary);
@@ -219,7 +220,13 @@
     word-wrap: break-word;
     overflow: hidden;
     pointer-events: auto;
+    cursor: move;
+    user-select: none;
+}
+
+.board-element .text-content.editing {
     cursor: text;
+    user-select: text;
 }
 
 .board-element .shape-svg {

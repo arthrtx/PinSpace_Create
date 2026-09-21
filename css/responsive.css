@@ -44,10 +44,6 @@
         --sidebar-width: 60px;
     }
 
-    .side-panel {
-        width: min(360px, calc(100vw - var(--sidebar-width) - 12px));
-    }
-
     .ms-nav {
         flex-wrap: wrap;
         gap: 14px;
@@ -92,11 +88,11 @@
     .tool-panel {
         position: absolute;
         left: var(--sidebar-width);
-        top: var(--topbar-height);
+        top: 0;
         bottom: 0;
         z-index: 200;
         box-shadow: var(--shadow-xl);
-        width: min(280px, calc(100vw - var(--sidebar-width) - 16px));
+        width: min(var(--panel-width), calc(100vw - var(--sidebar-width) - 16px));
         border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0;
     }
 
