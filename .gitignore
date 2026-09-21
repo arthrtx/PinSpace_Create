@@ -6,8 +6,9 @@ __pycache__/
 venv/
 env/
 
-# Dados locais (quadros públicos de cada utilizador)
-data/
+# Dados locais (projetos / exportações geradas em runtime)
+projects/
+!projects/.gitkeep
 *.tmp
 
 # Projetos / exportações geradas em runtime
@@ -21,7 +22,6 @@ projects/
 # Moodboards / PDFs gerados localmente
 MOODBOARD*.pdf
 MOODBOARD*_PT.pdf
-pins-moodboard.html
 rascunho*.html
 *.print.html
 

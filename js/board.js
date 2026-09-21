@@ -238,10 +238,11 @@ class BoardManager {
             }
             if (this.isDragging || this.isResizing || this.isRotating) {
                 this._showSnapGuides(false, false);
+                const shouldCommit = this.isResizing || this.isRotating || (this.dragStart && this.dragStart.moved);
                 this.isDragging = false;
                 this.isResizing = false;
                 this.isRotating = false;
-                this.onElementUpdate?.();
+                if (shouldCommit) this.onElementUpdate?.();
             }
         });
 
@@ -311,11 +312,16 @@ class BoardManager {
             mouseY: e.clientY,
             elX: elementData.x,
             elY: elementData.y,
-            id: elementData.id
+            id: elementData.id,
+            moved: false
         };
     }
 
     _handleDrag(e) {
+        if (!this.dragStart.moved) {
+            if (Math.abs(e.clientX - this.dragStart.mouseX) < 3 && Math.abs(e.clientY - this.dragStart.mouseY) < 3) return;
+            this.dragStart.moved = true;
+        }
         const dx = (e.clientX - this.dragStart.mouseX) / this.zoom;
         const dy = (e.clientY - this.dragStart.mouseY) / this.zoom;
         const dom = this.getElementDOM(this.dragStart.id);

@@ -11,8 +11,6 @@ class UIManager {
         this.panelContent = document.getElementById('panel-content');
         this.contextMenu = document.getElementById('context-menu');
         this.toast = document.getElementById('toast');
-        this.sidePanel = document.getElementById('side-panel');
-        this.sidePanelBody = document.getElementById('side-panel-body');
         this.currentTool = 'select';
         this.callbacks = {};
         this._brushSettings = null;
@@ -210,7 +208,7 @@ class UIManager {
         }
 
         if (collages.length === 0) {
-            container.innerHTML = '<p class="empty-state" id="empty-publicos">Ainda não há quadros públicos. No editor, abra Design → Partilha e publique o seu.</p>';
+            container.innerHTML = '<p class="empty-state" id="empty-publicos">Ainda não há quadros públicos. No editor, abra Ajustes → Partilha e publique o seu.</p>';
             return;
         }
 
@@ -249,31 +247,6 @@ class UIManager {
         });
     }
 
-    isSideIdeasOpen() {
-        return !!(this.sidePanel && !this.sidePanel.classList.contains('closed'));
-    }
-
-    openSideIdeas(callbacks) {
-        if (!this.sidePanel || !this.sidePanelBody) return;
-        this.sidePanelBody.innerHTML = getIdeiasPanelHTML();
-        bindIdeiasPanelEvents(this.sidePanelBody, callbacks);
-        this.sidePanel.classList.remove('closed');
-    }
-
-    focusSideIdeasSearch(callbacks) {
-        if (!this.sidePanelBody) return;
-        if (!this.sidePanelBody.children.length && callbacks) {
-            this.openSideIdeas(callbacks);
-        }
-        const input = this.sidePanelBody.querySelector('#pesquisa-query');
-        if (input) {
-            input.focus();
-            input.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        } else {
-            this.sidePanelBody.scrollTop = 0;
-        }
-    }
-
     showPanel(tool, selectedElement, projectCallbacks) {
         this.panel.classList.remove('collapsed');
         const titles = {
@@ -282,8 +255,7 @@ class UIManager {
             text: 'Texto',
             shapes: 'Formas',
             brush: 'Ferramentas',
-            design: 'Design',
-            ideas: 'Ideias',
+            design: 'Stickers',
             background: 'Fundo',
             layers: 'Camadas',
             settings: 'Configurações'
@@ -298,7 +270,7 @@ class UIManager {
                     this.panelContent.innerHTML = `
                         <div class="panel-section">
                             <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Importe uma imagem do seu computador.</p>
-                            <button class="btn btn-primary" id="btn-import-image" style="width:100%">📷 Importar imagem</button>
+                            <button class="btn btn-primary" id="btn-import-image" style="width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Importar imagem</button>
                         </div>
                     `;
                     this.panelContent.querySelector('#btn-import-image')?.addEventListener('click', () => {
@@ -318,33 +290,15 @@ class UIManager {
                 break;
 
             case 'brush':
-                this.panelContent.innerHTML = getShapesPanelHTML(null) + getBrushPanelHTML(this._brushSettings);
-                bindShapesPanelEvents(this.panelContent, null, projectCallbacks);
-                bindBrushPanelEvents(this.panelContent, this._brushSettings);
+                this._renderToolsMenu(projectCallbacks);
                 break;
 
             case 'design':
                 this._renderDesignPanel(projectCallbacks);
                 break;
 
-            case 'ideas':
-                this.panelContent.innerHTML = `
-                    <div class="panel-section">
-                        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">O menu Ideias está sempre aberto no painel à direita do ecrã. Use a busca para trazer feeds de Pinterest por tema ou ligue o seu perfil.</p>
-                    </div>
-                `;
-                break;
-
-            case 'background':
-                this._renderBackgroundPanel(projectCallbacks);
-                break;
-
-            case 'layers':
-                this._renderLayersPanel(selectedElement, projectCallbacks);
-                break;
-
             case 'settings':
-                this._renderSettingsPanel();
+                this._renderSettingsPanel(projectCallbacks);
                 break;
 
             case 'select':
@@ -378,20 +332,20 @@ class UIManager {
         }
 
         const alignBtns = [
-            ['left', '⬅️', 'Alinhar à esquerda'],
-            ['hcenter', '↔️', 'Centrar na horizontal'],
-            ['right', '➡️', 'Alinhar à direita'],
-            ['top', '⬆️', 'Alinhar ao topo'],
-            ['vcenter', '↕️', 'Centrar na vertical'],
-            ['bottom', '⬇️', 'Alinhar em baixo']
+            ['left', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="3" x2="3" y2="21"/><rect x="7" y="6" width="14" height="4" rx="1"/><rect x="7" y="14" width="8" height="4" rx="1"/></svg>', 'Alinhar à esquerda'],
+            ['hcenter', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><rect x="5" y="6" width="14" height="4" rx="1"/><rect x="7" y="14" width="10" height="4" rx="1"/></svg>', 'Centrar na horizontal'],
+            ['right', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="3" x2="21" y2="21"/><rect x="3" y="6" width="14" height="4" rx="1"/><rect x="9" y="14" width="8" height="4" rx="1"/></svg>', 'Alinhar à direita'],
+            ['top', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="3" x2="21" y2="3"/><rect x="6" y="7" width="4" height="14" rx="1"/><rect x="14" y="7" width="4" height="8" rx="1"/></svg>', 'Alinhar ao topo'],
+            ['vcenter', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="7" width="4" height="10" rx="1"/></svg>', 'Centrar na vertical'],
+            ['bottom', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="21" x2="21" y2="21"/><rect x="6" y="3" width="4" height="14" rx="1"/><rect x="14" y="9" width="4" height="8" rx="1"/></svg>', 'Alinhar em baixo']
         ];
 
         this.panelContent.innerHTML = `
             <div class="panel-section">
                 <h4>${escapeHTML(getElementLabel(selectedElement))}</h4>
                 <div class="quick-actions">
-                    <button class="btn btn-primary" id="btn-quick-duplicate" style="flex:1">📄 Duplicar</button>
-                    <button class="btn btn-danger" id="btn-quick-delete" style="flex:1">🗑️ Eliminar</button>
+                    <button class="btn btn-primary" id="btn-quick-duplicate" style="flex:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Duplicar</button>
+                    <button class="btn btn-danger" id="btn-quick-delete" style="flex:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Eliminar</button>
                 </div>
             </div>
             <div class="panel-section">
@@ -403,10 +357,10 @@ class UIManager {
             <div class="panel-section">
                 <h4>Ordenar camada</h4>
                 <div class="order-grid">
-                    <button class="align-btn" data-order="front" title="Trazer para a frente">⬆️ Frente</button>
-                    <button class="align-btn" data-order="back" title="Enviar para trás">⬇️ Atrás</button>
-                    <button class="align-btn" data-order="up" title="Subir um nível">▲ Subir</button>
-                    <button class="align-btn" data-order="down" title="Descer um nível">▼ Descer</button>
+                    <button class="align-btn" data-order="front" title="Trazer para a frente"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg> Frente</button>
+                    <button class="align-btn" data-order="back" title="Enviar para trás"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg> Atrás</button>
+                    <button class="align-btn" data-order="up" title="Subir um nível"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Subir</button>
+                    <button class="align-btn" data-order="down" title="Descer um nível"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M19 12l-7 7-7-7"/></svg> Descer</button>
                 </div>
             </div>
         `;
@@ -492,7 +446,7 @@ class UIManager {
                     break;
                 case 'imagem':
                     container.innerHTML = `
-                        <button class="btn btn-primary" id="bg-import-img" style="width:100%">📷 Importar imagem de fundo</button>
+                        <button class="btn btn-primary" id="bg-import-img" style="width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Importar imagem de fundo</button>
                     `;
                     container.querySelector('#bg-import-img').addEventListener('click', () => {
                         callbacks.onImportBgImage?.();
@@ -512,12 +466,43 @@ class UIManager {
         });
     }
 
+    _renderToolsMenu(callbacks) {
+        this.panelContent.innerHTML = `
+            <div class="panel-section">
+                <p class="panel-hint">Escolha uma ferramenta para ver as suas opções.</p>
+                <div class="tools-menu">
+                    <button class="tools-menu-card" data-tools-sub="pincel">
+                        <span class="tools-menu-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14.7 6.3a1 1 0 000 1.4l1.4 1.4a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></span>
+                        <span class="tools-menu-body">
+                            <span class="tools-menu-name">Pincel</span>
+                            <span class="tools-menu-desc">Desenhar e apagar</span>
+                        </span>
+                    </button>
+                    <button class="tools-menu-card" data-tools-sub="formas">
+                        <span class="tools-menu-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></span>
+                        <span class="tools-menu-body">
+                            <span class="tools-menu-name">Formas</span>
+                            <span class="tools-menu-desc">Figuras e polígonos</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        this.panelContent.querySelector('[data-tools-sub="pincel"]')?.addEventListener('click', () => {
+            this.panelContent.innerHTML = getBrushPanelHTML(this._brushSettings);
+            bindBrushPanelEvents(this.panelContent, this._brushSettings);
+        });
+        this.panelContent.querySelector('[data-tools-sub="formas"]')?.addEventListener('click', () => {
+            callbacks.onShowFormas?.();
+        });
+    }
+
     _renderDesignPanel(callbacks) {
         this.panelContent.innerHTML = `
             <div class="design-tabs">
-                <button class="design-tab ${this._designTab === 'stickers' ? 'active' : ''}" data-design-tab="stickers">🪄 Autocolantes</button>
-                <button class="design-tab ${this._designTab === 'molduras' ? 'active' : ''}" data-design-tab="molduras">🖼️ Molduras</button>
-                <button class="design-tab ${this._designTab === 'partilha' ? 'active' : ''}" data-design-tab="partilha">🌐 Partilha</button>
+                <button class="design-tab ${this._designTab === 'stickers' ? 'active' : ''}" data-design-tab="stickers"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> Stickers</button>
+                <button class="design-tab ${this._designTab === 'molduras' ? 'active' : ''}" data-design-tab="molduras"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 4-6 5 7"/></svg> Molduras</button>
             </div>
             <div id="design-content"></div>
         `;
@@ -527,8 +512,6 @@ class UIManager {
             if (tab === 'molduras') {
                 container.innerHTML = getMoldurasPanelHTML();
                 bindMoldurasPanelEvents(container, callbacks);
-            } else if (tab === 'partilha') {
-                this.renderPartilhaPanel(container, callbacks);
             } else {
                 container.innerHTML = getStickersPanelHTML();
                 bindStickersPanelEvents(container, callbacks);
@@ -558,26 +541,80 @@ class UIManager {
                 <div class="form-group">
                     <label>O seu nome (autor)</label>
                     <input type="text" id="pub-autor" value="${escapeHTML(info.autor || '')}" placeholder="Anónimo" maxlength="40" autocomplete="off">
+                    <p class="panel-hint pub-erro" id="pub-autor-erro" style="display:none"></p>
                 </div>
-                ${!online ? '<p class="panel-hint" style="color:var(--color-danger)">⚠️ Servidor público não disponível. Sirva o site com <code>python server.py</code> para publicar.</p>' : ''}
+                ${!online ? '<p class="panel-hint" style="color:var(--color-danger)">⚠️ A publicação não vai funcionar: o Supabase não está configurado. Confira <code>js/supabase-config.js</code>.</p>' : ''}
+                <div class="form-group pub-termos">
+                    <label class="pub-termos-label">
+                        <input type="checkbox" id="pub-termos">
+                        <span>Confirmo que tenho direitos sobre as imagens e aceito os <button type="button" class="pub-termos-link" id="pub-termos-toggle">termos e condições</button>.</span>
+                    </label>
+                    <div class="pub-termos-detalhe" id="pub-termos-detalhe" hidden>
+                        <ul>${IMAGE_RIGHTS_TERMS.map(t => `<li>${escapeHTML(t)}</li>`).join('')}</ul>
+                    </div>
+                </div>
                 ${info.publico
                     ? `<button class="btn btn-primary" id="btn-pub-atualizar" style="width:100%">🔄 Atualizar quadro público</button>
                        <button class="btn btn-secondary" id="btn-pub-privado" style="width:100%;margin-top:8px">🔒 Tornar privado (apagar do público)</button>`
-                    : `<button class="btn btn-primary" id="btn-pub-publicar" style="width:100%" ${online ? '' : 'disabled'}>🌐 Publicar quadro</button>`}
+                    : `<button class="btn btn-primary" id="btn-pub-publicar" style="width:100%">🌐 Publicar quadro</button>`}
             </div>
         `;
 
-        container.querySelector('#btn-pub-publicar')?.addEventListener('click', () => {
-            const autor = container.querySelector('#pub-autor').value.trim() || 'Anónimo';
+        const autorInput = container.querySelector('#pub-autor');
+        const erroEl = container.querySelector('#pub-autor-erro');
+        const termosBox = container.querySelector('#pub-termos');
+        const btnPublicar = container.querySelector('#btn-pub-publicar');
+        const btnAtualizar = container.querySelector('#btn-pub-atualizar');
+
+        const showError = (msg) => {
+            if (!erroEl) return;
+            erroEl.textContent = msg || '';
+            erroEl.style.display = msg ? 'block' : 'none';
+        };
+
+        const refresh = () => {
+            const check = validateAuthorName(autorInput.value);
+            showError(check.ok ? '' : check.error);
+            const ok = check.ok && termosBox.checked && online;
+            if (btnPublicar) btnPublicar.disabled = !ok;
+            if (btnAtualizar) btnAtualizar.disabled = !ok;
+        };
+
+        autorInput.addEventListener('input', refresh);
+        termosBox.addEventListener('change', refresh);
+        container.querySelector('#pub-termos-toggle')?.addEventListener('click', () => {
+            const det = container.querySelector('#pub-termos-detalhe');
+            if (det) det.hidden = !det.hidden;
+        });
+
+        const readAuthor = () => {
+            const check = validateAuthorName(autorInput.value);
+            if (!check.ok) {
+                showError(check.error);
+                return null;
+            }
+            if (!termosBox.checked) {
+                showError('Tem de aceitar os termos e condições antes de publicar.');
+                return null;
+            }
+            return check.value;
+        };
+
+        btnPublicar?.addEventListener('click', () => {
+            const autor = readAuthor();
+            if (autor === null) return;
             callbacks.onPublish?.(autor);
         });
-        container.querySelector('#btn-pub-atualizar')?.addEventListener('click', () => {
-            const autor = container.querySelector('#pub-autor').value.trim() || 'Anónimo';
+        btnAtualizar?.addEventListener('click', () => {
+            const autor = readAuthor();
+            if (autor === null) return;
             callbacks.onUpdatePublic?.(autor);
         });
         container.querySelector('#btn-pub-privado')?.addEventListener('click', () => {
             callbacks.onUnpublish?.();
         });
+
+        refresh();
     }
 
     _renderLayersPanel(selectedElement, callbacks) {
@@ -596,7 +633,7 @@ class UIManager {
         });
     }
 
-    _renderSettingsPanel() {
+    _renderSettingsPanel(callbacks) {
         const theme = document.documentElement.dataset.theme || 'light';
         this.panelContent.innerHTML = `
             <div class="panel-section">
@@ -611,6 +648,10 @@ class UIManager {
                 </div>
             </div>
             <div class="panel-section">
+                <h4>🌐 Partilha</h4>
+                <div id="settings-partilha"></div>
+            </div>
+            <div class="panel-section">
                 <h4>Sobre</h4>
                 <p style="font-size:13px;color:var(--text-secondary)">PinSpace Create v1.0<br>Vision Board Editor</p>
             </div>
@@ -619,9 +660,12 @@ class UIManager {
         this.panelContent.querySelectorAll('.theme-option').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.callbacks.onThemeChange?.(btn.dataset.theme);
-                this._renderSettingsPanel();
+                this._renderSettingsPanel(callbacks);
             });
         });
+
+        const container = this.panelContent.querySelector('#settings-partilha');
+        if (container) this.renderPartilhaPanel(container, callbacks);
     }
 
     updateHistoryButtons(canUndo, canRedo) {
@@ -658,6 +702,66 @@ class UIManager {
         document.documentElement.dataset.theme = theme;
     }
 
+    _sidebarWidth() {
+        const raw = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width');
+        return parseInt(raw, 10) || 0;
+    }
+
+    _panelMaxWidth() {
+        return Math.min(620, Math.max(200, window.innerWidth - this._sidebarWidth() - 120));
+    }
+
+    _setPanelWidth(width) {
+        document.documentElement.style.setProperty('--panel-width', width + 'px');
+    }
+
+    _initPanelResize() {
+        const resizer = document.getElementById('panel-resizer');
+        if (!resizer || !this.panel) return;
+
+        const MIN = 200;
+        const saved = parseInt(localStorage.getItem('pins.toolPanelWidth'), 10);
+        if (saved && saved >= MIN) this._setPanelWidth(saved);
+
+        let startX = 0;
+        let startWidth = 0;
+
+        const onMove = (e) => {
+            const width = Math.max(MIN, Math.min(this._panelMaxWidth(), startWidth + (e.clientX - startX)));
+            this._setPanelWidth(width);
+        };
+
+        const onUp = () => {
+            resizer.classList.remove('dragging');
+            this.panel.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            const current = parseInt(getComputedStyle(this.panel).width, 10);
+            if (current > 0) localStorage.setItem('pins.toolPanelWidth', current);
+            window.dispatchEvent(new Event('resize'));
+        };
+
+        resizer.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            startX = e.clientX;
+            startWidth = this.panel.getBoundingClientRect().width;
+            resizer.classList.add('dragging');
+            this.panel.classList.add('resizing');
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+        });
+
+        window.addEventListener('resize', () => {
+            if (this.panel.classList.contains('collapsed')) return;
+            const current = parseInt(getComputedStyle(this.panel).width, 10);
+            if (current > this._panelMaxWidth()) this._setPanelWidth(this._panelMaxWidth());
+        });
+    }
+
     bindHomeEvents() {
         document.getElementById('btn-novo-projeto')?.addEventListener('click', () => {
             this.openNewProjectModal(this.sizePresets());
@@ -676,6 +780,8 @@ class UIManager {
     }
 
     bindEditorEvents() {
+        this._initPanelResize();
+
         document.getElementById('btn-voltar-home')?.addEventListener('click', () => {
             this.callbacks.onBackHome?.();
         });
@@ -718,10 +824,6 @@ class UIManager {
 
         document.querySelectorAll('.tool-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (btn.dataset.tool === 'ideas' && this.callbacks.onFocusIdeias) {
-                    this.callbacks.onFocusIdeias();
-                    return;
-                }
                 this.callbacks.onToolChange?.(btn.dataset.tool);
             });
         });
