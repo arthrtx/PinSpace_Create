@@ -9,7 +9,12 @@
         <link rel="preconnect" href="https://i.pinimg.com">
         <link rel="dns-prefetch" href="https://i.pinimg.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;600;700&family=Open+Sans&family=Roboto&family=Lato&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Lora&family=Merriweather&family=Oswald:wght@400;500;600&family=Bebas+Neue&family=Archivo+Black&family=Abril+Fatface&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;600;700&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Advent+Pro:wght@400;600&family=Courier+Prime&family=Goudy+Bookletter+1911&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=2.2">
+    <link rel="stylesheet" href="css/style.css?v=3.1">
+    <link rel="stylesheet" href="css/editor-improvements.css?v=2.4">
+    <link rel="stylesheet" href="css/responsive.css?v=2.4">
+    <link rel="stylesheet" href="css/social.css?v=2.1">
+    <link rel="stylesheet" href="css/glass.css?v=2.4">
+    <link rel="stylesheet" href="css/music.css?v=1.2">
 </head>
 <body>
 
@@ -31,7 +36,7 @@
             <header class="ms-hero">
                 <img class="ms-hero-bg" src="https://i.pinimg.com/originals/a8/be/00/a8be002065390491cd1c67a3902333d5.jpg" alt="" aria-hidden="true" loading="eager" fetchpriority="high">
                 <nav class="ms-nav" data-reveal>
-                    <a href="#projetos-recentes" class="ms-nav-brand">
+                    <a href="#quadros-publicos" class="ms-nav-brand">
                         <span class="logo-mark" aria-hidden="true">
                             <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
                                 <circle cx="16" cy="16" r="15" fill="currentColor"/>
@@ -41,6 +46,7 @@
                         <span>pin space.</span>
                     </a>
                     <div class="ms-nav-right">
+                        <div id="landing-auth" class="ms-nav-auth"></div>
                         <button type="button" id="btn-abrir-projeto" class="ms-nav-link">Abrir quadro</button>
                         <button type="button" id="btn-novo-projeto" class="ms-nav-cta ms-magnetic">
                             <span>Start a collage</span>
@@ -68,47 +74,209 @@
                 </div>
             </header>
 
-            <section class="ms-pin">
-                <div class="ms-pin-inner">
-                    <div class="ms-pin-wall" aria-hidden="true"></div>
-                    <h2 class="ms-pin-h2" data-pin-text data-reveal-delay="2">Comece a criar.</h2>
-                    <p class="ms-pin-line" data-reveal data-reveal-delay="2">escolha um modelo pronto ou crie um do zero</p>
-                    <span class="ms-pin-tag" data-reveal data-reveal-delay="3">scroll to begin</span>
-                </div>
-            </section>
-
+            <div class="ms-glass-zone">
             <section class="ms-feature">
-                <div class="ms-mask ms-feature-mask" data-reveal-mask>
-                    <div class="section-header">
-                        <h3>Os teus quadros</h3>
-                        <span class="section-subtitle">guardados localmente</span>
+                <!-- Doca vertical (como os ícones à esquerda da referência) -->
+                <nav class="gw-dock" aria-label="Atalhos">
+                    <button type="button" class="gw-dock-btn" data-dock="top" title="Início"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></button>
+                    <a class="gw-dock-btn" href="#explore" title="Explorar a comunidade"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg></a>
+                    <button type="button" class="gw-dock-btn gw-dock-accent" data-dock="new" title="Novo quadro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                    <button type="button" class="gw-dock-btn" data-dock="open" title="Abrir quadro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></button>
+                    <a class="gw-dock-btn" href="#profile" data-dock="profile" title="O meu perfil"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>
+                </nav>
+
+                <div class="glass-window">
+                <div class="gh-header">
+                    <div class="gh-line" data-reveal-mask data-reveal-delay="1">
+                        <h3 class="gh-title">Public Gallery</h3>
+                    </div>
+                    <p class="gh-sub" data-scroll-text data-reveal-delay="3">public boards — open one, copy it, make it yours</p>
+                </div>
+
+                <!-- Barra superior da janela: pesquisa + chips -->
+                <div class="gw-toolbar" data-reveal data-reveal-delay="1">
+                    <div class="home-search">
+                        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                        <input type="search" id="search-projetos" placeholder="Procurar quadros públicos…" autocomplete="off">
+                    </div>
+                    <div class="gw-chips" role="tablist" aria-label="Secções">
+                        <button type="button" class="gw-chip active" data-chip="all">Tudo</button>
+                        <button type="button" class="gw-chip" data-chip="quadros-publicos">Públicos</button>
+                        <a class="gw-chip" href="#profile" data-dock="profile">Os meus</a>
+                        <a class="gw-chip" href="#explore">Comunidade</a>
                     </div>
                 </div>
 
-                <div class="home-search" data-reveal data-reveal-delay="1">
-                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                    <input type="search" id="search-projetos" placeholder="Pesquisar projetos..." autocomplete="off">
+                <div class="gw-dashboard">
+                    <!-- Coluna de widgets -->
+                    <aside class="gw-side" data-reveal data-reveal-delay="2">
+                        <div class="gw-widget gw-clock" aria-label="Hora em Lisboa">
+                            <span class="gw-w-kicker">Lisboa · agora</span>
+                            <div class="gw-clock-time" id="w-clock-time">--:--</div>
+                            <div class="gw-clock-date" id="w-clock-date"></div>
+                            <div class="gw-clock-stats">
+                                <span><b id="w-stat-local">0</b> neste dispositivo</span>
+                                <span><b id="w-stat-public">0</b> na galeria</span>
+                            </div>
+                        </div>
+
+                        <div class="gw-widget gw-continue">
+                            <div class="gw-w-head">
+                                <h5>Continuar a editar</h5>
+                                <a class="gw-mini" href="#profile" data-dock="profile">ver todos</a>
+                            </div>
+                            <ul class="gw-list" id="w-continue"></ul>
+                        </div>
+
+                        <div class="gw-widget gw-palette">
+                            <div class="gw-w-head"><h5>Paleta pin space</h5><span class="gw-mini-note">clica para copiar</span></div>
+                            <div class="gw-swatches" id="w-palette"></div>
+                        </div>
+
+                        <div class="gw-widget gw-tip">
+                            <span class="gw-w-kicker">✦ Dica</span>
+                            <p id="w-tip">Arrasta imagens diretamente do computador para o quadro.</p>
+                            <button type="button" class="gw-mini" id="w-tip-next">outra dica →</button>
+                        </div>
+                    </aside>
+
+                    <!-- Conteúdo principal -->
+                    <div class="gw-content">
+                        <article class="gw-featured" id="w-featured" data-reveal data-reveal-delay="2" aria-roledescription="carrossel" aria-label="Quadros em destaque">
+                            <div class="gw-featured-bg" id="w-featured-bg"></div>
+                            <div class="gw-featured-body">
+                                <span class="gw-pill gw-pill-hot">🔥 Em destaque</span>
+                                <div class="gw-featured-tags" id="w-featured-tags"></div>
+                                <h3 class="gw-featured-title" id="w-featured-title">A carregar quadros…</h3>
+                                <p class="gw-featured-meta" id="w-featured-meta">Quadros públicos da comunidade aparecem aqui.</p>
+                                <div class="gw-featured-actions">
+                                    <button type="button" class="gw-btn-white" id="w-featured-open" disabled>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+                                        Abrir cópia
+                                    </button>
+                                    <a class="gw-btn-glass" href="#explore">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>
+                                        Explorar
+                                    </a>
+                                    <button type="button" class="gw-btn-round" data-dock="new" title="Criar o meu quadro" aria-label="Criar o meu quadro">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="gw-featured-nav">
+                                <div class="gw-dots" id="w-featured-dots"></div>
+                                <button type="button" class="gw-btn-round" id="w-featured-prev" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+                                <button type="button" class="gw-btn-round" id="w-featured-next" aria-label="Seguinte"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+                            </div>
+                        </article>
+
+                        <section class="home-public" id="quadros-publicos" data-reveal data-reveal-delay="2">
+                            <div class="section-header">
+                                <h4>Public boards</h4>
+                                <a href="#explore" class="section-subtitle ps-landing-more">ver tudo na comunidade →</a>
+                            </div>
+                            <div id="lista-publicos" class="projects-grid">
+                                <p class="empty-state" id="empty-publicos">Loading public boards…</p>
+                            </div>
+                        </section>
+
+                    </div>
+                </div>
                 </div>
 
-                <section class="home-public" id="quadros-publicos" data-reveal data-reveal-delay="2">
-                        <div class="section-header">
-                            <h4>Quadros públicos</h4>
-                            <span class="section-subtitle">escolhe, copia e edita</span>
-                        </div>
-                        <div id="lista-publicos" class="projects-grid">
-                            <p class="empty-state" id="empty-publicos">A carregar quadros públicos…</p>
-                        </div>
-                    </section>
+                <!-- =====================================================
+                     Música (SoundCloud): caixa de ligação + coverflow +
+                     barra do leitor. Lógica em js/music.js
+                     ===================================================== -->
+                <section class="music" id="musica" aria-label="Música enquanto crias">
+                    <canvas class="music-ambient" id="music-ambient" aria-hidden="true"></canvas>
 
-                    <section class="home-recent" id="projetos-recentes" data-reveal data-reveal-delay="3">
-                        <div class="section-header">
-                            <h4>Projetos recentes</h4>
-                            <span class="section-subtitle">os teus murais criativos</span>
+                    <div class="music-connect" id="music-connect">
+                        <div class="music-connect-info">
+                            <span class="music-sc-logo" aria-hidden="true">
+                                <svg viewBox="0 0 32 14" width="34" height="15" fill="currentColor"><path d="M0 10.9c0 .9.3 1.6 1 2.1l.2-2.1-.2-2.2c-.7.5-1 1.3-1 2.2zm2.1-3.4L1.8 10.9l.3 3.1h.5l.3-3.1-.3-3.4zm1.6-.6-.3 4 .3 3.1h.5l.3-3.1-.3-4zm1.6-.3-.3 4.3.3 3.1h.5l.3-3.1-.3-4.3zm1.6-.2-.3 4.5.3 3.1h.5l.3-3.1-.3-4.5zm1.6-.6-.2 5.1.2 3.1h.6l.2-3.1-.2-5.1zm1.7-1-.2 6.1.2 3.1h.6l.2-3.1-.2-6.1zm1.7-.6-.2 6.7.2 3.1h.6l.2-3.1-.2-6.7zm1.8-.4c-.1 0-.2 0-.3.1v10.1h.1l.3-3.1-.1-7.1zm.7-.8V14h12.3c2.2 0 4-1.8 4-4s-1.8-4-4-4c-.5 0-1 .1-1.5.3C24.4 3 21.8.6 18.6.6c-.8 0-1.6.2-2.3.5-.3.1-.4.2-.4.4z"/></svg>
+                            </span>
+                            <div>
+                                <span class="gw-w-kicker">Música enquanto crias</span>
+                                <h4 class="music-connect-title" id="music-connect-title">Liga o teu SoundCloud</h4>
+                                <p class="music-connect-sub" id="music-connect-sub">Até lá, ouve as novidades da semana. Depois de ligares, segue o teu feed.</p>
+                            </div>
                         </div>
-                        <div id="lista-projetos" class="projects-grid">
-                            <p class="empty-state" id="empty-projects">Nenhum projeto ainda. Crie o seu primeiro quadro!</p>
+                        <div class="music-connect-actions" id="music-connect-actions">
+                            <button type="button" class="music-btn-sc" id="music-login">
+                                <svg viewBox="0 0 32 14" width="22" height="10" fill="currentColor" aria-hidden="true"><path d="M15 3.1V14h12.3c2.2 0 4-1.8 4-4s-1.8-4-4-4c-.5 0-1 .1-1.5.3C25.4 3 22.8.6 19.6.6c-.8 0-1.6.2-2.3.5-.3.1-.4.2-.4.4zM13.2 4v10h.6l.2-3.1-.2-6.9zM11.5 4.6V14h.6l.2-3.1-.2-6.3zM9.8 5.6V14h.6l.2-3.1-.2-5.3zM8.1 6.2V14h.5l.3-3.1-.3-4.7zM6.5 6.4V14H7l.3-3.1-.3-4.5zM4.9 6.7V14h.5l.3-3.1-.3-4.2zM3.3 7.3V14h.5l.3-3.1-.3-3.6zM1.8 7.5V14h.5l.3-3.1z"/></svg>
+                                <span id="music-login-label">Entrar com SoundCloud</span>
+                            </button>
+                            <form class="music-link-form" id="music-link-form" hidden>
+                                <input type="text" id="music-link-input" placeholder="soundcloud.com/o-teu-nome" autocomplete="off" spellcheck="false" aria-label="Link do teu perfil SoundCloud">
+                                <button type="submit" class="gw-btn-white">Ligar</button>
+                            </form>
+                            <button type="button" class="gw-mini" id="music-link-toggle">ou usar o link do perfil</button>
                         </div>
-                    </section>
+                        <p class="music-connect-error" id="music-connect-error" role="alert" hidden></p>
+                    </div>
+
+                    <div class="music-stage">
+                        <button type="button" class="music-nav music-nav-prev" id="music-flow-prev" aria-label="Faixa anterior">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <div class="music-flow" id="music-flow" role="listbox" aria-label="Faixas" tabindex="0">
+                            <div class="music-flow-empty" id="music-flow-empty"><span class="ps-spinner"></span> a carregar músicas…</div>
+                        </div>
+                        <button type="button" class="music-nav music-nav-next" id="music-flow-next" aria-label="Faixa seguinte">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="music-bar" id="music-bar">
+                        <div class="music-bar-controls">
+                            <button type="button" class="music-ctl" id="music-prev" aria-label="Anterior">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2.5 12zM21 6v12l-8.5-6z"/></svg>
+                            </button>
+                            <button type="button" class="music-ctl music-ctl-main" id="music-play" aria-label="Tocar">
+                                <svg class="i-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+                                <svg class="i-pause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                            </button>
+                            <button type="button" class="music-ctl" id="music-next" aria-label="Seguinte">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l8.5-6zM3 6v12l8.5-6z"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="music-now">
+                            <span class="music-now-art" id="music-now-art"></span>
+                            <span class="music-now-text">
+                                <strong id="music-now-title">Nada a tocar</strong>
+                                <small id="music-now-artist">escolhe uma faixa</small>
+                            </span>
+                            <span class="music-eq" id="music-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                            <a class="music-ctl music-ctl-sm" id="music-open-sc" href="https://soundcloud.com" target="_blank" rel="noopener" aria-label="Abrir no SoundCloud" title="Abrir no SoundCloud">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+                            </a>
+                            <div class="music-progress" id="music-progress" role="slider" aria-label="Posição na faixa" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><i id="music-progress-fill"></i></div>
+                        </div>
+
+                        <div class="music-bar-extra">
+                            <button type="button" class="music-ctl" id="music-queue-toggle" aria-label="Lista de faixas" aria-expanded="false">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                            </button>
+                            <div class="music-volume">
+                                <button type="button" class="music-ctl" id="music-mute" aria-label="Silenciar">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z" fill="currentColor"/><path class="i-wave" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+                                </button>
+                                <input type="range" id="music-volume" min="0" max="100" value="70" aria-label="Volume">
+                            </div>
+                        </div>
+
+                        <div class="music-queue" id="music-queue" hidden>
+                            <ol id="music-queue-list"></ol>
+                        </div>
+                    </div>
+
+                    <p class="music-credit">
+                        Música via <a href="https://soundcloud.com" target="_blank" rel="noopener">SoundCloud</a> — continua a tocar enquanto editas.
+                    </p>
+                    <div class="music-iframe-host" id="music-iframe-host" aria-hidden="true"></div>
+                </section>
             </section>
 
             <div class="ms-marquee" aria-hidden="true">
@@ -131,6 +299,8 @@
                     </div>
                 </div>
             </div>
+
+            </div><!-- /.ms-glass-zone -->
 
             <footer class="ms-footer">
                 <div class="ms-footer-top" data-reveal>
@@ -163,6 +333,78 @@
                 </div>
             </footer>
 
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         Comunidade: explorar, perfil, notificações.
+         Mesma linguagem visual da landing (nav em vidro, fundo preto,
+         cartões com fita, rodapé creme). Conteúdo: js/social-ui.js
+         ========================================================= -->
+    <div id="social-view" class="view ps-app">
+        <div class="ps-scroll" id="ps-scroll">
+            <header class="ps-top">
+                <nav class="ms-nav ps-nav" aria-label="Navegação da comunidade">
+                    <a href="#" class="ms-nav-brand" title="Voltar à página inicial">
+                        <span class="logo-mark" aria-hidden="true">
+                            <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+                                <circle cx="16" cy="16" r="15" fill="currentColor"/>
+                                <path d="M16 9c-2 0-3.6 1.6-3.6 3.6 0 2.4 3.6 8.1 3.6 8.1s3.6-5.7 3.6-8.1C19.6 10.6 18 9 16 9z" fill="#0A0A0A"/>
+                            </svg>
+                        </span>
+                        <span>pin space.</span>
+                    </a>
+
+                    <div class="ps-nav-links" id="ps-nav-links">
+                        <a href="#explore" class="ps-link" data-route="explore">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>
+                            <span>Explorar</span>
+                        </a>
+                        <a href="#notifications" class="ps-link" data-route="notifications">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                            <span>Notificações</span>
+                            <i class="ps-dot nav-badge" hidden></i>
+                        </a>
+                        <a href="#profile" class="ps-link" data-route="profile">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                            <span>Perfil</span>
+                        </a>
+                    </div>
+
+                    <div class="ps-nav-right">
+                        <form class="ps-search" id="ps-search-form" role="search">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                            <input type="search" placeholder="Procurar…" aria-label="Procurar quadros e pessoas" autocomplete="off">
+                        </form>
+                        <div class="ps-user" id="ps-user"></div>
+                    </div>
+                </nav>
+            </header>
+
+            <main class="ps-main" id="ps-main" tabindex="-1"></main>
+
+            <footer class="ms-footer ps-footer">
+                <div class="ms-footer-top">
+                    <div>
+                        <span class="ms-kicker">Mais projetos em</span>
+                        <a class="ms-footer-link" href="https://github.com/arthrtx" target="_blank" rel="noopener">
+                            github.com/arthrtx
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
+                        </a>
+                    </div>
+                    <div class="ms-footer-tags">
+                        <a class="ms-tag" href="#explore">explorar</a>
+                        <a class="ms-tag" href="#profile">perfil</a>
+                        <a class="ms-tag" href="#">início</a>
+                    </div>
+                </div>
+                <div class="ps-footer-word">pin space.</div>
+                <div class="ms-footer-bottom">
+                    <span>© PinSpace Create — o teu espaço para guardar ideias.</span>
+                    <span>Feito para criar, sem limites.</span>
+                </div>
+            </footer>
         </div>
     </div>
 
@@ -340,6 +582,43 @@
                         <span>Solte para adicionar</span>
                     </div>
                 </div>
+
+                <!-- Mini leitor de música no editor (sincronizado com js/music.js) -->
+                <div class="ed-music" id="ed-music" aria-label="Leitor de música">
+                    <button type="button" class="ed-music-disc" id="ed-music-disc" aria-label="Mostrar leitor de música" title="Música">
+                        <span class="ed-music-disc-art" data-music-art></span>
+                        <svg class="ed-music-disc-note" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 18V5l12-2v13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    </button>
+                    <div class="ed-music-bar">
+                        <div class="ed-music-controls">
+                            <button type="button" class="ed-music-btn" data-music-act="prev" aria-label="Anterior">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12L2.5 12zM21 6v12l-8.5-6z"/></svg>
+                            </button>
+                            <button type="button" class="ed-music-btn ed-music-main" data-music-act="toggle" aria-label="Tocar">
+                                <svg class="i-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+                                <svg class="i-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                            </button>
+                            <button type="button" class="ed-music-btn" data-music-act="next" aria-label="Seguinte">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l8.5-6zM3 6v12l8.5-6z"/></svg>
+                            </button>
+                        </div>
+                        <div class="ed-music-now">
+                            <span class="ed-music-art" data-music-art></span>
+                            <span class="ed-music-text">
+                                <strong data-music-title>Música</strong>
+                                <small data-music-artist>carrega em ▶ para ouvir</small>
+                            </span>
+                            <span class="music-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                            <div class="ed-music-progress" data-music-progress role="slider" aria-label="Posição na faixa" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i data-music-progress-fill></i></div>
+                        </div>
+                        <button type="button" class="ed-music-btn" data-music-act="mute" aria-label="Silenciar">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z" fill="currentColor"/><path class="i-wave" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+                        </button>
+                        <button type="button" class="ed-music-btn" id="ed-music-hide" aria-label="Recolher leitor" title="Recolher">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
@@ -437,6 +716,117 @@
         </div>
     </dialog>
 
+
+    <!-- Login / registo -->
+    <dialog id="modal-auth" class="modal modal-auth" aria-labelledby="auth-title">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="auth-title">Entrar no PinSpace</h2>
+                <button class="modal-close btn-icon-only" data-close-modal aria-label="Fechar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="modal-desc" id="auth-hint" hidden></p>
+            <div class="auth-tabs" role="tablist">
+                <button type="button" class="auth-tab active" data-mode="login" role="tab" aria-selected="true">Entrar</button>
+                <button type="button" class="auth-tab" data-mode="register" role="tab" aria-selected="false">Criar conta</button>
+            </div>
+
+            <form id="form-login" class="auth-form" novalidate>
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" name="email" autocomplete="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Palavra-passe</label>
+                    <input type="password" id="login-password" name="password" autocomplete="current-password" required>
+                </div>
+                <p class="auth-error" role="alert" hidden></p>
+                <button type="submit" class="btn btn-primary auth-submit">Entrar</button>
+                <p class="auth-switch">Ainda não tens conta? <a href="#" data-switch-mode="register">Cria uma</a></p>
+            </form>
+
+            <form id="form-register" class="auth-form" novalidate hidden>
+                <div class="form-group">
+                    <label for="register-username">Username</label>
+                    <input type="text" id="register-username" name="username" autocomplete="username" maxlength="30" required spellcheck="false">
+                    <p class="auth-field-hint" id="register-username-hint">Letras, números, "_" ou "-" (3–30).</p>
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" name="email" autocomplete="email" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="register-password">Palavra-passe</label>
+                        <input type="password" id="register-password" name="password" autocomplete="new-password" minlength="6" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password2">Repetir</label>
+                        <input type="password" id="register-password2" name="password2" autocomplete="new-password" minlength="6" required>
+                    </div>
+                </div>
+                <p class="auth-error" role="alert" hidden></p>
+                <p class="auth-info" role="status" hidden></p>
+                <button type="submit" class="btn btn-primary auth-submit">Criar conta</button>
+                <p class="auth-switch">Já tens conta? <a href="#" data-switch-mode="login">Entra</a></p>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- Repost com comentário -->
+    <dialog id="modal-repost" class="modal" aria-labelledby="repost-title">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="repost-title">Repostar quadro</h2>
+                <button class="modal-close btn-icon-only" data-close-modal aria-label="Fechar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="modal-desc">Aparece no separador Reposts do teu perfil.</p>
+            <form id="form-repost">
+                <div class="form-group">
+                    <label for="repost-comment">Comentário (opcional)</label>
+                    <textarea id="repost-comment" rows="3" maxlength="280" placeholder="Porque gostaste deste quadro?"></textarea>
+                    <p class="auth-field-hint" id="repost-count">0/280</p>
+                </div>
+                <button type="submit" class="btn btn-primary auth-submit">Repostar</button>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- Editar perfil -->
+    <dialog id="modal-perfil" class="modal" aria-labelledby="perfil-title">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="perfil-title">Editar perfil</h2>
+                <button class="modal-close btn-icon-only" data-close-modal aria-label="Fechar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form id="form-perfil">
+                <div class="perfil-avatar-row">
+                    <img id="perfil-avatar-preview" alt="Pré-visualização do avatar">
+                    <div>
+                        <button type="button" class="btn btn-secondary" id="perfil-avatar-pick">Mudar foto</button>
+                        <button type="button" class="btn btn-secondary" id="perfil-avatar-remove">Remover</button>
+                        <input type="file" id="perfil-avatar-file" accept="image/*" hidden>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="perfil-username">Username</label>
+                    <input type="text" id="perfil-username" name="username" maxlength="30" spellcheck="false" required>
+                </div>
+                <div class="form-group">
+                    <label for="perfil-bio">Bio</label>
+                    <textarea id="perfil-bio" name="bio" rows="3" maxlength="300" placeholder="Conta um pouco sobre ti"></textarea>
+                </div>
+                <p class="auth-error" role="alert" hidden></p>
+                <button type="submit" class="btn btn-primary auth-submit">Guardar perfil</button>
+            </form>
+        </div>
+    </dialog>
+
     <div id="context-menu" class="context-menu hidden">
         <button data-action="duplicate">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -472,13 +862,19 @@
 
     <div id="toast" class="toast hidden"></div>
 
-    <script src="js/core.js?v=2.2"></script>
-    <script src="js/reveal.js?v=2.2"></script>
-    <script src="js/data.js?v=2.2"></script>
-    <script src="js/editor.js?v=2.2"></script>
-    <script src="js/tools.js?v=2.2"></script>
-    <script src="js/board.js?v=2.2"></script>
-    <script src="js/ui.js?v=2.2"></script>
-    <script src="js/app.js?v=2.2"></script>
+    <script src="js/core.js?v=2.5"></script>
+    <script src="js/reveal.js?v=2.5"></script>
+    <script src="js/smooth-scroll.js?v=1.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="js/data.js?v=2.7"></script>
+    <script src="js/color-palettes.js?v=2.4"></script>
+    <script src="js/editor.js?v=2.4"></script>
+    <script src="js/tools.js?v=2.4"></script>
+    <script src="js/board.js?v=2.5"></script>
+    <script src="js/ui.js?v=2.7"></script>
+    <script src="js/social-ui.js?v=2.3"></script>
+    <script src="js/home-widgets.js?v=1.2"></script>
+    <script src="js/music.js?v=1.4"></script>
+    <script src="js/app.js?v=3.0"></script>
 </body>
 </html>

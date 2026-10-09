@@ -41,7 +41,10 @@
     )];
 
     const seen = new WeakSet();
-    const pending = () => revealTargets().filter((el) => !seen.has(el));
+    // Lista guardada: antes era refeita (querySelectorAll) a cada frame de scroll.
+    let targets = revealTargets();
+    const refreshTargets = () => { targets = revealTargets(); };
+    const pending = () => targets.filter((el) => !seen.has(el));
 
     const checkReveal = () => {
         // Procuramos de novo: o container pode ter acabado de aparecer.
@@ -55,7 +58,9 @@
         const home = document.getElementById('home-view');
         if (home && !home.classList.contains('active')) return;
 
-        pending().forEach((el) => {
+        const left = pending();
+        if (!left.length) return;
+        left.forEach((el) => {
             const r = el.getBoundingClientRect();
             // Basta a ponta de cima entrar na vista para revelar.
             if (r.top < box.bottom - 8 && r.bottom > box.top + 8) {
@@ -82,7 +87,7 @@
 
     document.addEventListener('scroll', onRevealScroll, { capture: true, passive: true });
     window.addEventListener('resize', onRevealScroll, { passive: true });
-    window.addEventListener('load', checkReveal);
+    window.addEventListener('load', () => { refreshTargets(); checkReveal(); });
     setTimeout(checkReveal, 60);
     checkReveal();
 
@@ -119,7 +124,7 @@
     // para a revelar assim que os cartoes existam.
     const galeria = document.getElementById('lista-publicos');
     if (galeria) {
-        new MutationObserver(() => checkReveal()).observe(galeria, { childList: true });
+        new MutationObserver(() => { refreshTargets(); checkReveal(); }).observe(galeria, { childList: true });
     }
 
     const pinTexts = [...document.querySelectorAll('[data-pin-text]')];
@@ -163,11 +168,13 @@
             ticking = false;
         };
         scroller.addEventListener('scroll', () => {
+            // Parallax só interessa enquanto o hero está visível.
+            if (scroller.scrollTop > scroller.clientHeight * 1.2) return;
             if (!ticking) {
                 requestAnimationFrame(applyPar);
                 ticking = true;
             }
-        });
+        }, { passive: true });
         applyPar();
     }
 
@@ -177,7 +184,12 @@
             const max = scroller.scrollHeight - scroller.clientHeight;
             prog.style.transform = `scaleX(${max > 0 ? scroller.scrollTop / max : 0})`;
         };
-        scroller.addEventListener('scroll', () => requestAnimationFrame(update));
+        let progTick = false;
+        scroller.addEventListener('scroll', () => {
+            if (progTick) return;
+            progTick = true;
+            requestAnimationFrame(() => { update(); progTick = false; });
+        }, { passive: true });
         window.addEventListener('resize', update);
         window.addEventListener('load', update);
         update();

@@ -1,0 +1,544 @@
+/* ============================================
+   RESPONSIVE IMPROVEMENTS - Mobile First
+   ============================================ */
+
+/* Base responsivo para todos os elementos */
+* {
+    box-sizing: border-box;
+}
+
+/* TOPBAR RESPONSIVA */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--topbar-height);
+    padding: 0 16px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.topbar::-webkit-scrollbar {
+    display: none;
+}
+
+.topbar-left,
+.topbar-center,
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.topbar-center {
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.topbar-btn {
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.topbar-btn span {
+    display: inline-block;
+}
+
+/* TOOLBAR RESPONSIVA */
+.toolbar {
+    width: var(--sidebar-width);
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(230, 0, 35, 0.3) transparent;
+}
+
+.toolbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.toolbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.toolbar::-webkit-scrollbar-thumb {
+    background: rgba(230, 0, 35, 0.3);
+    border-radius: 3px;
+}
+
+.toolbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(230, 0, 35, 0.5);
+}
+
+/* TOOL PANEL RESPONSIVO */
+#tool-panel {
+    width: var(--panel-width);
+    max-width: 90vw;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    transition: width var(--transition),
+                opacity var(--transition),
+                transform var(--transition);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(230, 0, 35, 0.3) transparent;
+}
+
+#tool-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+#tool-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#tool-panel::-webkit-scrollbar-thumb {
+    background: rgba(230, 0, 35, 0.3);
+    border-radius: 4px;
+}
+
+#tool-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(230, 0, 35, 0.5);
+}
+
+#tool-panel.collapsed {
+    width: 0;
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: none;
+}
+
+.panel-content {
+    padding: 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: calc(100vh - var(--topbar-height) - 60px);
+}
+
+/* GRIDS RESPONSIVOS */
+.text-presets-grid,
+.shapes-grid,
+.stickers-grid,
+.effects-grid,
+.color-palette-colors {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+}
+
+.text-presets-grid {
+    grid-template-columns: 1fr;
+}
+
+.shapes-grid,
+.stickers-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+}
+
+.effects-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+}
+
+.color-palette-colors {
+    grid-template-columns: repeat(5, 1fr);
+}
+
+/* MODAIS RESPONSIVOS */
+.modal {
+    max-width: min(520px, 92vw);
+    max-height: min(86vh, 680px);
+    overflow: auto;
+}
+
+.modal-content {
+    width: 100%;
+    padding: 24px;
+}
+
+.size-grid,
+.export-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+/* ZOOM CONTROLS RESPONSIVOS */
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+#zoom-level {
+    min-width: 45px;
+    text-align: center;
+    font-size: 12px;
+}
+
+/* ============================================
+   MEDIA QUERIES
+   ============================================ */
+
+/* Grelha masonry */
+@media (max-width: 1400px) {
+    .projects-grid {
+        column-count: 3;
+    }
+}
+
+/* Tablets e telas médias (1024px e abaixo) */
+@media (max-width: 1024px) {
+    :root {
+        --topbar-height: 56px;
+        --sidebar-width: 70px;
+        --panel-width: 280px;
+    }
+
+    .projects-grid {
+        column-count: 2;
+        column-gap: 16px;
+    }
+
+    .topbar-btn span {
+        font-size: 12px;
+    }
+
+    .tool-btn .tool-label {
+        font-size: 10px;
+    }
+
+    #tool-panel {
+        max-width: 85vw;
+    }
+
+    .panel-content {
+        padding: 14px;
+    }
+
+    .modal-content {
+        padding: 20px;
+    }
+}
+
+/* Tablets pequenos (768px e abaixo) */
+@media (max-width: 768px) {
+    :root {
+        --topbar-height: 52px;
+        --sidebar-width: 64px;
+        --panel-width: 100vw;
+    }
+
+    .topbar {
+        padding: 0 12px;
+        gap: 6px;
+    }
+
+    .topbar-left {
+        gap: 6px;
+    }
+
+    .topbar-center {
+        display: none;
+    }
+
+    .topbar-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .topbar-btn-icon span {
+        display: none;
+    }
+
+    .topbar-divider {
+        display: none;
+    }
+
+    .project-title {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .toolbar {
+        width: var(--sidebar-width);
+    }
+
+    .tool-btn {
+        padding: 10px 8px;
+    }
+
+    .tool-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .tool-label {
+        font-size: 9px;
+    }
+
+    #tool-panel {
+        position: absolute;
+        left: var(--sidebar-width);
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: auto;
+        max-width: none;
+        z-index: 1000;
+    }
+
+    #tool-panel.collapsed {
+        width: auto;
+        max-width: none;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(100%);
+    }
+
+    .panel-header {
+        padding: 14px;
+    }
+
+    .panel-content {
+        padding: 12px;
+        max-height: calc(100vh - var(--topbar-height) - 56px);
+    }
+
+    .panel-section {
+        padding: 14px 12px;
+        margin-bottom: 12px;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .size-grid,
+    .export-options {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+
+    .modal-content {
+        padding: 18px;
+        max-width: 95vw;
+    }
+
+    .zoom-controls {
+        gap: 4px;
+    }
+
+    .btn-icon-only {
+        width: 32px;
+        height: 32px;
+    }
+
+    /* Grid de projetos */
+    .projects-grid {
+        column-count: 2;
+        column-gap: 12px;
+    }
+}
+
+/* Mobile (480px e abaixo) */
+@media (max-width: 480px) {
+    :root {
+        --topbar-height: 50px;
+        --sidebar-width: 56px;
+    }
+
+    .topbar {
+        padding: 0 8px;
+        gap: 4px;
+    }
+
+    .topbar-brand-name {
+        display: none;
+    }
+
+    .topbar-sep {
+        display: none;
+    }
+
+    .project-title {
+        max-width: 80px;
+        font-size: 13px;
+    }
+
+    .topbar-btn {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    .topbar-right {
+        gap: 4px;
+    }
+
+    .zoom-controls span {
+        font-size: 11px;
+    }
+
+    .toolbar {
+        width: var(--sidebar-width);
+    }
+
+    .tool-btn {
+        padding: 8px 6px;
+    }
+
+    .tool-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .tool-label {
+        font-size: 8px;
+    }
+
+    .panel-header h3 {
+        font-size: 15px;
+    }
+
+    .panel-section h4 {
+        font-size: 12px;
+    }
+
+    .form-group label {
+        font-size: 11px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+        font-size: 13px;
+        padding: 8px 10px;
+    }
+
+    .btn,
+    .btn-secondary {
+        padding: 10px 14px;
+        font-size: 12px;
+    }
+
+    .modal-header h2 {
+        font-size: 18px;
+    }
+
+    .size-grid,
+    .export-options {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .projects-grid {
+        column-count: 1;
+        column-gap: 0;
+    }
+
+    .projects-grid .project-card .project-card-thumb {
+        height: 0;
+        padding-bottom: 72%;
+    }
+
+    /* Esconder elementos menos importantes em telas muito pequenas */
+    .topbar-logo-mark {
+        width: 18px;
+        height: 18px;
+    }
+
+    .btn-icon-only {
+        width: 30px;
+        height: 30px;
+    }
+
+    .btn-icon-only svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+/* Mobile muito pequeno (360px e abaixo) */
+@media (max-width: 360px) {
+    :root {
+        --topbar-height: 48px;
+        --sidebar-width: 50px;
+    }
+
+    .toolbar {
+        width: 50px;
+    }
+
+    .tool-label {
+        display: none;
+    }
+
+    .project-title {
+        max-width: 60px;
+    }
+}
+
+/* Landscape mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+    .topbar {
+        height: 48px;
+    }
+
+    .panel-content {
+        max-height: calc(100vh - 48px - 50px);
+    }
+
+    .modal-content {
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+}
+
+/* Touch devices */
+@media (hover: none) and (pointer: coarse) {
+    .tool-btn,
+    .btn,
+    .topbar-btn,
+    .btn-icon-only {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .handle {
+        width: 16px;
+        height: 16px;
+    }
+
+    .handle-rotate {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* Alta resolução (retina) */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .tool-icon svg,
+    .topbar-btn svg {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* Preferência de movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

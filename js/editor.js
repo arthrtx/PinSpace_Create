@@ -551,7 +551,11 @@ let fitMeasureCanvas = null;
 const TEXT_PRESETS = {
     titulo: { conteudo: 'Adicione um título', fonte: 'Playfair Display', tamanho: 46, cor: '#0f172a', negrito: true, alinhamento: 'left', width: 520, height: 90 },
     subtitulo: { conteudo: 'Adicione um subtítulo', fonte: 'Montserrat', tamanho: 26, cor: '#3f3f46', negrito: false, alinhamento: 'left', width: 440, height: 60 },
-    texto: { conteudo: 'Adicione algum texto', fonte: 'Segoe UI', tamanho: 18, cor: '#52525b', negrito: false, alinhamento: 'left', width: 360, height: 48 }
+    texto: { conteudo: 'Adicione algum texto', fonte: 'Segoe UI', tamanho: 18, cor: '#52525b', negrito: false, alinhamento: 'left', width: 360, height: 48 },
+    citacao: { conteudo: '"Adicione uma citação inspiradora"', fonte: 'Playfair Display', tamanho: 32, cor: '#1e293b', negrito: false, italico: true, alinhamento: 'center', width: 480, height: 80 },
+    destaque: { conteudo: 'DESTAQUE', fonte: 'Archivo Black', tamanho: 56, cor: '#E60023', negrito: true, alinhamento: 'center', width: 440, height: 100 },
+    nota: { conteudo: 'Uma pequena nota', fonte: 'Inter', tamanho: 14, cor: '#64748b', negrito: false, alinhamento: 'left', width: 280, height: 40 },
+    chamada: { conteudo: 'Sua mensagem aqui!', fonte: 'Poppins', tamanho: 38, cor: '#0ea5e9', negrito: true, alinhamento: 'center', width: 500, height: 85 }
 };
 
 function createTextPreset(preset, elementos) {
@@ -619,6 +623,7 @@ function renderTextElement(dom, el) {
         textEl.textContent = el.conteudo;
     }
 
+    // Estilos básicos
     textEl.style.fontFamily = el.fonte;
     textEl.style.fontSize = el.tamanho + 'px';
     textEl.style.color = el.cor;
@@ -629,6 +634,34 @@ function renderTextElement(dom, el) {
         el.riscado ? 'line-through' : ''
     ].filter(Boolean).join(' ') || 'none';
     textEl.style.textAlign = el.alinhamento;
+    textEl.style.wordWrap = 'break-word';
+    textEl.style.overflowWrap = 'break-word';
+    textEl.style.whiteSpace = 'pre-wrap';
+    textEl.style.padding = '4px';
+    textEl.style.boxSizing = 'border-box';
+
+    // Novos estilos avançados
+    textEl.style.lineHeight = (el.lineHeight || 1.2);
+    textEl.style.letterSpacing = (el.letterSpacing || 0) + 'px';
+    textEl.style.textTransform = el.textTransform || 'none';
+
+    // Cor de fundo do texto
+    if (el.bgColor) {
+        textEl.style.backgroundColor = el.bgColor;
+        textEl.style.padding = '6px 8px';
+    } else {
+        textEl.style.backgroundColor = 'transparent';
+        textEl.style.padding = '4px';
+    }
+
+    // Sombra do texto
+    if (el.textShadow && el.textShadowBlur > 0) {
+        const blur = el.textShadowBlur || 4;
+        const color = el.textShadowColor || '#000000';
+        textEl.style.textShadow = `0 2px ${blur}px ${color}`;
+    } else {
+        textEl.style.textShadow = 'none';
+    }
 
     fitTextElement(dom, el);
 }
@@ -692,6 +725,10 @@ function getTextPanelHTML(el) {
                     <span class="text-add-sample" style="font-family:'Segoe UI';font-weight:400;font-size:15px">Adicione algum texto</span>
                     <span class="text-add-label">Texto</span>
                 </button>
+                <button class="text-add-card" data-add="citacao" title="Adicionar citação">
+                    <span class="text-add-sample" style="font-family:'Lora';font-style:italic;font-size:16px">"Uma citação"</span>
+                    <span class="text-add-label">Citação</span>
+                </button>
             </div>
         </div>
         ${el ? `
@@ -714,7 +751,7 @@ function getTextPanelHTML(el) {
                 </div>
             </div>
             <div class="form-group">
-                <label>Cor</label>
+                <label>Cor do texto</label>
                 <input type="color" id="prop-cor" value="${el.cor || '#0f172a'}">
             </div>
             <div class="form-group">
@@ -735,11 +772,57 @@ function getTextPanelHTML(el) {
                 </div>
             </div>
             <div class="form-group">
+                <label>Espaçamento entre linhas</label>
+                <input type="range" id="prop-line-height" min="0.8" max="2.5" step="0.1" value="${el.lineHeight || 1.2}">
+                <span style="font-size:11px;color:var(--text-muted)">${(el.lineHeight || 1.2).toFixed(1)}</span>
+            </div>
+            <div class="form-group">
+                <label>Espaçamento entre letras</label>
+                <input type="range" id="prop-letter-spacing" min="-5" max="20" step="0.5" value="${el.letterSpacing || 0}">
+                <span style="font-size:11px;color:var(--text-muted)">${(el.letterSpacing || 0).toFixed(1)}px</span>
+            </div>
+            <div class="form-group">
+                <label>Transformação</label>
+                <div class="toggle-group">
+                    <button class="toggle-btn ${!el.textTransform || el.textTransform === 'none' ? 'active' : ''}" data-transform="none" title="Normal">Aa</button>
+                    <button class="toggle-btn ${el.textTransform === 'uppercase' ? 'active' : ''}" data-transform="uppercase" title="Maiúsculas">AA</button>
+                    <button class="toggle-btn ${el.textTransform === 'lowercase' ? 'active' : ''}" data-transform="lowercase" title="Minúsculas">aa</button>
+                    <button class="toggle-btn ${el.textTransform === 'capitalize' ? 'active' : ''}" data-transform="capitalize" title="Capitalizar">Aa</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Cor de fundo do texto</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="checkbox" id="prop-has-bg" ${el.bgColor ? 'checked' : ''} style="margin:0">
+                    <input type="color" id="prop-bg-color" value="${el.bgColor || '#ffffff'}" ${!el.bgColor ? 'disabled' : ''} style="flex:1">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Sombra do texto</label>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                    <input type="checkbox" id="prop-has-shadow" ${el.textShadow ? 'checked' : ''} style="margin:0">
+                    <span style="font-size:12px;color:var(--text-muted)">Ativar sombra</span>
+                </div>
+                <div id="shadow-controls" style="display:${el.textShadow ? 'block' : 'none'}">
+                    <div class="form-row">
+                        <div class="form-group" style="flex:1">
+                            <label style="font-size:11px">Desfoque</label>
+                            <input type="range" id="prop-shadow-blur" min="0" max="20" value="${el.textShadowBlur || 4}">
+                        </div>
+                        <div class="form-group" style="flex:1">
+                            <label style="font-size:11px">Cor</label>
+                            <input type="color" id="prop-shadow-color" value="${el.textShadowColor || '#000000'}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
                 <label><input type="checkbox" id="prop-autoajustar" ${el.autoAjustar !== false ? 'checked' : ''} style="margin-right:6px"> Auto-ajustar caixa ao conteúdo</label>
             </div>
             <div class="form-group">
                 <label>Opacidade</label>
                 <input type="range" id="prop-opacidade" min="0" max="1" step="0.05" value="${el.opacidade ?? 1}">
+                <span style="font-size:11px;color:var(--text-muted)">${Math.round((el.opacidade ?? 1) * 100)}%</span>
             </div>
             <div class="form-group">
                 <label>Rotação</label>
@@ -846,6 +929,85 @@ function bindTextPanelEvents(panel, el, callbacks) {
 
     panel.querySelector('#prop-rotation')?.addEventListener('change', (e) => {
         el.rotation = parseInt(e.target.value) || 0;
+        callbacks.onUpdate(el);
+    });
+
+    // Novos event handlers para opções avançadas de texto
+    panel.querySelector('#prop-line-height')?.addEventListener('input', (e) => {
+        el.lineHeight = parseFloat(e.target.value);
+        e.target.nextElementSibling.textContent = el.lineHeight.toFixed(1);
+        callbacks.onUpdate(el);
+    });
+
+    panel.querySelector('#prop-letter-spacing')?.addEventListener('input', (e) => {
+        el.letterSpacing = parseFloat(e.target.value);
+        e.target.nextElementSibling.textContent = el.letterSpacing.toFixed(1) + 'px';
+        callbacks.onUpdate(el);
+    });
+
+    panel.querySelectorAll('[data-transform]')?.forEach(btn => {
+        btn.addEventListener('click', () => {
+            el.textTransform = btn.dataset.transform;
+            panel.querySelectorAll('[data-transform]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            callbacks.onUpdate(el);
+        });
+    });
+
+    panel.querySelector('#prop-has-bg')?.addEventListener('change', (e) => {
+        const colorInput = panel.querySelector('#prop-bg-color');
+        if (e.target.checked) {
+            el.bgColor = colorInput.value;
+            colorInput.disabled = false;
+        } else {
+            el.bgColor = null;
+            colorInput.disabled = true;
+        }
+        callbacks.onUpdate(el);
+    });
+
+    panel.querySelector('#prop-bg-color')?.addEventListener('input', (e) => {
+        if (panel.querySelector('#prop-has-bg').checked) {
+            el.bgColor = e.target.value;
+            callbacks.onUpdate(el);
+        }
+    });
+
+    panel.querySelector('#prop-has-shadow')?.addEventListener('change', (e) => {
+        const shadowControls = panel.querySelector('#shadow-controls');
+        if (e.target.checked) {
+            el.textShadow = true;
+            el.textShadowBlur = parseInt(panel.querySelector('#prop-shadow-blur')?.value) || 4;
+            el.textShadowColor = panel.querySelector('#prop-shadow-color')?.value || '#000000';
+            shadowControls.style.display = 'block';
+        } else {
+            el.textShadow = false;
+            el.textShadowBlur = 0;
+            el.textShadowColor = '#000000';
+            shadowControls.style.display = 'none';
+        }
+        callbacks.onUpdate(el);
+    });
+
+    panel.querySelector('#prop-shadow-blur')?.addEventListener('input', (e) => {
+        if (el.textShadow) {
+            el.textShadowBlur = parseInt(e.target.value) || 0;
+            callbacks.onUpdate(el);
+        }
+    });
+
+    panel.querySelector('#prop-shadow-color')?.addEventListener('input', (e) => {
+        if (el.textShadow) {
+            el.textShadowColor = e.target.value;
+            callbacks.onUpdate(el);
+        }
+    });
+
+    // Atualizar displays de valores dos sliders
+    panel.querySelector('#prop-opacidade')?.addEventListener('input', (e) => {
+        el.opacidade = parseFloat(e.target.value);
+        const display = e.target.nextElementSibling;
+        if (display) display.textContent = Math.round(el.opacidade * 100) + '%';
         callbacks.onUpdate(el);
     });
 }
@@ -1274,6 +1436,25 @@ const STICKER_PACKS = [
             { id: 'dots', label: 'Pontos' },
             { id: 'ring', label: 'Anel' }
         ]
+    },
+    {
+        id: 'aesthetic',
+        label: 'Aesthetic',
+        icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`,
+        stickers: [
+            { id: 'aesthetic-arch', label: 'Arco Minimalista' },
+            { id: 'aesthetic-line', label: 'Linha Abstrata' },
+            { id: 'aesthetic-circle', label: 'Círculo Aberto' },
+            { id: 'aesthetic-half-moon', label: 'Meia Lua' },
+            { id: 'aesthetic-abstract', label: 'Forma Abstrata' },
+            { id: 'aesthetic-dots', label: 'Pontos Minimalistas' },
+            { id: 'aesthetic-wavy', label: 'Linha Orgânica' },
+            { id: 'aesthetic-frame', label: 'Moldura Fina' },
+            { id: 'aesthetic-branch', label: 'Ramo Delicado' },
+            { id: 'aesthetic-flower', label: 'Flor Linear' },
+            { id: 'aesthetic-geo', label: 'Geométrico Suave' },
+            { id: 'aesthetic-sun', label: 'Sol Linear' }
+        ]
     }
 ];
 
@@ -1447,15 +1628,83 @@ function getStickerSVG(id) {
             <path d="M35 45 Q45 50 52 55" fill="none" stroke="white" stroke-width="1" opacity="0.3"/>
         </svg>`,
         'butterfly': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 70" width="80" height="70">
-            <ellipse cx="25" cy="25" rx="20" ry="18" fill="${c.indigo}" opacity="0.8" transform="rotate(-15 25 25)"/>
-            <ellipse cx="55" cy="25" rx="20" ry="18" fill="${c.indigo}" opacity="0.8" transform="rotate(15 55 25)"/>
-            <ellipse cx="22" cy="48" rx="14" ry="12" fill="${c.sky}" opacity="0.8" transform="rotate(-10 22 48)"/>
-            <ellipse cx="58" cy="48" rx="14" ry="12" fill="${c.sky}" opacity="0.8" transform="rotate(10 58 48)"/>
-            <ellipse cx="40" cy="35" rx="4" ry="18" fill="${c.ink}"/>
-            <line x1="38" y1="18" x2="32" y2="8" stroke="${c.ink}" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="42" y1="18" x2="48" y2="8" stroke="${c.ink}" stroke-width="1.5" stroke-linecap="round"/>
-            <circle cx="32" cy="7" r="2" fill="${c.ink}"/>
-            <circle cx="48" cy="7" r="2" fill="${c.ink}"/>
+            <path d="M20 35 Q10 20 15 10 Q20 5 25 8 Q30 12 28 20 L40 35" fill="${c.pink}" opacity="0.8"/>
+            <path d="M60 35 Q70 20 65 10 Q60 5 55 8 Q50 12 52 20 L40 35" fill="${c.pink}" opacity="0.8"/>
+            <path d="M20 35 Q10 50 15 60 Q20 65 25 62 Q30 58 28 50 L40 35" fill="${c.mustard}" opacity="0.8"/>
+            <path d="M60 35 Q70 50 65 60 Q60 65 55 62 Q50 58 52 50 L40 35" fill="${c.mustard}" opacity="0.8"/>
+            <ellipse cx="40" cy="35" rx="3" ry="8" fill="${c.ink}"/>
+            <line x1="40" y1="27" x2="36" y2="20" stroke="${c.ink}" stroke-width="1.5"/>
+            <line x1="40" y1="27" x2="44" y2="20" stroke="${c.ink}" stroke-width="1.5"/>
+        </svg>`,
+        'aesthetic-arch': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 80" width="90" height="80">
+            <path d="M10 70 Q10 20 45 20 Q80 20 80 70" fill="none" stroke="${c.ink}" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>`,
+        'aesthetic-line': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40" width="100" height="40">
+            <path d="M5 20 Q30 10 50 20 Q70 30 95 20" fill="none" stroke="${c.ink}" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>`,
+        'aesthetic-circle': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 70" width="70" height="70">
+            <circle cx="35" cy="35" r="28" fill="none" stroke="${c.ink}" stroke-width="1.2"/>
+            <circle cx="35" cy="35" r="22" fill="none" stroke="${c.terracotta}" stroke-width="0.8" opacity="0.5"/>
+        </svg>`,
+        'aesthetic-half-moon': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80" width="60" height="80">
+            <path d="M30 10 A25 25 0 0 0 30 60" fill="none" stroke="${c.ink}" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="30" cy="25" r="2" fill="${c.mustard}"/>
+            <circle cx="30" cy="45" r="1.5" fill="${c.mustard}"/>
+        </svg>`,
+        'aesthetic-abstract': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+            <path d="M10 40 Q20 10 40 20 Q60 30 70 10" fill="none" stroke="${c.ink}" stroke-width="1.2"/>
+            <path d="M10 50 Q30 70 50 50 Q70 30 70 60" fill="none" stroke="${c.terracotta}" stroke-width="1" opacity="0.6"/>
+        </svg>`,
+        'aesthetic-dots': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+            <circle cx="20" cy="20" r="2" fill="${c.ink}"/>
+            <circle cx="40" cy="20" r="2" fill="${c.ink}"/>
+            <circle cx="60" cy="20" r="2" fill="${c.ink}"/>
+            <circle cx="20" cy="40" r="2" fill="${c.terracotta}"/>
+            <circle cx="40" cy="40" r="2" fill="${c.terracotta}"/>
+            <circle cx="60" cy="40" r="2" fill="${c.terracotta}"/>
+            <circle cx="20" cy="60" r="2" fill="${c.mustard}"/>
+            <circle cx="40" cy="60" r="2" fill="${c.mustard}"/>
+            <circle cx="60" cy="60" r="2" fill="${c.mustard}"/>
+        </svg>`,
+        'aesthetic-wavy': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="100" height="60">
+            <path d="M5 30 Q20 15 35 30 Q50 45 65 30 Q80 15 95 30" fill="none" stroke="${c.ink}" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>`,
+        'aesthetic-frame': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+            <rect x="10" y="10" width="60" height="60" fill="none" stroke="${c.ink}" stroke-width="1.2"/>
+            <rect x="15" y="15" width="50" height="50" fill="none" stroke="${c.terracotta}" stroke-width="0.8" opacity="0.5"/>
+        </svg>`,
+        'aesthetic-branch': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 90" width="70" height="90">
+            <line x1="35" y1="10" x2="35" y2="80" stroke="${c.moss}" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="35" y1="25" x2="25" y2="20" stroke="${c.moss}" stroke-width="1" stroke-linecap="round"/>
+            <line x1="35" y1="35" x2="45" y2="32" stroke="${c.moss}" stroke-width="1" stroke-linecap="round"/>
+            <line x1="35" y1="50" x2="28" y2="48" stroke="${c.moss}" stroke-width="1" stroke-linecap="round"/>
+            <line x1="35" y1="65" x2="42" y2="63" stroke="${c.moss}" stroke-width="1" stroke-linecap="round"/>
+            <circle cx="25" cy="20" r="2" fill="${c.terracotta}"/>
+            <circle cx="45" cy="32" r="2" fill="${c.terracotta}"/>
+            <circle cx="28" cy="48" r="2" fill="${c.terracotta}"/>
+            <circle cx="42" cy="63" r="2" fill="${c.terracotta}"/>
+        </svg>`,
+        'aesthetic-flower': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 70" width="70" height="70">
+            <circle cx="35" cy="35" r="4" fill="${c.mustard}"/>
+            <ellipse cx="35" cy="20" rx="4" ry="10" fill="none" stroke="${c.ink}" stroke-width="1"/>
+            <ellipse cx="50" cy="35" rx="10" ry="4" fill="none" stroke="${c.ink}" stroke-width="1"/>
+            <ellipse cx="35" cy="50" rx="4" ry="10" fill="none" stroke="${c.ink}" stroke-width="1"/>
+            <ellipse cx="20" cy="35" rx="10" ry="4" fill="none" stroke="${c.ink}" stroke-width="1"/>
+        </svg>`,
+        'aesthetic-geo': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+            <polygon points="40,15 60,35 40,55 20,35" fill="none" stroke="${c.ink}" stroke-width="1.2"/>
+            <circle cx="40" cy="35" r="8" fill="none" stroke="${c.terracotta}" stroke-width="0.8"/>
+        </svg>`,
+        'aesthetic-sun': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+            <circle cx="40" cy="40" r="12" fill="none" stroke="${c.mustard}" stroke-width="1.5"/>
+            <line x1="40" y1="10" x2="40" y2="18" stroke="${c.mustard}" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="40" y1="62" x2="40" y2="70" stroke="${c.mustard}" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="10" y1="40" x2="18" y2="40" stroke="${c.mustard}" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="62" y1="40" x2="70" y2="40" stroke="${c.mustard}" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="19" y1="19" x2="25" y2="25" stroke="${c.mustard}" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="55" y1="55" x2="61" y2="61" stroke="${c.mustard}" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="61" y1="19" x2="55" y2="25" stroke="${c.mustard}" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="25" y1="55" x2="19" y2="61" stroke="${c.mustard}" stroke-width="1.2" stroke-linecap="round"/>
         </svg>`,
         'wave': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40" width="100" height="40">
             <path d="M5 20 Q15 5 25 20 Q35 35 45 20 Q55 5 65 20 Q75 35 85 20 Q95 5 95 20" fill="none" stroke="${c.sky}" stroke-width="3" stroke-linecap="round"/>

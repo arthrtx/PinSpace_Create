@@ -12,21 +12,313 @@ class PinSpaceApp {
         this._dropPreviewURL = null;
         this._clipboard = null;
         this._pasteOffset = 0;
+
+        // Contas / rede social
+        this.currentUser = null;      // { id, email, username, image, bio } ou null
+        this.authState = 'loading';   // 'loading' | 'loggedIn' | 'loggedOut'
+        this.authReady = Promise.resolve();
+        this.social = new SocialUI(this);
+        this.homeWidgets = new HomeWidgets(this);
+        this.music = new MusicPlayer(this);
     }
 
     init() {
         this._initBoard();
         this._bindUI();
         this._applySettings();
-        this._showHome();
+        this.social.init();
+        this.homeWidgets.init();
+        this.music.init();
+        this.authReady = this.checkAuth();
+        this._initRouter();
         this._startAutosave();
     }
 
-    _startAutosave() {
-        this._autosaveTimer = setInterval(() => {
-            if (this.project && this.isDirty && this.ui.editorView.classList.contains('active')) {
-                this.saveCurrentProject(true);
+    /* ================= Contas ================= */
+
+    async checkAuth() {
+        this.authState = 'loading';
+        this.social.renderAuthAreas();
+        let user = null;
+        try {
+            user = await getCurrentUser();
+        } catch (err) {
+            console.warn('Não foi possível verificar a sessão:', err);
+        }
+        if (user) {
+            this.currentUser = user;
+            this.authState = 'loggedIn';
+            this.showLoggedInUI();
+        } else {
+            this.currentUser = null;
+            this.authState = 'loggedOut';
+            this.showLoggedOutUI();
+        }
+        return user;
+    }
+
+    showLoggedInUI() {
+        document.documentElement.classList.add('is-logged-in');
+        this.social.renderAuthAreas();
+        this.social.startNotifPolling();
+        if (this.project && this.ui.editorView.classList.contains('active') && this.ui.currentTool === 'settings') this._refreshPanel();
+    }
+
+    showLoggedOutUI() {
+        document.documentElement.classList.remove('is-logged-in');
+        this.social.renderAuthAreas();
+        this.social.stopNotifPolling();
+        if (this.project && this.ui.editorView.classList.contains('active') && this.ui.currentTool === 'settings') this._refreshPanel();
+    }
+
+    showLoginModal(mode = 'login', hint = '') {
+        this.social.openAuth(mode, hint);
+    }
+
+    async onSignedIn(isNewAccount = false) {
+        this.authReady = this.checkAuth();
+        const user = await this.authReady;
+        if (!user) return;
+        this.ui.showToast(isNewAccount ? `Bem-vindo(a), @${user.username}!` : `Olá, @${user.username}!`);
+        if (this.ui.editorView.classList.contains('active')) return; // fica no editor
+        const target = '#profile/' + encodeURIComponent(user.username || '');
+        if (window.location.hash === target) this._handleHashChange();
+        else window.location.hash = target;
+    }
+
+    async logout() {
+        await signOut();
+        this.currentUser = null;
+        this.authState = 'loggedOut';
+        this.authReady = Promise.resolve(null);
+        this.showLoggedOutUI();
+        this.ui.showToast('Sessão terminada.');
+        if (this.ui.isSocialActive()) {
+            const r = this._parseRoute();
+            if (r && r.name === 'notifications') window.location.hash = '#explore';
+            else if (r) this.social.render(r);
+        }
+    }
+
+    toggleTheme() {
+        const cur = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+        this._setTheme(cur === 'dark' ? 'light' : 'dark');
+    }
+
+    /* ================= Router por hash =================
+       #explore[?q=] · #notifications · #profile · #profile/<user>[/reposts|followers|following]
+       Qualquer outro hash (ex.: #projetos-recentes) = landing page.        */
+
+    _initRouter() {
+        window.addEventListener('hashchange', () => this._handleHashChange());
+
+        window.addEventListener('pinspace:auth', async (e) => {
+            const { event, session } = e.detail || {};
+            if (event === 'SIGNED_OUT' && this.currentUser) {
+                this.currentUser = null;
+                this.authState = 'loggedOut';
+                this.showLoggedOutUI();
+                if (this.ui.isSocialActive()) this._handleHashChange();
+            } else if (event === 'SIGNED_IN' && session && (!this.currentUser || this.currentUser.id !== session.user.id)) {
+                // Login noutro separador ou regresso do link de confirmação por email.
+                this.authReady = this.checkAuth();
+                await this.authReady;
+                if (/access_token|type=signup/.test(window.location.hash)) window.location.hash = '#profile';
+                else if (this.ui.isSocialActive()) this._handleHashChange();
             }
+        });
+
+        this._handleHashChange(true);
+    }
+
+    _parseRoute() {
+        let h = window.location.hash.replace(/^#\/?/, '');
+        if (!h) return null;
+        let query = '';
+        const qi = h.indexOf('?');
+        if (qi >= 0) { query = h.slice(qi + 1); h = h.slice(0, qi); }
+        const parts = h.split('/').map(x => { try { return decodeURIComponent(x); } catch { return x; } });
+        switch (parts[0]) {
+            case 'feed':        // links antigos do feed vão para Explorar
+            case 'inicio':
+            case 'dashboard':
+            case 'explore':
+            case 'explorar':
+                return { name: 'explore', q: new URLSearchParams(query).get('q') || '' };
+            case 'notifications':
+            case 'notificacoes':
+                return { name: 'notifications' };
+            case 'profile':
+            case 'perfil': {
+                const tab = ['reposts', 'followers', 'following'].includes(parts[2]) ? parts[2] : 'boards';
+                return { name: 'profile', username: parts[1] || null, tab };
+            }
+            default:
+                return null;
+        }
+    }
+
+    _handleHashChange(initial = false) {
+        const route = this._parseRoute();
+
+        if (!route) {
+            if (initial) this._showHome();
+            else if (this.ui.isSocialActive()) this._showHome();
+            return;
+        }
+
+        if (this.ui.editorView.classList.contains('active') && this.project) {
+            if (this.isDirty && confirm('Guardar alterações antes de sair do editor?')) {
+                this.saveCurrentProject();
+            }
+            this.project = null;
+        }
+
+        if (initial) this.ui.renderProjectsList(getAllProjects());
+        this.ui.showSocial();
+        this.social.render(route);
+    }
+
+    // Abre um quadro da tabela boards. Se for meu, abre-o como meu (fica
+    // ligado à conta). Se for de outra pessoa, abre uma cópia para editar.
+    async openCloudBoard(remoteId) {
+        if (!remoteId) return;
+        const user = this.currentUser;
+        const local = getAllProjects().find(p => p.remoteId === remoteId);
+        if (local && user && local.authorId === user.id) {
+            this.openProject(local.id);
+            return;
+        }
+
+        try {
+            this.ui.showToast('A abrir quadro…');
+            const row = await getCloudBoardProject(remoteId);
+            const base = row.projeto;
+            if (!base || !Array.isArray(base.elementos)) {
+                throw new Error('Este quadro foi guardado sem conteúdo.');
+            }
+            if (this.project && this.isDirty) {
+                if (!confirm('Abrir este quadro? Alterações não guardadas serão perdidas.')) return;
+            }
+
+            const isMine = !!(user && row.author_id === user.id);
+            const shared = {
+                boardWidth: base.boardWidth || 3000,
+                boardHeight: base.boardHeight || 3000,
+                background: base.background || { tipo: 'cor', valor: '#e8e8e8' },
+                grade: base.grade == null ? 'pontos' : base.grade
+            };
+            let project;
+            if (isMine) {
+                // Mesmo quadro noutro dispositivo: mantém a ligação à conta.
+                const idTaken = base.id && getAllProjects().some(p => p.id === base.id && p.remoteId !== remoteId);
+                project = {
+                    ...createEmptyProject(base.id && !idTaken ? base.id : generateId(), row.title),
+                    ...JSON.parse(JSON.stringify(base)),
+                    ...shared,
+                    titulo: row.title,
+                    descricao: row.description || '',
+                    perfilPublico: !!row.is_public,
+                    remoteId: row.id,
+                    authorId: row.author_id
+                };
+                if (idTaken || !base.id) project.id = generateId();
+            } else {
+                project = {
+                    ...createEmptyProject(generateId(), (row.title || 'Sem título') + ' (cópia)'),
+                    ...shared,
+                    elementos: base.elementos.map(el => {
+                        const nel = JSON.parse(JSON.stringify(el));
+                        nel.id = generateId();
+                        return nel;
+                    }),
+                    autor: user ? user.username : 'Anónimo',
+                    descricao: row.description || '',
+                    perfilPublico: false,
+                    remoteId: null,
+                    authorId: null,
+                    copiadoDe: { remoteId: row.id, username: row.author ? row.author.username : null }
+                };
+            }
+
+            this.project = project;
+            this.history.clear();
+            this.isDirty = !isMine;
+            this._loadProjectIntoEditor();
+            this.ui.showToast(isMine
+                ? 'Quadro aberto. Guardar atualiza-o na tua conta.'
+                : `Cópia do quadro de @${(row.author && row.author.username) || 'alguém'} — edita à vontade!`);
+        } catch (err) {
+            console.error('Abrir quadro da conta falhou:', err);
+            this.ui.showToast(_socialErrMsg(err));
+        }
+    }
+
+    // O quadro remoto foi apagado: as cópias locais deixam de estar ligadas.
+    forgetRemoteId(remoteId) {
+        getAllProjects().forEach(p => {
+            if (p.remoteId === remoteId) {
+                p.remoteId = null;
+                p.cloudSyncedAt = null;
+                saveProject(p);
+            }
+        });
+        if (this.project && this.project.remoteId === remoteId) {
+            this.project.remoteId = null;
+            this.project.cloudSyncedAt = null;
+        }
+    }
+
+    async _syncToCloud(project = this.project) {
+        if (!project || !this.currentUser || !authAvailable()) return false;
+        try {
+            const n = await compactarProjeto(project);
+            if (n > 0 && this.project === project) this._rerenderAll();
+            await saveWithOwner(project);
+            return true;
+        } catch (err) {
+            console.error('Sincronizar com a conta falhou:', err);
+            this.ui.showToast('Guardado neste dispositivo, mas falhou na conta: ' + _socialErrMsg(err), 5000);
+            return false;
+        }
+    }
+
+    async _saveAccountSettings({ descricao, perfilPublico }) {
+        if (!this.project) return;
+        if (!this.currentUser) {
+            this.showLoginModal('login', 'Entra para guardar este quadro na tua conta.');
+            return;
+        }
+        this.project.descricao = String(descricao || '').slice(0, 500);
+        this.project.perfilPublico = !!perfilPublico;
+        this._syncAllFromDOM();
+        try {
+            this.project.thumbnail = await generateThumbnailDataURL(this.project);
+        } catch { /* miniatura opcional */ }
+        saveProject(this.project);
+        const ok = await this._syncToCloud();
+        if (ok) {
+            this.isDirty = false;
+            this.ui.showToast(this.project.perfilPublico
+                ? 'Guardado na conta e visível no teu perfil.'
+                : 'Guardado na conta (privado — só tu vês).');
+        }
+        if (this.ui.currentTool === 'settings') this._refreshPanel();
+    }
+
+    _startAutosave() {
+        // Guardar serializa todos os projetos (pode ser lento com muitas
+        // fotos), por isso esperamos por um momento em que o browser esteja
+        // livre — nunca a meio de um arrasto ou de uma animação.
+        const idle = window.requestIdleCallback
+            ? (fn) => window.requestIdleCallback(fn, { timeout: 5000 })
+            : (fn) => setTimeout(fn, 200);
+        this._autosaveTimer = setInterval(() => {
+            if (!(this.project && this.isDirty && this.ui.editorView.classList.contains('active'))) return;
+            if (this.board && (this.board.isDragging || this.board.isResizing || this.board.isRotating)) return;
+            idle(() => {
+                if (this.project && this.isDirty) this.saveCurrentProject(true);
+            });
         }, 30000);
     }
 
@@ -272,21 +564,26 @@ class PinSpaceApp {
     _setTheme(theme) {
         this.ui.applyTheme(theme);
         saveSettings({ ...getSettings(), theme });
+        this.social?.renderAuthAreas();
     }
 
     _showHome() {
         this.ui.showHome();
         this.ui.renderProjectsList(getAllProjects());
         this._loadPublicGallery();
+        this.homeWidgets.refresh();
     }
 
+    // A landing mostra só 3 quadros públicos (cabem certinhos no widget).
+    // O resto está em Explorar.
     async _loadPublicGallery() {
         try {
             const data = await getPublicCollages();
-            this.ui.renderPublicList(data.collages || []);
+            this._publicCollages = data.collages || [];
+            this._renderPublicPreview(document.getElementById('search-projetos')?.value || '');
         } catch (err) {
             console.error('Falha ao carregar os quadros públicos:', err);
-            this.ui.renderPublicList(null);
+            this.ui.renderPublicList(null, err && err.message);
         }
     }
 
@@ -433,7 +730,14 @@ class PinSpaceApp {
             }
         }
         this.project = null;
-        this._showHome();
+        // Se viemos do perfil/explorar, voltamos para lá.
+        const route = this._parseRoute();
+        if (route) {
+            this.ui.showSocial();
+            this.social.render(route);
+        } else {
+            this._showHome();
+        }
     }
 
     createNewProject(size) {
@@ -458,7 +762,7 @@ class PinSpaceApp {
             if (!confirm('Abrir outro projeto? Alterações não guardadas serão perdidas.')) return;
         }
 
-        this.project = JSON.parse(JSON.stringify(project));
+        this.project = deepClone(project);
         this.history.clear();
         this.isDirty = false;
         this._loadProjectIntoEditor();
@@ -483,29 +787,60 @@ class PinSpaceApp {
     }
 
     async saveCurrentProject(silent = false) {
-        if (!this.project) return;
+        // Guardamos a referência: quem chama pode pôr this.project = null
+        // logo a seguir (ex.: sair do editor) enquanto isto ainda corre.
+        const project = this.project;
+        if (!project) return;
 
-        this._syncAllFromDOM();
+        if (this.project === project) this._syncAllFromDOM();
 
-        if (!silent || !this.project.thumbnail) {
+        if (!silent || !project.thumbnail) {
             try {
-                this.project.thumbnail = await generateThumbnailDataURL(this.project);
+                project.thumbnail = await generateThumbnailDataURL(project);
             } catch { /* thumbnail opcional */ }
         }
 
-        saveProject(this.project);
-        this.isDirty = false;
-        if (!silent) this.ui.showToast('Projeto guardado com sucesso!');
+        saveProject(project);
+        if (this.project === project) this.isDirty = false;
+        if (silent) return; // o autosave não envia para a conta (evita uploads a cada 30 s)
+
+        if (this.currentUser && authAvailable()) {
+            const ok = await this._syncToCloud(project);
+            if (ok) this.ui.showToast('Guardado neste dispositivo e na tua conta!');
+            if (this.project === project && this.ui.currentTool === 'settings') this._refreshPanel();
+        } else {
+            this.ui.showToast('Projeto guardado com sucesso!');
+        }
     }
 
     _deleteProject(id) {
+        const p = getAllProjects().find(x => x.id === id);
         deleteProject(id);
         this.ui.renderProjectsList(getAllProjects());
-        this.ui.showToast('Projeto eliminado.');
+        this.homeWidgets.refreshLocal();
+        if (this.ui.isSocialActive() && this.social.route) this.social.render(this.social.route);
+        this.ui.showToast(p && p.remoteId
+            ? 'Removido deste dispositivo. Continua na tua conta (apaga-o no teu perfil se quiseres).'
+            : 'Projeto eliminado.');
     }
 
+    _renderPublicPreview(query = '') {
+        const q = String(query || '').toLowerCase().trim();
+        const all = this._publicCollages || [];
+        const list = q
+            ? all.filter(c => (c.titulo || '').toLowerCase().includes(q) || (c.autor || '').toLowerCase().includes(q))
+            : all;
+        this.ui.renderPublicList(list.slice(0, 3));
+        if (q && !list.length) {
+            const box = document.getElementById('lista-publicos');
+            if (box) box.innerHTML = `<p class="empty-state">Nenhum quadro público com “${escapeHTML(query)}”. <a href="#explore?q=${encodeURIComponent(query)}" class="ps-landing-more">procurar na comunidade →</a></p>`;
+        }
+    }
+
+    // A pesquisa da landing procura nos quadros públicos (os quadros
+    // deste dispositivo estão agora no perfil).
     _searchProjects(query) {
-        this.ui.renderProjectsList(searchProjects(query));
+        this._renderPublicPreview(query);
     }
 
     _showOpenModal() {
@@ -1054,9 +1389,20 @@ class PinSpaceApp {
             },
             getPublicInfo: () => ({
                 publico: !!(this.project && this.project.publico),
-                autor: (this.project && this.project.autor) || 'Anónimo',
+                autor: (this.project && this.project.autor && this.project.autor !== 'Anónimo')
+                    ? this.project.autor
+                    : ((this.currentUser && this.currentUser.username) || 'Anónimo'),
                 server: publicServerAvailable()
             }),
+            getAccountInfo: () => ({
+                user: this.currentUser,
+                descricao: this.project ? this.project.descricao || '' : '',
+                perfilPublico: !!(this.project && this.project.perfilPublico),
+                syncedAt: this.project && this.project.remoteId ? this.project.cloudSyncedAt : null,
+                foreign: !!(this.project && this.project.copiadoDe && !this.project.remoteId)
+            }),
+            onAccountSave: (opts) => this._saveAccountSettings(opts),
+            onShowLogin: () => this.showLoginModal('login', 'Entra para guardar este quadro na tua conta.'),
             onPublish: (autor) => this._publishProject(autor, false),
             onUpdatePublic: (autor) => this._publishProject(autor, true),
             onUnpublish: () => this._unpublishProject(),
