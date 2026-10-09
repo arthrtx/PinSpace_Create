@@ -1,10 +1,71 @@
 const STORAGE_KEY = 'pinspace_projects';
 const SETTINGS_KEY = 'pinspace_settings';
 
-// Os projetos têm imagens em base64 (vários MB). Ler e fazer JSON.parse
-// a cada chamada custava milissegundos de cada vez e era chamado muitas
-// vezes seguidas, por isso guardamos a versão já lida em memória.
+// Os quadros guardados neste navegador ficam no IndexedDB (centenas de MB),
+// não no localStorage (só ~5 MB): com fotos, o localStorage enchia, a
+// gravação falhava em silêncio e ao voltar ao quadro faltavam as últimas
+// alterações. Em memória fica uma cópia para leituras rápidas e síncronas.
 let _projectsCache = null;
+let _idb = null;
+const IDB_NAME = 'pinspace';
+const IDB_STORE = 'projects';
+
+function _idbOpen() {
+    return new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) return reject(new Error('sem IndexedDB'));
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => {
+            if (!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+        req.onblocked = () => reject(new Error('IndexedDB bloqueado'));
+    });
+}
+
+function _idbTx(mode, fn) {
+    return new Promise((resolve, reject) => {
+        const tx = _idb.transaction(IDB_STORE, mode);
+        const store = tx.objectStore(IDB_STORE);
+        let result;
+        Promise.resolve(fn(store)).then(r => { result = r; });
+        tx.oncomplete = () => resolve(result);
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error('gravação cancelada'));
+    });
+}
+
+function _byLastEdit(a, b) {
+    return String(b.ultimaEdicao || '').localeCompare(String(a.ultimaEdicao || ''));
+}
+
+// Chamada uma vez no arranque (antes de mostrar o site). Passa para o
+// IndexedDB os quadros que estavam no localStorage.
+async function initProjectStore() {
+    let fromLS = [];
+    try { fromLS = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') || []; } catch { fromLS = []; }
+    try {
+        _idb = await _idbOpen();
+        const all = await _idbTx('readonly', (st) => new Promise((res, rej) => {
+            const r = st.getAll();
+            r.onsuccess = () => res(r.result || []);
+            r.onerror = () => rej(r.error);
+        }));
+        const byId = new Map(all.map(p => [p.id, p]));
+        const migrate = fromLS.filter(p => p && p.id && (!byId.has(p.id) || String(p.ultimaEdicao || '') > String(byId.get(p.id).ultimaEdicao || '')));
+        if (migrate.length) {
+            await _idbTx('readwrite', (st) => migrate.forEach(p => st.put(p)));
+            migrate.forEach(p => byId.set(p.id, p));
+        }
+        if (fromLS.length) localStorage.removeItem(STORAGE_KEY);   // já estão no IndexedDB
+        _projectsCache = [...byId.values()].sort(_byLastEdit);
+    } catch (err) {
+        console.warn('IndexedDB indisponível, a usar o localStorage:', err);
+        _idb = null;
+        _projectsCache = fromLS;
+    }
+    return _projectsCache;
+}
 
 function getAllProjects() {
     if (_projectsCache) return _projectsCache;
@@ -17,20 +78,24 @@ function getAllProjects() {
     return _projectsCache;
 }
 
+function _persistError(err) {
+    console.error('Não foi possível guardar neste navegador:', err);
+    window.dispatchEvent(new CustomEvent('pinspace:save-error', { detail: err }));
+}
+
 function saveAllProjects(projects) {
+    _projectsCache = projects;
+    if (_idb) {
+        _idbTx('readwrite', (st) => { st.clear(); projects.forEach(p => st.put(p)); }).catch(_persistError);
+        return;
+    }
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-        _projectsCache = projects;
     } catch (err) {
-        _projectsCache = null; // volta a ler o que está mesmo guardado
+        _persistError(err);
         throw err;
     }
 }
-
-// Outro separador alterou os projetos → esquece a cópia em memória.
-window.addEventListener('storage', (e) => {
-    if (e.key === STORAGE_KEY || e.key === null) _projectsCache = null;
-});
 
 function saveProject(project) {
     const projects = getAllProjects().slice();
@@ -41,19 +106,23 @@ function saveProject(project) {
     // essas alterações (ainda não guardadas) não podem entrar na cache.
     const copy = deepClone(project);
 
-    if (index >= 0) {
-        projects[index] = copy;
-    } else {
-        projects.unshift(copy);
-    }
+    if (index >= 0) projects.splice(index, 1);
+    projects.unshift(copy);           // o mais recente primeiro ("Continuar a editar")
+    _projectsCache = projects;
 
-    saveAllProjects(projects);
+    if (_idb) {
+        _idbTx('readwrite', (st) => st.put(copy)).catch(_persistError);
+    } else {
+        saveAllProjects(projects);
+    }
     return project;
 }
 
 function deleteProject(id) {
     const projects = getAllProjects().filter(p => p.id !== id);
-    saveAllProjects(projects);
+    _projectsCache = projects;
+    if (_idb) _idbTx('readwrite', (st) => st.delete(id)).catch(_persistError);
+    else saveAllProjects(projects);
 }
 
 function searchProjects(query) {
@@ -654,25 +723,24 @@ function _canvasToBlob(canvas, maxSide, quality = 0.9) {
     return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Não foi possível criar a imagem do quadro.')), 'image/jpeg', quality));
 }
 
-// Guarda a imagem do quadro público no Storage (pasta "quadros"):
-//   <utilizador>/<quadro>.jpg        imagem grande (até 2048 px) → boards.image_full
-//   <utilizador>/<quadro>-thumb.jpg  miniatura (480 px)          → boards.image_url
+// Guarda a imagem do quadro público no Storage (pasta "quadros"): UM ficheiro
+// por quadro, <utilizador>/<quadro>.jpg (até 1600 px). Serve de imagem grande
+// (boards.image_full) e de miniatura (boards.image_url). Ao voltar a publicar
+// o mesmo quadro o ficheiro é substituído, não duplicado.
 async function uploadBoardImage(project) {
     const user = _requireUser();
     const sb = _requireSb();
     if (!project.remoteId || !sb.storage) return null;
     const full = await renderToCanvas(project);
-    const [big, small] = await Promise.all([_canvasToBlob(full, 2048, 0.9), _canvasToBlob(full, 480, 0.82)]);
+    const blob = await _canvasToBlob(full, 1600, 0.86);
     const base = `${user.id}/${project.remoteId}`;
-    const [fullUrl, thumbUrl] = await Promise.all([
-        _uploadImage('quadros', base + '.jpg', big),
-        _uploadImage('quadros', base + '-thumb.jpg', small)
-    ]);
-    const { error } = await sb.from('boards').update({ image_full: fullUrl, image_url: thumbUrl }).eq('id', project.remoteId);
+    const url = await _uploadImage('quadros', base + '.jpg', blob);
+    // versões antigas guardavam também uma miniatura à parte
+    sb.storage.from('quadros').remove([base + '-thumb.jpg']).catch(() => {});
+    const { error } = await sb.from('boards').update({ image_full: url, image_url: url }).eq('id', project.remoteId);
     if (error) throw error;
-    project.imageFull = fullUrl;
-    project.imageThumbUrl = thumbUrl;
-    return fullUrl;
+    project.imageFull = url;
+    return url;
 }
 
 async function removeBoardImage(project) {
@@ -681,8 +749,27 @@ async function removeBoardImage(project) {
     if (!project.remoteId || !sb.storage) return;
     const base = `${user.id}/${project.remoteId}`;
     await sb.storage.from('quadros').remove([base + '.jpg', base + '-thumb.jpg']).catch(() => {});
-    await sb.from('boards').update({ image_full: null }).eq('id', project.remoteId);
+    const thumb = project.thumbnail && String(project.thumbnail).startsWith('data:') ? project.thumbnail : null;
+    await sb.from('boards').update({ image_full: null, image_url: thumb }).eq('id', project.remoteId);
     project.imageFull = null;
+}
+
+// Arruma a minha pasta de imagens: apaga miniaturas antigas (-thumb) e imagens
+// de quadros que já não existem ou deixaram de ser públicos. Uma vez por visita.
+async function cleanupMyBoardImages() {
+    const user = getCachedUser();
+    const sb = getSupabase();
+    if (!user || !sb || !sb.storage) return 0;
+    try { if (sessionStorage.getItem('ps_cleanup')) return 0; sessionStorage.setItem('ps_cleanup', '1'); } catch { /* ok */ }
+    const { data: files, error } = await sb.storage.from('quadros').list(user.id, { limit: 1000 });
+    if (error || !Array.isArray(files) || !files.length) return 0;
+    const { data: boards } = await sb.from('boards').select('id,is_public').eq('author_id', user.id);
+    const keep = new Set((boards || []).filter(b => b.is_public).map(b => b.id + '.jpg'));
+    const remove = files.map(f => f.name).filter(n => n && !keep.has(n));
+    if (!remove.length) return 0;
+    const { error: e2 } = await sb.storage.from('quadros').remove(remove.map(n => `${user.id}/${n}`));
+    if (e2) { console.warn('Limpeza das imagens:', e2); return 0; }
+    return remove.length;
 }
 
 // Quadros públicos meus que ainda não têm imagem no Storage (ex.: vindos
@@ -737,9 +824,11 @@ async function registerBoardView(boardId) {
 }
 
 async function deleteCloudBoard(remoteId) {
-    _requireUser();
+    const user = _requireUser();
     const { error } = await _requireSb().from('boards').delete().eq('id', remoteId);
     if (error) throw error;
+    // a imagem do quadro sai também do Storage
+    _requireSb().storage?.from('quadros').remove([`${user.id}/${remoteId}.jpg`, `${user.id}/${remoteId}-thumb.jpg`]).catch(() => {});
     return true;
 }
 

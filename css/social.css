@@ -946,3 +946,12 @@ a.ps-card-author:hover { color: #FFF; text-decoration: underline; text-decoratio
     font-size: clamp(18px, 2vw, 22px);
     color: rgba(255, 255, 255, 0.6);
 }
+
+/* Rascunhos no perfil: botão Publicar em destaque */
+.project-card-actions button.publish {
+    background: linear-gradient(180deg, #FF8A4C, #FF6B2C) !important;
+    border-color: transparent !important;
+    color: #FFF !important;
+    font-weight: 700;
+}
+.project-card-actions button.publish:hover { filter: brightness(1.06); }
