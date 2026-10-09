@@ -103,3 +103,88 @@
         alvo = limitar(alvo);
     }, { passive: true });
 })();
+
+/* ---------------------------------------------------------------------
+   Barra de scroll pequena (lado direito) para quem não tem roda no rato.
+   Aparece na página inicial e na comunidade; escondida no editor.
+   Arrastar a bolinha = percorre a página; clicar na calha = salta para lá.
+   --------------------------------------------------------------------- */
+(() => {
+    'use strict';
+    const box = document.createElement('div');
+    box.className = 'ps-scrollbar';
+    box.setAttribute('role', 'scrollbar');
+    box.setAttribute('aria-orientation', 'vertical');
+    box.setAttribute('aria-label', 'Percorrer a página');
+    box.tabIndex = 0;
+    box.innerHTML = '<div class="ps-scrollbar-track"><div class="ps-scrollbar-thumb"></div></div>';
+    document.body.appendChild(box);
+    const track = box.firstElementChild;
+    const thumb = track.firstElementChild;
+
+    // Qual é o elemento que faz scroll na vista atual (ou nenhum, no editor).
+    const alvo = () => {
+        if (document.getElementById('editor-view')?.classList.contains('active')) return null;
+        if (document.getElementById('social-view')?.classList.contains('active')) return document.getElementById('ps-scroll');
+        if (document.getElementById('home-view')?.classList.contains('active')) return document.querySelector('.home-container');
+        return null;
+    };
+
+    const atualizar = () => {
+        const el = alvo();
+        const max = el ? el.scrollHeight - el.clientHeight : 0;
+        box.hidden = !el || max < 40 || !!document.querySelector('dialog[open]');
+        if (box.hidden) return;
+        const th = track.clientHeight;
+        const h = Math.max(16, Math.min(th, th * el.clientHeight / el.scrollHeight));
+        thumb.style.height = h + 'px';
+        thumb.style.transform = `translateY(${(th - h) * (el.scrollTop / max)}px)`;
+        box.setAttribute('aria-valuenow', String(Math.round(100 * el.scrollTop / max)));
+    };
+
+    // Converte uma posição na calha em scrollTop.
+    const irPara = (clientY, suave) => {
+        const el = alvo();
+        if (!el) return;
+        const r = track.getBoundingClientRect();
+        const h = thumb.offsetHeight;
+        const p = Math.min(1, Math.max(0, (clientY - r.top - h / 2) / Math.max(1, r.height - h)));
+        el.scrollTo({ top: p * (el.scrollHeight - el.clientHeight), behavior: suave ? 'smooth' : 'auto' });
+    };
+
+    let arrastar = false, offset = 0;
+    track.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (e.target === thumb) {
+            arrastar = true;
+            offset = e.clientY - thumb.getBoundingClientRect().top - thumb.offsetHeight / 2;
+            track.setPointerCapture(e.pointerId);
+            box.classList.add('is-drag');
+        } else {
+            irPara(e.clientY, true);
+        }
+    });
+    track.addEventListener('pointermove', (e) => { if (arrastar) irPara(e.clientY - offset, false); });
+    const soltar = () => { arrastar = false; box.classList.remove('is-drag'); };
+    track.addEventListener('pointerup', soltar);
+    track.addEventListener('pointercancel', soltar);
+
+    // Roda por cima da barra e teclado (setas / Page Up / Page Down).
+    box.addEventListener('wheel', (e) => { const el = alvo(); if (el) { e.preventDefault(); el.scrollBy({ top: e.deltaY }); } }, { passive: false });
+    box.addEventListener('keydown', (e) => {
+        const el = alvo();
+        if (!el) return;
+        const passo = { ArrowDown: 80, ArrowUp: -80, PageDown: el.clientHeight * 0.8, PageUp: -el.clientHeight * 0.8 }[e.key];
+        if (!passo) return;
+        e.preventDefault();
+        el.scrollBy({ top: passo, behavior: 'smooth' });
+    });
+
+    // Mantém o estado certo: scroll em qualquer contentor, mudança de vista, redimensionar.
+    document.addEventListener('scroll', () => requestAnimationFrame(atualizar), { capture: true, passive: true });
+    window.addEventListener('resize', atualizar);
+    window.addEventListener('hashchange', () => setTimeout(atualizar, 300));
+    new MutationObserver(() => requestAnimationFrame(atualizar))
+        .observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'open'] });
+    atualizar();
+})();

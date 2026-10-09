@@ -343,35 +343,45 @@ function paintGlassBackgrounds() {
     const img = new Image();
     img.decoding = 'async';
     img.onload = () => {
-        // 1) reduz a foto a 20 px de largura (isto já é o "desfoque")
-        const tiny = document.createElement('canvas');
-        tiny.width = 20;
-        tiny.height = Math.max(8, Math.round(20 * img.naturalHeight / img.naturalWidth));
-        const t = tiny.getContext('2d');
-        t.imageSmoothingQuality = 'high';
-        t.drawImage(img, 0, 0, tiny.width, tiny.height);
-
+        // Desfoque feito UMA vez com qualidade (canvas maior + filter blur),
+        // em vez de ampliar 20 px → 96 px, que deixava o fundo "pixelado".
         canvases.forEach((c) => {
-            // 2) amplia para 96 px com suavização (bilinear duas vezes ≈ desfoque suave)
-            const w = 96;
             const host = c.parentElement;
             const isFixed = host.classList.contains('ps-app');
             const ratio = isFixed
                 ? window.innerHeight / Math.max(1, window.innerWidth)
                 : host.offsetHeight / Math.max(1, host.offsetWidth);
+            const w = 640;
             c.width = w;
-            c.height = Math.max(24, Math.round(w * Math.min(ratio, 3)));
+            c.height = Math.max(120, Math.round(w * Math.min(ratio, 3)));
             const ctx = c.getContext('2d');
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             // "cover": corta a foto ao formato do canvas
-            const sr = tiny.width / tiny.height, dr = c.width / c.height;
-            let sw = tiny.width, sh = tiny.height, sx = 0, sy = 0;
-            if (sr > dr) { sw = tiny.height * dr; sx = (tiny.width - sw) / 2; }
-            else { sh = tiny.width / dr; sy = (tiny.height - sh) / 2; }
-            ctx.drawImage(tiny, sx, sy, sw, sh, 0, 0, c.width, c.height);
+            const sr = img.naturalWidth / img.naturalHeight, dr = c.width / c.height;
+            let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
+            if (sr > dr) { sw = img.naturalHeight * dr; sx = (img.naturalWidth - sw) / 2; }
+            else { sh = img.naturalWidth / dr; sy = (img.naturalHeight - sh) / 2; }
+            const pad = 40; // margem para o desfoque não escurecer as bordas
+            if ('filter' in ctx) ctx.filter = 'blur(22px)';
+            ctx.drawImage(img, sx, sy, sw, sh, -pad, -pad, c.width + pad * 2, c.height + pad * 2);
+            ctx.filter = 'none';
             // escurece (em vez de filter: brightness)
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, c.width, c.height);
+            // grão muito fino por cima: evita "degraus" de cor ao esticar no ecrã
+            // (desenhado à parte, sem ler os píxeis da foto)
+            const grain = document.createElement('canvas');
+            grain.width = 128; grain.height = 128;
+            const g = grain.getContext('2d');
+            const gd = g.createImageData(128, 128);
+            for (let k = 0; k < gd.data.length; k += 4) {
+                const v = Math.random() * 255;
+                gd.data[k] = gd.data[k + 1] = gd.data[k + 2] = v;
+                gd.data[k + 3] = 10;
+            }
+            g.putImageData(gd, 0, 0);
+            ctx.fillStyle = ctx.createPattern(grain, 'repeat');
             ctx.fillRect(0, 0, c.width, c.height);
             c.classList.add('ready');
         });

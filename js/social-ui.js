@@ -177,6 +177,7 @@ class SocialUI {
         this._bindAuthModal();
         this._bindRepostModal();
         this._bindProfileModal();
+        this._bindNotifPopup();
         this.renderAuthAreas();
     }
 
@@ -232,9 +233,9 @@ class SocialUI {
             if (state === 'loading') {
                 this.topbarUser.innerHTML = '<span class="ps-skeleton-avatar" aria-label="A carregar sessão"></span>';
             } else if (!u) {
+                // Entrar e Criar conta faziam o mesmo (login com Google): fica um só botão.
                 this.topbarUser.innerHTML = `
-                    <button type="button" class="ms-nav-link" data-act="login">Entrar</button>
-                    <button type="button" class="ms-nav-cta ps-cta" data-act="register"><span>Criar conta</span>
+                    <button type="button" class="ms-nav-cta ps-cta" data-act="login"><span>Entrar</span>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </button>`;
             } else {
@@ -354,7 +355,13 @@ class SocialUI {
         try {
             switch (route.name) {
                 case 'explore': await this._renderExplore(token, route.q || ''); break;
-                case 'notifications': await this._renderNotifications(token); break;
+                case 'notifications':
+                    // Já não há página de notificações: abre o pop-up por cima de Explorar.
+                    history.replaceState(history.state, '', window.location.pathname + window.location.search + '#explore');
+                    this._setActiveNav('explore');
+                    await this._renderExplore(token, '');
+                    this.openNotifPopup(this.root?.querySelector('.ps-link[data-route="notifications"]'));
+                    break;
                 case 'profile': await this._renderProfile(token, route.username, route.tab || 'boards'); break;
                 default: await this._renderExplore(token, '');
             }
@@ -395,10 +402,9 @@ class SocialUI {
             <h3><em>${escapeHTML(title)}</em></h3>
             <p>${escapeHTML(text)}</p>
             <div class="ps-blank-actions">
-                <button type="button" class="ms-nav-cta ps-cta" data-act="register"><span>Criar conta</span>
+                <button type="button" class="ms-nav-cta ps-cta" data-act="login"><span>Entrar</span>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
-                <button type="button" class="ps-btn" data-act="login">Já tenho conta</button>
             </div>
         </div>`;
     }
@@ -585,7 +591,7 @@ class SocialUI {
 
         let actions;
         if (b.legacy) {
-            actions = `<button type="button" class="fd-act" data-act="open-legacy" data-board-id="${id}">${ghIcon('open', 17)}<span>Abrir cópia</span></button>`;
+            actions = `<button type="button" class="fd-act" data-act="open-legacy" data-board-id="${id}">${ghIcon('open', 17)}<span>Abrir e editar</span></button>`;
         } else {
             const liked = this.state.likeState[b.id] === 'liked';
             const rted = this.state.retweetState[b.id] === 'retweeted';
@@ -665,11 +671,11 @@ class SocialUI {
     async _renderProfile(token, username, tab) {
         if (!username) {
             if (!this.user) {
-                const local = getAllProjects();
-                this.main.innerHTML = `${this._pageHead('Perfil', 'O teu perfil', '<em>um espaço só teu</em> — com todos os teus quadros')}
-                    ${this._loginBlankslate('Ainda não tens perfil', 'Entra ou cria uma conta para teres um perfil com os teus quadros.')}
-                    ${this._localSection(local)}`;
-                this._fillLocal(local);
+                // Sem conta: em vez de uma página, mostra Explorar com um pop-up pequeno.
+                history.replaceState(history.state, '', window.location.pathname + window.location.search + '#explore');
+                this._setActiveNav('explore');
+                await this._renderExplore(token, '');
+                if (token === this._renderToken) this.openAccountPopup(this.root?.querySelector('.ps-link[data-route="profile"]'));
                 return;
             }
             username = this.user.username;
@@ -789,33 +795,31 @@ class SocialUI {
             ? `<span class="pf-label">Destaque</span>
                <a href="#" class="pf-feat-thumb" data-act="open" data-board-id="${escapeHTML(featured.id)}" title="${escapeHTML(featured.title)}">
                    ${featThumb ? `<img src="${featThumb}" alt="">` : '<span>📌</span>'}
-               </a>
-               <button type="button" class="pf-red-btn" data-pf="scroll" aria-label="Ver quadros">${ghIcon('arrowDown', 20)}</button>`
+               </a>`
             : `<span class="pf-label">${isMe ? 'Criar' : 'Quadros'}</span>
-               <span class="pf-feat-thumb pf-feat-empty">${ghIcon('image', 26)}</span>
                ${isMe
-                   ? `<button type="button" class="pf-red-btn" data-act="new-board" aria-label="Novo quadro">${ghIcon('plus', 20)}</button>`
-                   : `<button type="button" class="pf-red-btn" data-pf="scroll" aria-label="Ver quadros">${ghIcon('arrowDown', 20)}</button>`}`;
+                   ? `<a href="#" class="pf-feat-thumb pf-feat-empty" data-act="new-board" title="Novo quadro">${ghIcon('plus', 26)}</a>`
+                   : `<span class="pf-feat-thumb pf-feat-empty">${ghIcon('image', 26)}</span>`}`;
 
         const lang = typeof window.psLang === 'function' ? window.psLang() : 'pt';
 
         return `
         <div class="pf-frame">
             <aside class="pf-rail">
-                <nav class="pf-card pf-nav" aria-label="Atalhos">
-                    <a href="#" class="pf-logo" title="Página inicial">
-                        <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="currentColor"/><path d="M16 9c-2 0-3.6 1.6-3.6 3.6 0 2.4 3.6 8.1 3.6 8.1s3.6-5.7 3.6-8.1C19.6 10.6 18 9 16 9z" fill="#2a2524"/></svg>
-                    </a>
-                    <a href="#" class="pf-nav-ic" title="Página inicial">${ghIcon('home', 17)}</a>
-                    <a href="#explore" class="pf-nav-ic" title="Explorar">${ghIcon('star', 17)}</a>
-                    <a href="#notifications" class="pf-nav-ic" title="Notificações">${ghIcon('bell', 17)}</a>
-                </nav>
+                <div class="pf-rail-group">
+                    <nav class="pf-card pf-nav" aria-label="Atalhos">
+                        <a href="#" class="pf-nav-ic" title="Página inicial" aria-label="Página inicial">${ghIcon('home', 18)}</a>
+                        <a href="${base}/reposts" class="pf-nav-ic ${tab === 'reposts' ? 'on' : ''}" title="Reposts" aria-label="Reposts">${ghIcon('star', 18)}</a>
+                        <a href="#explore" class="pf-nav-ic" title="Explorar" aria-label="Explorar">${ghIcon('explore', 18)}</a>
+                        <a href="#notifications" class="pf-nav-ic" title="Notificações" aria-label="Notificações">${ghIcon('bell', 18)}</a>
+                    </nav>
 
-                <div class="pf-card pf-me">
-                    <button type="button" class="pf-me-avatar" ${isMe ? 'data-act="edit-profile" title="Mudar foto"' : 'data-pf="noop" tabindex="-1"'}>
-                        <img id="profile-avatar" src="${avatarSrc(profile)}" alt="Avatar de ${escapeHTML(profile.username)}">
-                    </button>
-                    <span class="pf-label">Perfil</span>
+                    <div class="pf-card pf-me">
+                        <button type="button" class="pf-me-avatar" ${isMe ? 'data-act="edit-profile" title="Mudar foto"' : 'data-pf="noop" tabindex="-1"'}>
+                            <img id="profile-avatar" src="${avatarSrc(profile)}" alt="Avatar de ${escapeHTML(profile.username)}">
+                        </button>
+                        <span class="pf-label">Perfil</span>
+                    </div>
                 </div>
 
                 <div class="pf-card pf-opts">
@@ -864,13 +868,11 @@ class SocialUI {
 
                 ${isMe ? `<button type="button" class="pf-cover-btn" data-pf="cover" title="Mudar banner">${ghIcon('image', 15)}<span>Banner</span></button>` : ''}
 
-                <button type="button" class="pf-red-btn pf-down" data-pf="scroll" aria-label="Ver quadros">${ghIcon('arrowDown', 20)}</button>
-
                 <div class="pf-cut pf-cut-left">
                     <div class="pf-card pf-feat">${featCard}</div>
                 </div>
 
-                <div class="pf-cut pf-cut-right">
+                <div class="pf-music-float">
                     <div class="pf-music" data-music-mini>
                         <button type="button" class="pf-music-pill" data-music-act="toggle"><span class="pf-when-paused">Ouvir</span><span class="pf-when-playing">Pausa</span></button>
                         <div class="pf-music-card">
@@ -888,9 +890,58 @@ class SocialUI {
         </div>`;
     }
 
+    // Recorta a imagem do banner (entalhe dos separadores em cima e canto do
+    // "Destaque" em baixo) com uma máscara SVG — os recortes ficam
+    // transparentes e mostram o fundo da página, sem moldura por trás.
+    _shapeHero() {
+        const hero = this.main.querySelector('.pf-hero');
+        if (!hero) return;
+        const w = hero.clientWidth, h = hero.clientHeight;
+        if (!w || !h) return;
+        const hb = hero.getBoundingClientRect();
+        const cs = getComputedStyle(hero);
+        const r = parseFloat(cs.borderTopLeftRadius) || 36;
+        const a = Math.min(r, 26);   // cantos convexos dos recortes
+        const c = 28;                // cantos côncavos
+        const gap = 10;
+        const n = (v) => Math.round(v * 10) / 10;
+        let d = `M${r} 0`;
+
+        const notch = hero.querySelector('.pf-notch');
+        const nb = notch && notch.offsetWidth ? notch.getBoundingClientRect() : null;
+        if (nb) {
+            const x1 = nb.left - hb.left - gap, x2 = nb.right - hb.left + gap, nh = nb.bottom - hb.top + gap;
+            d += ` H${n(x1 - a)} A${a} ${a} 0 0 1 ${n(x1)} ${a} V${n(nh - c)} A${c} ${c} 0 0 0 ${n(x1 + c)} ${n(nh)}`
+               + ` H${n(x2 - c)} A${c} ${c} 0 0 0 ${n(x2)} ${n(nh - c)} V${a} A${a} ${a} 0 0 1 ${n(x2 + a)} 0`;
+        }
+        d += ` H${w - r} A${r} ${r} 0 0 1 ${w} ${r} V${h - r} A${r} ${r} 0 0 1 ${w - r} ${h}`;
+
+        const cut = hero.querySelector('.pf-cut-left');
+        const fb = cut && cut.offsetWidth ? cut.getBoundingClientRect() : null;
+        if (fb) {
+            const fw = fb.right - hb.left + gap, fy = fb.top - hb.top - gap;
+            d += ` H${n(fw + a)} A${a} ${a} 0 0 1 ${n(fw)} ${n(h - a)} V${n(fy + c)} A${c} ${c} 0 0 0 ${n(fw - c)} ${n(fy)}`
+               + ` H${a} A${a} ${a} 0 0 1 0 ${n(fy - a)} V${r} A${r} ${r} 0 0 1 ${r} 0Z`;
+        } else {
+            d += ` H${r} A${r} ${r} 0 0 1 0 ${h - r} V${r} A${r} ${r} 0 0 1 ${r} 0Z`;
+        }
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${d}"/></svg>`;
+        hero.style.setProperty('--pf-mask', `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+        hero.classList.add('is-shaped');
+    }
+
     _bindProfileHero(profile) {
         const root = this.main.querySelector('.pf');
         if (!root) return;
+        this._pfRO?.disconnect();
+        const hero = root.querySelector('.pf-hero');
+        if (hero && typeof ResizeObserver === 'function') {
+            let raf = 0;
+            this._pfRO = new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => this._shapeHero()); });
+            [hero, hero.querySelector('.pf-notch'), hero.querySelector('.pf-cut-left')].filter(Boolean).forEach(el => this._pfRO.observe(el));
+        }
+        this._shapeHero();
+        document.fonts?.ready?.then(() => this._shapeHero());
         root.addEventListener('click', (e) => {
             const lang = e.target.closest('[data-pf-lang]');
             if (lang) {
@@ -994,6 +1045,152 @@ class SocialUI {
             </div>`;
     }
 
+    /* ---------------- Notificações: pop-up ---------------- */
+
+    _bindNotifPopup() {
+        // Qualquer link para #notifications (nav, sino do perfil, menu) abre o pop-up.
+        document.addEventListener('click', (e) => {
+            const a = e.target.closest('a[href="#notifications"]');
+            if (!a) return;
+            e.preventDefault();
+            e.stopPropagation();
+            a.closest('details.ps-menu')?.removeAttribute('open');
+            if (this._notifPop && !this._notifPop.hidden && this._notifAnchor === a) this.closeNotifPopup();
+            else this.openNotifPopup(a);
+        }, true);
+        // Sem sessão: links para "o meu perfil" abrem o pop-up de conta.
+        document.addEventListener('click', (e) => {
+            const a = e.target.closest('a[href="#profile"], a[href="#perfil"]');
+            if (!a || this.user || this.app.authState !== 'loggedOut') return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (this._notifPop && !this._notifPop.hidden && this._notifAnchor === a) this.closeNotifPopup();
+            else this.openAccountPopup(a);
+        }, true);
+        document.addEventListener('click', (e) => {
+            const pop = this._notifPop;
+            if (!pop || pop.hidden) return;
+            if (pop.contains(e.target)) {
+                // Seguir um link dentro do pop-up fecha-o.
+                if (e.target.closest('a[href]:not([href="#"]), [data-act="open"], [data-act="login"], [data-act="register"]')) this.closeNotifPopup();
+                return;
+            }
+            this.closeNotifPopup();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.closeNotifPopup();
+        });
+        window.addEventListener('resize', () => this._placeNotifPopup());
+        this.scroller?.addEventListener('scroll', () => this._placeNotifPopup(), { passive: true });
+    }
+
+    _ensureNotifPopup() {
+        if (this._notifPop) return this._notifPop;
+        const pop = document.createElement('div');
+        pop.className = 'ps-notif-pop';
+        pop.setAttribute('role', 'dialog');
+        pop.setAttribute('aria-label', 'Notificações');
+        pop.hidden = true;
+        pop.innerHTML = `<div class="ps-notif-pop-head"><strong>Notificações</strong></div><div class="ps-notif-pop-body"></div>`;
+        document.body.appendChild(pop);
+        this._bindDelegation(pop);
+        this._notifPop = pop;
+        return pop;
+    }
+
+    _placeNotifPopup() {
+        const pop = this._notifPop;
+        if (!pop || pop.hidden) return;
+        const a = this._notifAnchor;
+        const r = a && a.isConnected ? a.getBoundingClientRect() : null;
+        const w = pop.offsetWidth, vw = window.innerWidth, vh = window.innerHeight, m = 12;
+        let left, top;
+        if (r && r.width && r.bottom > 0 && r.top < vh) {
+            // Ao lado do sino se estiver na coluna da esquerda; senão por baixo.
+            if (r.left < vw * 0.25 && r.right + m + w < vw) { left = r.right + m; top = r.top - 10; }
+            else { left = r.left + r.width / 2 - w / 2; top = r.bottom + 10; }
+        } else {
+            left = vw - w - m; top = 90;
+        }
+        left = Math.max(m, Math.min(left, vw - w - m));
+        top = Math.max(m, Math.min(top, vh - 140));
+        pop.style.left = left + 'px';
+        pop.style.top = top + 'px';
+        pop.style.maxHeight = (vh - top - m) + 'px';
+    }
+
+    closeNotifPopup() {
+        if (this._notifPop) this._notifPop.hidden = true;
+        this._notifAnchor = null;
+    }
+
+    // Pop-up "ainda não tens conta" (mesmo estilo do das notificações).
+    openAccountPopup(anchor) {
+        const pop = this._ensureNotifPopup();
+        pop.setAttribute('aria-label', 'Perfil');
+        pop.querySelector('.ps-notif-pop-head strong').textContent = 'Perfil';
+        pop.querySelector('.ps-notif-pop-body').innerHTML = `
+            <div class="ps-acc-pop">
+                <p class="ps-acc-pop-title">Ainda não tens conta</p>
+                <p class="ps-acc-pop-text">Entra com o Google — se for a primeira vez, a conta é criada na hora. Assim tens um perfil com os teus quadros.</p>
+                <div class="ps-acc-pop-actions">
+                    <button type="button" class="ps-notif-pop-login" data-act="login">Entrar</button>
+                </div>
+            </div>`;
+        this._notifAnchor = anchor || null;
+        pop.hidden = false;
+        this._placeNotifPopup();
+    }
+
+    async openNotifPopup(anchor) {
+        const pop = this._ensureNotifPopup();
+        pop.setAttribute('aria-label', 'Notificações');
+        pop.querySelector('.ps-notif-pop-head strong').textContent = 'Notificações';
+        const body = pop.querySelector('.ps-notif-pop-body');
+        this._notifAnchor = anchor || null;
+        pop.hidden = false;
+        this._placeNotifPopup();
+
+        if (!this.user) {
+            body.innerHTML = `<p class="ps-notif-pop-empty">Entra para veres quem gostou, repostou ou te seguiu.</p>
+                <button type="button" class="ps-notif-pop-login" data-act="login">Entrar</button>`;
+            this._placeNotifPopup();
+            return;
+        }
+        body.innerHTML = '<div class="ps-notif-pop-empty"><span class="ps-spinner"></span></div>';
+        let items = [];
+        try { items = await getNotifications(40, true); } catch (err) { console.warn('Notificações indisponíveis:', err); }
+        if (pop.hidden) return;
+        if (items.some(n => n.type === 'follow')) {
+            const ids = await getFollowingIds(this.user.id).catch(() => []);
+            items.filter(n => n.type === 'follow').forEach(n => { this.state.followState[n.user.id] = ids.includes(n.user.id) ? 'following' : 'none'; });
+        }
+        try { localStorage.setItem('pinspace_notif_seen', new Date().toISOString()); } catch { /* ok */ }
+        this._setNotifDot(false);
+        body.innerHTML = (items.length
+            ? `<ul class="ps-notif-list">${items.map(n => this._notifRow(n)).join('')}</ul>`
+            : '<p class="ps-notif-pop-empty">Ainda não tens nenhuma notificação.</p>')
+            + '<p class="ps-notif-pop-note">As notificações são apagadas automaticamente ao fim de 60 dias.</p>';
+        this._placeNotifPopup();
+    }
+
+    _notifRow(n) {
+        const who = `<a href="#profile/${encodeURIComponent(n.user.username)}" class="ps-strong">@${unameHTML(n.user.username)}</a>`;
+        const board = n.board ? `<a href="#" data-act="open" data-board-id="${escapeHTML(n.board.id)}" class="ps-strong ps-board-name">${escapeHTML(n.board.title || 'Sem título')}</a>` : '';
+        const text = n.type === 'like'
+            ? `${who} gostou de ${board}`
+            : n.type === 'repost'
+                ? `${who} repostou ${board}${n.comment ? `<span class="ps-quote">“${escapeHTML(n.comment)}”</span>` : ''}`
+                : `${who} começou a seguir-te`;
+        const icon = n.type === 'like' ? 'heart' : n.type === 'repost' ? 'repeat' : 'userPlus';
+        return `<li class="ps-notif ps-notif-${n.type}">
+            <span class="ps-notif-icon">${ghIcon(icon, 12)}</span>
+            <img class="ps-avatar-sm" src="${avatarSrc(n.user)}" alt="">
+            <div class="ps-notif-body"><p>${text}</p><time datetime="${escapeHTML(n.created_at)}">${timeAgo(n.created_at)}</time></div>
+            ${n.type === 'follow' ? this.followButton(n.user.id, 'ps-btn-sm') : ''}
+        </li>`;
+    }
+
     async refreshNotifDot() {
         if (!this.user || !authAvailable()) return this._setNotifDot(false);
         try {
@@ -1050,7 +1247,8 @@ class SocialUI {
         if (!boards || !boards.length) {
             return `<p class="ps-empty-simple">${escapeHTML(emptyText)}</p>`;
         }
-        return `<div class="projects-grid ps-grid ${extraClass}">${boards.map(b => this.boardCard(b)).join('')}</div>`;
+        // Perfil: quadros como posts da comunidade, em versão pequena.
+        return `<div class="pf-posts ${extraClass}">${boards.map(b => this.feedPost(b)).join('')}</div>`;
     }
 
     boardCard(b) {
@@ -1075,7 +1273,7 @@ class SocialUI {
 
         let actions;
         if (b.legacy) {
-            actions = `<button type="button" class="ps-act" data-act="open-legacy" data-board-id="${id}">Abrir cópia</button>`;
+            actions = `<button type="button" class="ps-act" data-act="open-legacy" data-board-id="${id}">Abrir e editar</button>`;
         } else {
             const liked = this.state.likeState[b.id] === 'liked';
             const rted = this.state.retweetState[b.id] === 'retweeted';
@@ -1310,6 +1508,14 @@ class SocialUI {
         const btn = modal.querySelector('#btn-google-login');
         btn.disabled = false;
         btn.querySelector('span').textContent = 'Continuar com Google';
+        const terms = modal.querySelector('#auth-terms');
+        if (terms) {
+            let ok = false;
+            try { ok = localStorage.getItem('pinspace_terms_ok') === '1'; } catch {}
+            terms.checked = ok;
+            btn.classList.toggle('is-locked', !ok);
+            modal.querySelector('.auth-terms')?.classList.remove('need');
+        }
         if (!modal.open) modal.showModal();
         setTimeout(() => btn.focus(), 30);
     }
@@ -1320,8 +1526,36 @@ class SocialUI {
         const btn = modal.querySelector('#btn-google-login');
         const errEl = modal.querySelector('.auth-error');
         const label = btn.querySelector('span');
+        const terms = modal.querySelector('#auth-terms');
+        const termsRow = modal.querySelector('.auth-terms');
+        const detail = modal.querySelector('#auth-terms-detail');
+        if (detail && typeof IMAGE_RIGHTS_TERMS !== 'undefined') {
+            detail.innerHTML = [
+                'Para criar o perfil usamos o nome, o email e a foto da tua conta Google.',
+                ...IMAGE_RIGHTS_TERMS
+            ].map(t => `<li>${escapeHTML(t)}</li>`).join('');
+        }
+        modal.querySelector('#auth-terms-toggle')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (detail) detail.hidden = !detail.hidden;
+        });
+        terms?.addEventListener('change', () => {
+            btn.classList.toggle('is-locked', !terms.checked);
+            termsRow?.classList.remove('need');
+            try {
+                if (terms.checked) localStorage.setItem('pinspace_terms_ok', '1');
+                else localStorage.removeItem('pinspace_terms_ok');
+            } catch {}
+        });
 
         btn.addEventListener('click', async () => {
+            if (terms && !terms.checked) {
+                // Sem aceitar os termos: só realça a linha, sem mensagens grandes.
+                termsRow?.classList.remove('need');
+                void termsRow?.offsetWidth;
+                termsRow?.classList.add('need');
+                return;
+            }
             errEl.hidden = true;
             btn.disabled = true;
             label.textContent = 'A abrir o Google…';

@@ -529,10 +529,12 @@ html.js .ms-magnetic {
     top: 50%;
     min-width: 100vmax;
     min-height: 100vmax;
-    transform: translate(-50%, -50%) rotate(90deg);
+    transform: translate(-50%, -50%) rotate(90deg) scale(1.04);
     object-fit: cover;
     z-index: 0;
     pointer-events: none;
+    /* Desfoque leve: esconde os blocos/píxeis da foto ampliada */
+    filter: blur(4px);
 }
 
 .ms-hero::before {

@@ -20,6 +20,8 @@
 --                       "avatars" (fotos de perfil)
 -- 10  arrumação         perfis em falta, galeria antiga → contas,
 --                       contadores recalculados
+-- 11  limpeza           notificações apagadas ao fim de 60 dias;
+--                       vista "ver_quadros" para consultar no painel
 -- =====================================================================
 
 create extension if not exists pgcrypto;
@@ -595,5 +597,69 @@ begin
   for r in select id from public.boards loop perform public.refresh_board_counts(r.id); end loop;
   for r in select id from public.profiles loop perform public.refresh_profile_counts(r.id); end loop;
 end $$;
+
+notify pgrst, 'reload schema';
+
+-- =====================================================================
+-- 11. Limpeza automática das notificações (60 dias)
+--     + tabela de consulta "ver_quadros" (só para ti, no painel)
+--     Pode ser colado sozinho no SQL Editor. É seguro voltar a correr.
+-- =====================================================================
+
+-- 11a. Apaga já as notificações com mais de 60 dias
+delete from public.notifications where created_at < now() - interval '60 days';
+
+-- 11b. Sempre que entra uma notificação nova, as com mais de 60 dias saem
+--      (funciona sem extensões; a tabela nunca cresce para além disso)
+create index if not exists notifications_created_idx on public.notifications (created_at);
+
+create or replace function public.prune_old_notifications()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  delete from public.notifications where created_at < now() - interval '60 days';
+  return null;
+end $$;
+
+drop trigger if exists notifications_prune on public.notifications;
+create trigger notifications_prune after insert on public.notifications
+  for each statement execute function public.prune_old_notifications();
+
+-- 11c. Extra: limpeza diária às 04:00, se a extensão pg_cron estiver ativa
+--      (Database → Extensions → pg_cron). Se não estiver, isto é ignorado.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule(jobid) from cron.job where jobname = 'pinspace_notificacoes_60_dias';
+    perform cron.schedule('pinspace_notificacoes_60_dias', '0 4 * * *',
+      $job$delete from public.notifications where created_at < now() - interval '60 days'$job$);
+  end if;
+exception when others then
+  raise notice 'pg_cron indisponível — fica só a limpeza automática por trigger.';
+end $$;
+
+-- 11d. "ver_quadros": uma linha por quadro, fácil de ler no Table Editor.
+--      Só tu vês (no painel do Supabase); o site e os visitantes não têm acesso.
+create or replace view public.ver_quadros
+with (security_invoker = true) as
+select
+  p.username                                            as utilizador,
+  b.title                                               as titulo,
+  case when b.is_public then 'público' else 'privado' end as visibilidade,
+  b.created_at                                          as criado_em,
+  b.updated_at                                          as atualizado_em,
+  b.likes_count                                         as likes,
+  b.retweets_count                                      as reposts,
+  b.views_count                                         as visualizacoes,
+  case when b.image_full like 'http%' then b.image_full end      as imagem,
+  case when b.image_url  like 'http%' then b.image_url
+       when b.image_url is not null then '(miniatura guardada dentro da base de dados)'
+  end                                                   as miniatura,
+  pg_size_pretty(coalesce(pg_column_size(b.projeto), 0)::bigint) as tamanho_conteudo,
+  b.id                                                  as id_quadro
+from public.boards b
+join public.profiles p on p.id = b.author_id
+order by b.updated_at desc;
+
+revoke all on public.ver_quadros from anon, authenticated;
 
 notify pgrst, 'reload schema';

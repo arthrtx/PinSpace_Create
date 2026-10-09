@@ -899,8 +899,9 @@ body:has(#editor-view.active) .ms-grain { animation-play-state: paused; }
     z-index: -1;
     pointer-events: none;
     background:
-        radial-gradient(ellipse 120% 70% at 50% 50%, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.55) 100%),
-        url("../img/fundo-galeria.jpg") center 62% / cover no-repeat,
+        linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+        radial-gradient(ellipse 120% 70% at 50% 50%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.7) 100%),
+        url("../img/fundo-galeria-vision.jpg?v=2") center / cover no-repeat,
         #000;
     /* Degradê com curva suave (vários pontos) para o preto em cima e em baixo */
     -webkit-mask-image: linear-gradient(to bottom,
@@ -934,7 +935,7 @@ body:has(#editor-view.active) .ms-grain { animation-play-state: paused; }
         rgba(0,0,0,0.03) calc(100% - var(--fade-bottom) * 0.15),
         rgba(0,0,0,0) 100%);
 }
-.gw-stage > .gw-dock { z-index: 5; }
+.gw-stage .gw-dock { z-index: 5; }
 .ms-glass-zone .music { margin-top: 0; }
 
 /* ---- Doca em ecrãs menores ---- */
@@ -963,7 +964,8 @@ body:has(#editor-view.active) .ms-grain { animation-play-state: paused; }
         background: rgba(20, 20, 22, 0.62);
     }
     .gw-stage .gw-dock-btn { width: 42px; height: 42px; }
-    .gw-stage > .glass-window { min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
+    .gw-stage-row { display: contents; }
+    .gw-stage .glass-window { min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
 }
 
 /* ---- Widget do hero (Vision boards / stats): versão mais compacta ---- */
@@ -1018,3 +1020,148 @@ body:has(#editor-view.active) .ms-grain { animation-play-state: paused; }
 html.js .gw-side[data-reveal] { transform: none; }
 
 html[lang="en"] .ps-local-grid .project-card-info::before { content: 'On this device'; }
+
+/* Galeria pública: a janela inteira (título, pesquisa, widgets e quadros)
+   fica mais pequena, por igual, em ecrãs de computador. */
+@media (min-width: 901px) {
+    .gw-stage { padding: clamp(70px, 7vw, 110px) var(--stage-pad-x) clamp(70px, 7vw, 110px); }
+    .gw-stage-head { margin-bottom: clamp(22px, 2.6vw, 36px); }
+    /* Doca encostada à esquerda da janela; as duas ficam mais pequenas por igual */
+    .gw-stage-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 14px;
+        zoom: 0.78;
+    }
+    /* Menu lateral fixo ao lado da janela (não acompanha o scroll) */
+    .gw-stage .gw-dock {
+        display: flex;
+        flex: none;
+        position: static;
+        left: auto;
+        top: auto;
+        margin-top: 0;
+        align-self: center; /* a meio da altura da janela da galeria */
+    }
+    .gw-stage .glass-window {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 1440px;
+        margin: 0;
+        padding-top: clamp(22px, 2.6vw, 34px);
+        padding-bottom: clamp(22px, 2.6vw, 34px);
+    }
+    /* Menos altura dentro da janela */
+    .gw-stage .gw-featured { min-height: clamp(220px, 21vw, 290px); }
+    .gw-stage .gw-side { gap: 12px; }
+    .gw-stage .gw-toolbar { margin-bottom: 18px; }
+}
+
+
+/* Janela da galeria mais transparente (deixa ver a imagem de fundo) */
+.gw-stage .glass-window {
+    background: rgba(14, 14, 16, 0.26);
+    border-color: rgba(255, 255, 255, 0.16);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    backdrop-filter: blur(14px) saturate(1.3);
+}
+.gw-stage-head .music-head-title { text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5); }
+.gw-stage-head .music-head-sub { color: rgba(255, 255, 255, 0.8); }
+
+/* Vista pequena da comunidade (leva a Explorar) */
+.gw-community {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: clamp(14px, 1.6vw, 18px);
+    padding: 16px 18px;
+    border-radius: var(--gw-radius-md);
+    background: var(--gw-widget);
+    border: 1px solid var(--gw-border-soft);
+    box-shadow: var(--gw-shadow-sm);
+    color: #FFF !important;
+    text-decoration: none;
+    transition: background .2s, transform .2s;
+}
+.gw-community:hover { background: var(--gw-widget-hover); transform: translateY(-2px); }
+.gw-community-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.gw-community-text strong { font-size: 15px; font-weight: 700; }
+.gw-community-text small { font-size: 12.5px; color: rgba(255, 255, 255, 0.62); }
+.gw-community-thumbs { display: flex; flex: none; }
+.gw-community-thumbs img {
+    width: 46px;
+    height: 46px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 2px solid rgba(20, 20, 22, 0.9);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+.gw-community-thumbs img + img { margin-left: -14px; }
+.gw-community-thumbs img:nth-child(odd) { transform: rotate(-4deg); }
+.gw-community-thumbs img:nth-child(even) { transform: rotate(4deg); }
+.gw-community-go {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: #111;
+    transition: transform .2s;
+}
+.gw-community:hover .gw-community-go { transform: translateX(3px); }
+@media (max-width: 520px) { .gw-community-thumbs { display: none; } }
+
+/* Widgets de dentro um pouco mais sólidos, para o texto ler-se bem sobre a imagem */
+.gw-stage .gw-widget,
+.gw-stage .gw-community {
+    background: rgba(16, 16, 18, 0.58);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    backdrop-filter: blur(16px) saturate(1.2);
+}
+.gw-stage .gw-community:hover { background: rgba(26, 26, 28, 0.7); }
+
+/* Barra de scroll pequena à direita (js/smooth-scroll.js) — mesma pílula de antes */
+.ps-scrollbar {
+    position: fixed;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 90;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(10, 10, 10, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    opacity: 0.55;
+    transition: opacity .2s;
+    touch-action: none;
+}
+.ps-scrollbar:hover, .ps-scrollbar:focus-visible, .ps-scrollbar.is-drag { opacity: 1; }
+.ps-scrollbar:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.6); outline-offset: 2px; }
+.ps-scrollbar[hidden] { display: none; }
+.ps-scrollbar-track {
+    position: relative;
+    width: 26px;
+    height: 56px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.ps-scrollbar-thumb {
+    position: absolute;
+    left: 7px;
+    top: 0;
+    width: 12px;
+    min-height: 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.85);
+    cursor: grab;
+    transition: background .15s;
+}
+.ps-scrollbar-thumb:hover { background: #FFF; }
+.ps-scrollbar.is-drag .ps-scrollbar-thumb { cursor: grabbing; background: #FFF; }
+/* Ecrãs só de toque (telemóvel): não faz falta */
+@media (hover: none) and (pointer: coarse) { .ps-scrollbar { display: none; } }

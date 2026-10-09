@@ -341,6 +341,7 @@ function publicServerAvailable() {
    ===================================================================== */
 
 const USER_KEY = 'pinspace_user';
+const LAST_EMAIL_KEY = 'pinspace_last_email';
 let _sb = null;
 
 function getSupabase() {
@@ -372,6 +373,8 @@ function getSupabase() {
                 image: (cached && cached.id === u.id && cached.image) || null
             };
             localStorage.setItem(USER_KEY, JSON.stringify(summary));
+            // Lembra a conta Google usada, para o próximo login ser de um clique.
+            if (u.email) { try { localStorage.setItem(LAST_EMAIL_KEY, u.email); } catch {} }
         } else if (event === 'SIGNED_OUT') {
             localStorage.removeItem(USER_KEY);
         }
@@ -453,11 +456,15 @@ async function signInWithGoogle() {
     const sb = _requireSb();
     // Lembra onde a pessoa estava para voltar lá depois do Google.
     try { sessionStorage.setItem(AUTH_RETURN_KEY, window.location.hash || ''); } catch {}
+    // Sem "prompt: select_account": se o navegador já tem a conta Google
+    // guardada, o Google entra logo, sem pedir para escolher a conta outra vez.
+    let lastEmail = null;
+    try { lastEmail = localStorage.getItem(LAST_EMAIL_KEY); } catch {}
     const { data, error } = await sb.auth.signInWithOAuth({
         provider: 'google',
         options: {
             redirectTo: window.location.origin + window.location.pathname,
-            queryParams: { prompt: 'select_account' }
+            queryParams: lastEmail ? { login_hint: lastEmail } : {}
         }
     });
     if (error) return { data, error: { message: _ptAuthError(error) } };
@@ -490,11 +497,39 @@ async function signOut() {
     return { error };
 }
 
+function _waitForSession(sb, ms) {
+    return new Promise((resolve) => {
+        const end = Date.now() + ms;
+        const tick = async () => {
+            let s = null;
+            try { s = (await sb.auth.getSession()).data.session; } catch {}
+            if (s && s.user) return resolve(s);
+            if (Date.now() >= end) return resolve(null);
+            setTimeout(tick, 250);
+        };
+        tick();
+    });
+}
+
 // Lê a sessão guardada (sem ida à rede) e completa com o perfil.
 async function getCurrentUser() {
     const sb = getSupabase();
     if (!sb) return null;
-    const { data: { session } } = await sb.auth.getSession();
+    let { data: { session } } = await sb.auth.getSession();
+    // Regresso do Google (?code=…): às vezes a troca do código ainda não acabou
+    // quando a app pergunta pela sessão, e era preciso entrar uma segunda vez.
+    // Espera um pouco por ela e, se não chegar, troca o código aqui.
+    if ((!session || !session.user) && /[?&]code=/.test(window.location.search)) {
+        session = await _waitForSession(sb, 4000);
+        if (!session) {
+            try {
+                const code = new URLSearchParams(window.location.search).get('code');
+                const res = await sb.auth.exchangeCodeForSession(code);
+                session = (res && res.data && res.data.session) || null;
+            } catch (err) { console.warn('Login Google:', err); }
+            if (!session) session = (await sb.auth.getSession()).data.session;
+        }
+    }
     if (!session || !session.user) {
         localStorage.removeItem(USER_KEY);
         return null;
@@ -1122,13 +1157,18 @@ async function getMyInteractions(boardIds) {
 
 /* ---------- Notificações ---------- */
 
+const NOTIF_KEEP_DAYS = 60;
+
 async function getNotifications(limit = 40, markRead = false) {
     const user = _requireUser();
     const sb = _requireSb();
+    // Só os últimos 60 dias (as mais antigas são apagadas pela base de dados).
+    const since = new Date(Date.now() - NOTIF_KEEP_DAYS * 864e5).toISOString();
     // Base de dados nova: notificações guardadas (criadas pelos triggers).
     const saved = await sb.from('notifications')
         .select('id,type,comment,created_at,read_at,user:profiles!notifications_actor_id_fkey(id,username,display_name,image),board:boards(id,title,author_id,image_url)')
         .eq('user_id', user.id)
+        .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(limit);
     if (!saved.error && Array.isArray(saved.data)) {
@@ -1142,17 +1182,20 @@ async function getNotifications(limit = 40, markRead = false) {
             .select('created_at,user:profiles!likes_user_id_fkey(id,username,image),boards!inner(id,title,author_id)')
             .eq('boards.author_id', user.id)
             .neq('user_id', user.id)
+            .gte('created_at', since)
             .order('created_at', { ascending: false })
             .limit(limit),
         sb.from('retweets')
             .select('created_at,comment,user:profiles!retweets_user_id_fkey(id,username,image),boards!inner(id,title,author_id)')
             .eq('boards.author_id', user.id)
             .neq('user_id', user.id)
+            .gte('created_at', since)
             .order('created_at', { ascending: false })
             .limit(limit),
         sb.from('follows')
             .select('created_at,user:profiles!follows_follower_id_fkey(id,username,image)')
             .eq('following_id', user.id)
+            .gte('created_at', since)
             .order('created_at', { ascending: false })
             .limit(limit)
     ]);
