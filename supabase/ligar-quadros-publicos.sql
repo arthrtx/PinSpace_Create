@@ -1,0 +1,2 @@
+-- Este passo agora está incluído em supabase/social.sql (secção 12).
+-- Corre só o social.sql — faz tudo de uma vez e é seguro repetir.

@@ -254,8 +254,10 @@ class UIManager {
 
     setActiveTool(tool) {
         this.currentTool = tool;
+        // Formas vive dentro de Ferramentas: o botão aceso é o de Ferramentas.
+        const lit = tool === 'shapes' ? 'brush' : tool;
         document.querySelectorAll('.tool-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tool === tool);
+            btn.classList.toggle('active', btn.dataset.tool === lit);
         });
     }
 
@@ -267,7 +269,7 @@ class UIManager {
             text: 'Texto',
             shapes: 'Formas',
             brush: 'Ferramentas',
-            design: 'Stickers',
+            design: 'Elementos',
             background: 'Fundo',
             layers: 'Camadas',
             settings: 'Configurações'
@@ -286,10 +288,18 @@ class UIManager {
                             <button class="btn btn-primary" id="btn-import-image" style="width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Importar Imagem</button>
                         </div>
                         <div class="panel-section">
+                            <h4>Colar link da imagem</h4>
+                            <div class="img-url-row">
+                                <input type="url" id="img-url" placeholder="https://… (link da imagem)" autocomplete="off" spellcheck="false">
+                                <button type="button" class="btn btn-primary" id="img-url-add" aria-label="Adicionar imagem do link">${uiIcon('plus', 16)}</button>
+                            </div>
+                            <p class="panel-hint">Ao colar o link, a imagem entra logo no quadro. Também podes colar (Ctrl+V) um link ou uma imagem diretamente no quadro.</p>
+                        </div>
+                        <div class="panel-section">
                             <h4>Dicas</h4>
                             <ul class="tips-list">
-                                <li>Arraste imagens diretamente do seu computador</li>
-                                <li>Use Ctrl+V para colar imagens da área de transferência</li>
+                                <li>Arraste imagens diretamente do seu computador ou de outro site</li>
+                                <li>Use Ctrl+V para colar imagens ou links de imagem</li>
                                 <li>Selecione a imagem para editar filtros e ajustes</li>
                             </ul>
                         </div>
@@ -297,6 +307,17 @@ class UIManager {
                     this.panelContent.querySelector('#btn-import-image')?.addEventListener('click', () => {
                         projectCallbacks.onImportImage?.();
                     });
+                    const urlInput = this.panelContent.querySelector('#img-url');
+                    const addUrl = () => {
+                        const v = urlInput.value.trim();
+                        if (!v) { urlInput.focus(); return; }
+                        projectCallbacks.onAddImageUrl?.(v);
+                        urlInput.value = '';
+                    };
+                    this.panelContent.querySelector('#img-url-add')?.addEventListener('click', addUrl);
+                    urlInput?.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') addUrl(); });
+                    // Colar um link já adiciona a imagem, sem precisar de clicar.
+                    urlInput?.addEventListener('paste', () => setTimeout(() => { if (/^(https?:|data:image)/i.test(urlInput.value.trim())) addUrl(); }, 0));
                 }
                 break;
 
@@ -306,12 +327,15 @@ class UIManager {
                 break;
 
             case 'shapes':
-                this.panelContent.innerHTML = getShapesPanelHTML(selectedElement);
+                this.panelContent.innerHTML = this._toolsTabs('shapes') + getShapesPanelHTML(selectedElement);
                 bindShapesPanelEvents(this.panelContent, selectedElement, projectCallbacks);
+                this._bindToolsTabs();
                 break;
 
             case 'brush':
-                this._renderToolsMenu(projectCallbacks);
+                this.panelContent.innerHTML = this._toolsTabs('brush') + getBrushPanelHTML(this._brushSettings);
+                bindBrushPanelEvents(this.panelContent, this._brushSettings);
+                this._bindToolsTabs();
                 break;
 
             case 'design':
@@ -369,7 +393,8 @@ class UIManager {
             ['bottom', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="21" x2="21" y2="21"/><rect x="6" y="3" width="4" height="14" rx="1"/><rect x="14" y="9" width="4" height="8" rx="1"/></svg>', 'Alinhar em baixo']
         ];
 
-        this.panelContent.innerHTML = `
+        const isImg = selectedElement.tipo === 'imagem' && !selectedElement.moldura;
+        this.panelContent.innerHTML = (isImg ? getImageToolsHTML() : '') + `
             <div class="panel-section">
                 <h4>${escapeHTML(getElementLabel(selectedElement))}</h4>
                 <div class="quick-actions">
@@ -394,6 +419,7 @@ class UIManager {
             </div>
         `;
 
+        if (isImg) bindImageToolsEvents(this.panelContent, callbacks);
         this.panelContent.querySelector('#btn-quick-duplicate')?.addEventListener('click', () => callbacks.onDuplicateElement?.(selectedElement.id));
         this.panelContent.querySelector('#btn-quick-delete')?.addEventListener('click', () => callbacks.onDeleteElement?.(selectedElement.id));
         this.panelContent.querySelectorAll('[data-align]').forEach(btn => {
@@ -419,8 +445,14 @@ class UIManager {
                 <div id="bg-options"></div>
             </div>
             <div class="panel-section">
-                <h4>Grade de alinhamento</h4>
-                <p class="panel-hint">Pontos ou linhas bem subtis para alinhar conteúdo.</p>
+                <h4>Padrão do fundo</h4>
+                <p class="panel-hint">Faz parte do fundo: aparece ao exportar, na miniatura e ao publicar.</p>
+                <div class="pattern-grid" id="pattern-grid"></div>
+                <div id="pattern-opts"></div>
+            </div>
+            <div class="panel-section">
+                <h4>Grelha guia</h4>
+                <p class="panel-hint">Só aparece aqui no editor, para alinhar. Não sai na exportação.</p>
                 <div class="toggle-group">
                     <button class="toggle-btn ${grade === null || grade === 'none' ? 'active' : ''}" data-grid-mode="none">Sem</button>
                     <button class="toggle-btn ${grade === 'pontos' ? 'active' : ''}" data-grid-mode="pontos">Pontos</button>
@@ -435,6 +467,40 @@ class UIManager {
                 callbacks.onGridChange?.(btn.dataset.gridMode === 'none' ? null : btn.dataset.gridMode);
             });
         });
+
+        // ---------- Padrão do fundo ----------
+        const pd = Object.assign({ tipo: 'nenhum', cor: '#1d1d1f', opacidade: 0.18, espaco: 48 }, bg.padrao || {});
+        const setPattern = (patch) => {
+            Object.assign(pd, patch);
+            const cur = callbacks.getBackground?.() || bg;
+            callbacks.onBackgroundChange?.({ ...cur, padrao: pd.tipo === 'nenhum' ? null : { ...pd } });
+        };
+        const grid = this.panelContent.querySelector('#pattern-grid');
+        const opts = this.panelContent.querySelector('#pattern-opts');
+        const sw = (tipo) => {
+            const css = tipo === 'nenhum' ? '' : bgPatternCSS({ tipo, cor: pd.cor, opacidade: Math.max(0.35, pd.opacidade), espaco: 10 });
+            return `<span class="pattern-swatch" style="background:${css ? css + ', ' : ''}var(--ed-swatch-bg, #f4f4f1)"></span>`;
+        };
+        const drawPatternUI = () => {
+            grid.innerHTML = BG_PATTERNS.map(([id, label]) => `
+                <button type="button" class="pattern-option ${pd.tipo === id ? 'active' : ''}" data-pattern="${id}">${sw(id)}<span>${label}</span></button>`).join('');
+            opts.innerHTML = pd.tipo === 'nenhum' ? '' : `
+                <div class="form-row">
+                    <div class="form-group"><label>Cor</label><input type="color" id="pat-cor" value="${pd.cor}"></div>
+                    <div class="form-group"><label>Intensidade</label><input type="range" id="pat-op" min="4" max="80" value="${Math.round(pd.opacidade * 100)}"></div>
+                </div>
+                <div class="form-group"><label>Espaçamento</label><input type="range" id="pat-esp" min="12" max="200" value="${pd.espaco}"></div>`;
+            opts.querySelector('#pat-cor')?.addEventListener('input', (e) => setPattern({ cor: e.target.value }));
+            opts.querySelector('#pat-op')?.addEventListener('input', (e) => setPattern({ opacidade: +e.target.value / 100 }));
+            opts.querySelector('#pat-esp')?.addEventListener('input', (e) => setPattern({ espaco: +e.target.value }));
+        };
+        grid.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-pattern]');
+            if (!b) return;
+            setPattern({ tipo: b.dataset.pattern });
+            drawPatternUI();
+        });
+        drawPatternUI();
 
         const renderBgOptions = (tipo) => {
             const container = this.panelContent.querySelector('#bg-options');
@@ -519,18 +585,48 @@ class UIManager {
         `;
 
         this.panelContent.querySelector('[data-tools-sub="pincel"]')?.addEventListener('click', () => {
-            this.panelContent.innerHTML = getBrushPanelHTML(this._brushSettings);
+            this.panelContent.innerHTML = this._backToTools() + getBrushPanelHTML(this._brushSettings);
             bindBrushPanelEvents(this.panelContent, this._brushSettings);
+            this._bindBackToTools(callbacks);
         });
         this.panelContent.querySelector('[data-tools-sub="formas"]')?.addEventListener('click', () => {
             callbacks.onShowFormas?.();
         });
     }
 
+    // Barra superior de Ferramentas: troca entre Pincel e Formas.
+    _toolsTabs(active) {
+        return `<div class="design-tabs tools-tabs">
+            <button type="button" class="design-tab ${active === 'brush' ? 'active' : ''}" data-tools-tab="brush">${uiIcon('brush', 14)} Pincel</button>
+            <button type="button" class="design-tab ${active === 'shapes' ? 'active' : ''}" data-tools-tab="shapes"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><circle cx="17" cy="17" r="4"/><path d="M17 3l4 7h-8z"/></svg> Formas</button>
+        </div>`;
+    }
+
+    _bindToolsTabs() {
+        this.panelContent.querySelectorAll('[data-tools-tab]').forEach(b => {
+            b.addEventListener('click', () => {
+                if (!b.classList.contains('active')) this.callbacks.onToolChange?.(b.dataset.toolsTab);
+            });
+        });
+    }
+
+    _backToTools() {
+        return `<button type="button" class="ed-back" data-back-tools>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            Ferramentas
+        </button>`;
+    }
+
+    _bindBackToTools(callbacks) {
+        this.panelContent.querySelector('[data-back-tools]')?.addEventListener('click', () => {
+            this.callbacks.onToolChange?.('brush');
+        });
+    }
+
     _renderDesignPanel(callbacks) {
         this.panelContent.innerHTML = `
             <div class="design-tabs">
-                <button class="design-tab ${this._designTab === 'stickers' ? 'active' : ''}" data-design-tab="stickers"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> Stickers</button>
+                <button class="design-tab ${this._designTab === 'stickers' ? 'active' : ''}" data-design-tab="stickers"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M12 3c.8 4.6 3.4 7.2 8 8-4.6.8-7.2 3.4-8 8-.8-4.6-3.4-7.2-8-8 4.6-.8 7.2-3.4 8-8z"/></svg> Elementos</button>
                 <button class="design-tab ${this._designTab === 'molduras' ? 'active' : ''}" data-design-tab="molduras"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 4-6 5 7"/></svg> Molduras</button>
             </div>
             <div id="design-content"></div>
@@ -564,7 +660,7 @@ class UIManager {
         container.innerHTML = `
             <div class="panel-section">
                 <div class="pub-status-row">
-                    <span class="pub-badge ${info.publico ? 'pub' : 'priv'}">${info.publico ? '🔓 Público' : '🔒 Privado'}</span>
+                    <span class="pub-badge ${info.publico ? 'pub' : 'priv'}">${info.publico ? uiIcon('globe', 13) + ' Público' : uiIcon('lock', 13) + ' Privado'}</span>
                     ${info.publico ? `<span class="pub-note">Qualquer pessoa pode ver este quadro no início do site e fazer uma cópia.</span>` : `<span class="pub-note">Só você vê este quadro. Pode publicá-lo para toda a gente.</span>`}
                 </div>
                 <div class="form-group">
@@ -572,7 +668,7 @@ class UIManager {
                     <input type="text" id="pub-autor" value="${escapeHTML(info.autor || '')}" placeholder="Anónimo" maxlength="40" autocomplete="off">
                     <p class="panel-hint pub-erro" id="pub-autor-erro" style="display:none"></p>
                 </div>
-                ${!online ? '<p class="panel-hint" style="color:var(--color-danger)">⚠️ A publicação não vai funcionar: o Supabase não está configurado. Confira <code>js/data.js</code>.</p>' : ''}
+                ${!online ? '<p class="panel-hint" style="color:var(--color-danger)">' + uiIcon('warn', 13) + ' A publicação não vai funcionar: o Supabase não está configurado. Confira <code>js/data.js</code>.</p>' : ''}
                 <div class="form-group pub-termos">
                     <label class="pub-termos-label">
                         <input type="checkbox" id="pub-termos">
@@ -583,9 +679,9 @@ class UIManager {
                     </div>
                 </div>
                 ${info.publico
-                    ? `<button class="btn btn-primary" id="btn-pub-atualizar" style="width:100%">🔄 Atualizar quadro público</button>
-                       <button class="btn btn-secondary" id="btn-pub-privado" style="width:100%;margin-top:8px">🔒 Tornar privado (apagar do público)</button>`
-                    : `<button class="btn btn-primary" id="btn-pub-publicar" style="width:100%">🌐 Publicar quadro</button>`}
+                    ? `<button class="btn btn-primary" id="btn-pub-atualizar" style="width:100%">${uiIcon('refresh')} Atualizar quadro público</button>
+                       <button class="btn btn-secondary" id="btn-pub-privado" style="width:100%;margin-top:8px">${uiIcon('lock')} Tornar privado (apagar do público)</button>`
+                    : `<button class="btn btn-primary" id="btn-pub-publicar" style="width:100%">${uiIcon('globe')} Publicar quadro</button>`}
             </div>
         `;
 
@@ -669,24 +765,16 @@ class UIManager {
                 <h4>Aparência</h4>
                 <div class="theme-toggle">
                     <button class="theme-option ${theme === 'light' ? 'active' : ''}" data-theme="light">
-                        <span class="theme-icon">☀️</span> Claro
+                        <span class="theme-icon">${uiIcon('sun')}</span> Claro
                     </button>
                     <button class="theme-option ${theme === 'dark' ? 'active' : ''}" data-theme="dark">
-                        <span class="theme-icon">🌙</span> Escuro
+                        <span class="theme-icon">${uiIcon('moon')}</span> Escuro
                     </button>
                 </div>
             </div>
             <div class="panel-section">
-                <h4>👤 Conta e perfil</h4>
+                <h4>Publicar</h4>
                 <div id="settings-conta"></div>
-            </div>
-            <div class="panel-section">
-                <h4>🌐 Galeria pública (anónima)</h4>
-                <div id="settings-partilha"></div>
-            </div>
-            <div class="panel-section">
-                <h4>Sobre</h4>
-                <p style="font-size:13px;color:var(--text-secondary)">PinSpace Create v1.0<br>Vision Board Editor</p>
             </div>
         `;
 
@@ -700,53 +788,82 @@ class UIManager {
         const conta = this.panelContent.querySelector('#settings-conta');
         if (conta) this.renderContaPanel(conta, callbacks);
 
-        const container = this.panelContent.querySelector('#settings-partilha');
-        if (container) this.renderPartilhaPanel(container, callbacks);
     }
 
-    // Quadro ligado à conta: descrição, visibilidade no perfil e sincronização.
+    // Publicar: só com sessão iniciada. O autor é sempre o utilizador
+    // da sessão e o quadro fica ligado à conta (tabela boards).
     renderContaPanel(container, callbacks) {
         const info = callbacks.getAccountInfo ? callbacks.getAccountInfo() : { user: null };
         if (!info.user) {
             container.innerHTML = `
-                <p class="panel-hint">Entra na tua conta para guardar este quadro no teu perfil, receber likes e reposts e ser seguido.</p>
-                <button class="btn btn-primary" id="btn-conta-login" style="width:100%">Entrar / Criar conta</button>
+                <p class="panel-hint">Para publicar tens de ter sessão iniciada. O quadro fica ligado à tua conta e o teu nome de utilizador aparece como autor.</p>
+                <button class="btn btn-primary" id="btn-conta-login" style="width:100%">${uiIcon('user')} Entrar / Criar conta</button>
             `;
             container.querySelector('#btn-conta-login')?.addEventListener('click', () => callbacks.onShowLogin?.());
             return;
         }
 
-        const synced = info.syncedAt ? 'Sincronizado ' + formatDate(info.syncedAt) : 'Ainda não guardado na conta';
+        const u = info.user;
+        const pub = !!info.perfilPublico;
+        const synced = info.syncedAt ? 'guardado ' + formatDate(info.syncedAt) : 'ainda não guardado na conta';
         const foreign = info.foreign
             ? '<p class="panel-hint">Este quadro é uma cópia do quadro de outra pessoa. Ao guardar, passa a ser um quadro novo teu.</p>'
             : '';
         container.innerHTML = `
-            <p class="panel-hint">Dono: <strong>@${escapeHTML(info.user.username || '')}</strong> · <span id="conta-sync">${escapeHTML(synced)}</span></p>
+            <div class="pub-author">
+                <span class="pub-author-av">${u.image ? `<img src="${escapeHTML(u.image)}" alt="">` : uiIcon('user', 16)}</span>
+                <span class="pub-author-text"><small>Autor</small><strong>@${escapeHTML(u.username || '')}</strong></span>
+                <span class="pub-badge ${pub ? 'pub' : 'priv'}">${pub ? uiIcon('globe', 13) + ' Público' : uiIcon('lock', 13) + ' Privado'}</span>
+            </div>
+            <p class="panel-hint" id="conta-sync">${escapeHTML(synced.charAt(0).toUpperCase() + synced.slice(1))}${pub ? ' · aparece no teu perfil, em Explorar e na galeria do início.' : '.'}</p>
             ${foreign}
             <div class="form-group">
                 <label for="conta-desc">Descrição (opcional)</label>
                 <textarea id="conta-desc" rows="3" maxlength="500" placeholder="Sobre o que é este quadro?">${escapeHTML(info.descricao || '')}</textarea>
             </div>
-            <label class="pub-termos-label" style="margin-bottom:12px">
-                <input type="checkbox" id="conta-publico" ${info.perfilPublico ? 'checked' : ''}>
-                <span>Público — aparece no meu perfil, no feed de quem me segue e em Explorar.</span>
-            </label>
-            <button class="btn btn-primary" id="btn-conta-guardar" style="width:100%">Guardar na minha conta</button>
-            <a class="btn btn-secondary" href="#profile" style="width:100%;margin-top:8px;text-decoration:none">Ver o meu perfil</a>
+            ${pub ? '' : `
+            <div class="form-group pub-termos">
+                <label class="pub-termos-label">
+                    <input type="checkbox" id="conta-termos">
+                    <span>Confirmo que tenho direitos sobre as imagens e aceito os <button type="button" class="pub-termos-link" id="pub-termos-toggle">termos</button>.</span>
+                </label>
+                <div class="pub-termos-detalhe" id="pub-termos-detalhe" hidden>
+                    <ul>${IMAGE_RIGHTS_TERMS.map(t => `<li>${escapeHTML(t)}</li>`).join('')}</ul>
+                </div>
+            </div>`}
+            <p class="panel-hint pub-erro" id="conta-erro" hidden></p>
+            ${pub
+                ? `<button class="btn btn-primary" id="btn-publicar-quadro" style="width:100%">${uiIcon('refresh')} Atualizar publicação</button>
+                   <button class="btn btn-secondary" id="btn-conta-privado" style="width:100%;margin-top:8px">${uiIcon('lock')} Tornar privado</button>`
+                : `<button class="btn btn-primary" id="btn-publicar-quadro" style="width:100%">${uiIcon('globe')} Publicar quadro</button>
+                   <button class="btn btn-secondary" id="btn-conta-guardar" style="width:100%;margin-top:8px">Guardar sem publicar</button>`}
+            <a class="btn btn-secondary" href="#profile/${encodeURIComponent(u.username || '')}" style="width:100%;margin-top:8px;text-decoration:none">Ver o meu perfil</a>
         `;
         const desc = container.querySelector('#conta-desc');
-        const pub = container.querySelector('#conta-publico');
-        container.querySelector('#btn-conta-guardar')?.addEventListener('click', async (e) => {
-            const btn = e.currentTarget;
-            btn.disabled = true;
-            btn.textContent = 'A guardar…';
-            try {
-                await callbacks.onAccountSave?.({ descricao: desc.value, perfilPublico: pub.checked });
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Guardar na minha conta';
-            }
+        const erro = container.querySelector('#conta-erro');
+        container.querySelector('#pub-termos-toggle')?.addEventListener('click', () => {
+            const d = container.querySelector('#pub-termos-detalhe');
+            if (d) d.hidden = !d.hidden;
         });
+        const run = async (btn, perfilPublico, busy) => {
+            const label = btn.innerHTML;
+            btn.disabled = true;
+            btn.textContent = busy;
+            try { await callbacks.onAccountSave?.({ descricao: desc.value, perfilPublico }); }
+            finally { if (btn.isConnected) { btn.disabled = false; btn.innerHTML = label; } }
+        };
+        container.querySelector('#btn-publicar-quadro')?.addEventListener('click', (e) => {
+            const termos = container.querySelector('#conta-termos');
+            if (termos && !termos.checked) {
+                erro.textContent = 'Para publicar, confirma que tens direitos sobre as imagens.';
+                erro.hidden = false;
+                return;
+            }
+            erro.hidden = true;
+            run(e.currentTarget, true, 'A publicar…');
+        });
+        container.querySelector('#btn-conta-guardar')?.addEventListener('click', (e) => run(e.currentTarget, false, 'A guardar…'));
+        container.querySelector('#btn-conta-privado')?.addEventListener('click', (e) => run(e.currentTarget, false, 'A tornar privado…'));
     }
 
     updateHistoryButtons(canUndo, canRedo) {
