@@ -252,7 +252,12 @@ class BoardManager {
         });
 
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !e.target.isContentEditable) {
+            // Espaço = mão para arrastar o quadro, mas NUNCA enquanto se escreve
+            const t = e.target;
+            const typing = t && (t.isContentEditable
+                || (t.closest && t.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""]')));
+            const editorOn = !!document.getElementById('editor-view')?.classList.contains('active');
+            if (e.code === 'Space' && !typing && editorOn) {
                 e.preventDefault();
                 this._spacePressed = true;
                 this.viewport.style.cursor = 'grab';

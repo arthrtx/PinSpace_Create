@@ -621,25 +621,32 @@ color: #FFFFFF;
 .ms-nav-cta {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 14px 24px;
-    background: var(--indigo-slate);
+    gap: 8px;
+    padding: 9px 16px;
+    background: rgba(61, 90, 150, 0.3);
     color: #FFFFFF !important;
     font: inherit;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.02em;
-    border: 1px solid var(--indigo-slate);
+    border: 1px solid rgba(122, 155, 220, 0.45);
     border-radius: 999px;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     cursor: pointer;
-    transition: background var(--transition-fast), color var(--transition-fast);
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
-.ms-nav-cta svg { transition: transform var(--transition-fast); }
+.ms-nav-cta svg {
+    width: 13px;
+    height: 13px;
+    transition: transform var(--transition-fast);
+}
 
 .ms-nav-cta:hover {
-    background: var(--color-cream);
-    color: var(--indigo-slate) !important;
+    background: rgba(61, 90, 150, 0.55);
+    border-color: rgba(150, 180, 240, 0.7);
+    color: #FFFFFF !important;
 }
 
 .ms-nav-cta:hover svg { transform: translateX(4px); }
@@ -856,10 +863,10 @@ color: var(--color-olive);
 .gh-sub {
     margin: clamp(8px, 1vw, 14px) auto 0;
     font-family: var(--font-family);
-    font-size: clamp(15px, 1.7vw, 21px);
+    font-size: clamp(10px, 0.9vw, 13px);
     font-weight: 500;
     line-height: 1.5;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
     color: rgba(255, 255, 255, 0.72);
     max-width: 62ch;
     text-align: center;
@@ -3909,7 +3916,8 @@ html.js .ms-coords.is-on { opacity: 1; }
     }
 
     .ms-nav-cta {
-        padding: 10px 16px;
+        padding: 7px 13px;
+        font-size: 11px;
     }
 
     .section-header {

@@ -576,7 +576,7 @@ function createTextPreset(preset, elementos) {
     const base = TEXT_PRESETS[preset] || TEXT_PRESETS.texto;
     return {
         ...createTextElement(200, 200, layer),
-        conteudo: base.conteudo,
+        conteudo: (typeof window !== 'undefined' && window.psT) ? window.psT(base.conteudo) : base.conteudo,
         fonte: base.fonte,
         tamanho: base.tamanho,
         cor: base.cor,

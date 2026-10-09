@@ -1,0 +1,158 @@
+/* =====================================================================
+   PinSpace — tipografia do site
+   Host Grotesk (texto/UI, estilo Helvetica) + Montserrat (títulos e
+   etiquetas). A primeira parte (hero "CREATE") e a intro mantêm as
+   fontes originais. As fontes dos textos dentro dos quadros (editor)
+   não são afetadas — essas vêm de cada elemento.
+   ===================================================================== */
+/* Fontes alojadas no próprio site (variáveis, latim + acentos) */
+@font-face {
+    font-family: 'PS Grotesk';
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url('../fonts/host-grotesk-latin-ext-wght-normal.woff2') format('woff2-variations');
+    unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+    font-family: 'PS Grotesk';
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url('../fonts/host-grotesk-latin-wght-normal.woff2') format('woff2-variations');
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+    font-family: 'PS Grotesk';
+    font-style: italic;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url('../fonts/host-grotesk-latin-ext-wght-italic.woff2') format('woff2-variations');
+    unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+    font-family: 'PS Grotesk';
+    font-style: italic;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url('../fonts/host-grotesk-latin-wght-italic.woff2') format('woff2-variations');
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+    font-family: 'PS Montserrat';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../fonts/montserrat-latin-ext-wght-normal.woff2') format('woff2-variations');
+    unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+    font-family: 'PS Montserrat';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../fonts/montserrat-latin-wght-normal.woff2') format('woff2-variations');
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+    font-family: 'PS Montserrat';
+    font-style: italic;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../fonts/montserrat-latin-ext-wght-italic.woff2') format('woff2-variations');
+    unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+    font-family: 'PS Montserrat';
+    font-style: italic;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../fonts/montserrat-latin-wght-italic.woff2') format('woff2-variations');
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+    font-family: 'PS Bebas';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/bebas-neue-latin-400-normal.woff2') format('woff2');
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+    font-family: 'PS Bebas';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/bebas-neue-latin-ext-400-normal.woff2') format('woff2');
+    unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+:root {
+    --font-family: 'PS Grotesk', 'Host Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-display: 'PS Montserrat', 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-accent: 'PS Grotesk', 'Host Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-eyebrow: 'PS Montserrat', 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Primeira parte do site: fica exatamente como estava */
+.ms-hero,
+.ms-coords,
+.ms-intro {
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-display: 'Archivo Black', 'Inter', sans-serif;
+    --font-accent: 'Playfair Display', Georgia, serif;
+    --font-eyebrow: 'Poppins', 'Inter', sans-serif;
+    font-family: var(--font-family);
+}
+
+/* Campos e botões herdam a fonte da página */
+button, input, select, textarea { font-family: inherit; }
+
+/* ---- Botão de idioma (EN/PT) ao lado de "pin space." ---- */
+.ps-brand-group { display: inline-flex; align-items: center; gap: 12px; }
+.ps-lang-toggle {
+    display: inline-grid;
+    place-items: center;
+    min-width: 34px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.86);
+    font-family: 'PS Montserrat', 'Montserrat', sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.ps-lang-toggle:hover { background: #FFF; color: #111; border-color: #FFF; }
+
+/* ---- Final branco: o título grande "pin space." volta à fonte original ---- */
+.ms-footer-word,
+.ps-footer-word {
+    font-family: 'Archivo Black', 'Inter', sans-serif;
+}
+
+/* ---- Faixa rolante acima do final: mais baixa e com outra fonte ---- */
+.ms-marquee {
+    padding: clamp(10px, 1.4vw, 16px) 0;
+    contain-intrinsic-size: auto 90px;
+}
+.ms-marquee-word {
+    font-family: 'PS Bebas', 'Bebas Neue', 'Oswald', sans-serif;
+    font-weight: 400;
+    font-size: clamp(1.9rem, 4.6vw, 3.9rem);
+    letter-spacing: 0.04em;
+    line-height: 1.05;
+}
+.ms-glass-zone .ms-marquee-word { -webkit-text-stroke: 1.1px rgba(255, 255, 255, 0.75); }
+.ms-marquee-dot { font-size: clamp(1rem, 2vw, 1.6rem); padding: 0 clamp(16px, 2.6vw, 36px); }
+
+/* Sem contorno pontilhado ao passar o rato (logo, links, cartões, pesquisa) */
+@media (hover: hover) {
+    .project-card:hover, .home-search:hover, .ms-tag:hover, .ms-footer-link:hover,
+    .ms-nav-brand:hover, .ms-nav-link:hover { outline-color: transparent; }
+}
