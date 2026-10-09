@@ -31,8 +31,36 @@ const GH_ICONS = {
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
     open: '<path d="M7 17 17 7M8 7h9v9"/>',
     userPlus: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/>',
-    userCheck: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 11l2 2 4-4"/>'
+    userCheck: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 11l2 2 4-4"/>',
+    star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+    image: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="m21 15-5-5L5 21"/>',
+    arrowDown: '<path d="M12 4v16M5 13l7 7 7-7"/>',
+    more: '<circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/>',
+    send: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
+    music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    sort: '<path d="M3 6h18M6 12h12M10 18h4"/>'
 };
+
+// Ícones cheios (leitor de música).
+const PS_PLAY = '<svg class="i-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
+const PS_PAUSE = '<svg class="i-pause" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+const PS_PREV = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 6v12L2.5 12zM21 6v12l-8.5-6z"/></svg>';
+const PS_NEXT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 6v12l8.5-6zM3 6v12l8.5-6z"/></svg>';
+
+// Username com pontos de quebra depois de "_", "." e "-" (nada fica cortado).
+function unameHTML(name) {
+    return escapeHTML(String(name || '')).replace(/([_.\-])/g, '$1<wbr>');
+}
+
+function psLoc() {
+    return typeof window.psLocale === 'function' ? window.psLocale() : 'pt-PT';
+}
+
+// Texto com #hashtags realçadas (já escapado).
+function _richText(text) {
+    return escapeHTML(text || '').replace(/(^|\s)#([\p{L}\p{N}_-]{1,40})/gu, '$1<a class="fd-tag" href="#explore?q=$2">#$2</a>');
+}
 
 function ghIcon(name, size = 16, extraClass = '') {
     return `<svg class="ps-icon ${extraClass}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GH_ICONS[name] || ''}</svg>`;
@@ -222,7 +250,7 @@ class SocialUI {
                         <div class="ps-menu-panel" role="menu">
                             <div class="ps-menu-head">
                                 <span class="ms-kicker">Sessão iniciada</span>
-                                <strong>@${escapeHTML(u.username || '')}</strong>
+                                <strong>@${unameHTML(u.username || '')}</strong>
                             </div>
                             <a href="#profile/${encodeURIComponent(u.username || '')}" role="menuitem">${ghIcon('user')} O meu perfil</a>
                             <a href="#notifications" role="menuitem">${ghIcon('bell')} Notificações</a>
@@ -258,7 +286,7 @@ class SocialUI {
             } else {
                 edUser.innerHTML = `<a class="ed-user-chip" href="#profile/${encodeURIComponent(u.username || '')}" title="Ver o meu perfil">
                         <img src="${avatarSrc(u)}" alt="">
-                        <span class="ed-user-name"><strong>@${escapeHTML(u.username || '')}</strong><small>O meu perfil</small></span>
+                        <span class="ed-user-name"><strong>@${unameHTML(u.username || '')}</strong><small>O meu perfil</small></span>
                     </a>`;
             }
             if (!edUser._bound) {
@@ -313,6 +341,7 @@ class SocialUI {
         const searchInput = document.querySelector('#ps-search-form input');
         if (searchInput && route.name !== 'explore') searchInput.value = '';
 
+        this.main.classList.remove('is-feed', 'is-profile');
         this.main.innerHTML = '<div class="ps-loading"><span class="ps-spinner"></span><em>a carregar…</em></div>';
         await this.app.authReady;
         if (token !== this._renderToken) return;
@@ -377,41 +406,258 @@ class SocialUI {
     /* ---------------- Explorar ---------------- */
 
     async _renderExplore(token, q) {
-        const [explore, people] = await Promise.all([
+        const me = this.user;
+        const [explore, people, notifs, myStats] = await Promise.all([
             getExploreAll(q, 60),
-            q && authAvailable() ? searchProfiles(q, 12).catch(() => []) : Promise.resolve([])
+            q && authAvailable() ? searchProfiles(q, 8).catch(() => []) : Promise.resolve([]),
+            me ? getNotifications(6).catch(() => []) : Promise.resolve([]),
+            me ? getProfileStats(me.id).catch(() => null) : Promise.resolve(null)
         ]);
         const boards = explore.items;
-        await this._loadInteractions(boards.filter(b => !b.legacy));
+        await this._loadInteractions(boards.filter(b => !b.legacy)).catch(() => {});
+        if (me && notifs.some(n => n.type === 'follow')) {
+            const ids = await getFollowingIds(me.id).catch(() => []);
+            notifs.filter(n => n.type === 'follow').forEach(n => { this.state.followState[n.user.id] = ids.includes(n.user.id) ? 'following' : 'none'; });
+        }
+        if (people.length && me) {
+            const ids = await getFollowingIds(me.id).catch(() => []);
+            people.forEach(p => { this.state.followState[p.id] = ids.includes(p.id) ? 'following' : 'none'; });
+        }
         if (token !== this._renderToken) return;
 
         const searchInput = document.querySelector('#ps-search-form input');
         if (searchInput) searchInput.value = q;
 
-        const peopleHTML = q
-            ? `<section class="ps-section">
-                ${this._sectionHead('Pessoas', `${people.length} ${people.length === 1 ? 'resultado' : 'resultados'}`, 'sky')}
-                ${people.length ? `<div class="ps-people">${people.map(p => this.personRow(p)).join('')}</div>` : '<p class="ps-empty">Ninguém com esse nome.</p>'}
-               </section>`
-            : '';
+        this._exploreItems = boards;
+        this._exploreSort = this._exploreSort || 'recent';
 
+        // Sugestões: autores do feed que ainda não sigo.
+        const seen = new Set();
+        const suggestions = [];
+        boards.forEach(b => {
+            const a = b.author;
+            if (!a || !a.id || b.legacy || seen.has(a.id) || (me && a.id === me.id)) return;
+            seen.add(a.id);
+            if (this.state.followState[a.id] !== 'following') suggestions.push(a);
+        });
+
+        this.main.classList.add('is-feed');
         this.main.innerHTML = `
-            ${this._pageHead('Comunidade', 'Explorar', q ? `resultados para <em>“${escapeHTML(q)}”</em>` : '<em>quadros públicos</em> — abre um, copia, faz teu', `
-                <form class="home-search ps-explore-search" id="explore-form">
-                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                    <input type="search" name="q" value="${escapeHTML(q)}" placeholder="Procurar quadros e pessoas…" aria-label="Procurar">
-                </form>`)}
-            ${peopleHTML}
-            <section class="ps-section">
-                ${this._sectionHead('Quadros públicos', `${boards.length} ${boards.length === 1 ? 'quadro' : 'quadros'} · da comunidade e da galeria`)}
-                ${this._grid(boards, q ? 'Nenhum quadro com esse título.' : 'Ainda não há quadros públicos. Sê o primeiro!')}
-            </section>`;
+            <div class="fd">
+                <aside class="fd-side fd-left">
+                    ${this._feedMeCard(me, myStats)}
+                    ${this._feedShortcuts(me)}
+                </aside>
 
-        this.main.querySelector('#explore-form')?.addEventListener('submit', (e) => {
+                <section class="fd-center" aria-label="Feed">
+                    ${this._feedComposer(me, q)}
+                    <div class="fd-sortbar">
+                        <span class="fd-sort-line"></span>
+                        <div class="fd-sort" role="group" aria-label="Ordenar">
+                            <span>Ordenar:</span>
+                            <button type="button" data-sort="recent" class="${this._exploreSort === 'recent' ? 'on' : ''}">Recentes</button>
+                            <button type="button" data-sort="popular" class="${this._exploreSort === 'popular' ? 'on' : ''}">Populares</button>
+                        </div>
+                    </div>
+                    <div class="fd-posts" id="fd-posts">${this._feedPosts(q)}</div>
+                </section>
+
+                <aside class="fd-side fd-right">
+                    ${q ? this._feedPeople('Pessoas', people, q ? 'Ninguém com esse nome.' : '') : ''}
+                    ${me ? this._feedActivity(notifs) : this._feedJoin()}
+                    ${suggestions.length ? this._feedPeople('Sugestões para ti', suggestions.slice(0, 5)) : ''}
+                </aside>
+            </div>`;
+
+        this.main.querySelectorAll('.fd-sort [data-sort]').forEach(btn => btn.addEventListener('click', () => {
+            this._exploreSort = btn.dataset.sort;
+            this.main.querySelectorAll('.fd-sort [data-sort]').forEach(b => b.classList.toggle('on', b === btn));
+            const list = this.main.querySelector('#fd-posts');
+            if (list) list.innerHTML = this._feedPosts(q);
+        }));
+        this.main.querySelector('#fd-search')?.addEventListener('submit', (e) => {
             e.preventDefault();
             const v = e.currentTarget.q.value.trim();
             window.location.hash = '#explore' + (v ? '?q=' + encodeURIComponent(v) : '');
         });
+    }
+
+    _feedMeCard(me, stats) {
+        if (!me) {
+            return `<div class="fd-card fd-me fd-me-guest">
+                <div class="fd-me-cover"></div>
+                <div class="fd-me-body">
+                    <h3 class="fd-me-title">Junta-te à comunidade</h3>
+                    <p class="fd-muted">Publica quadros, segue pessoas e guarda o que gostas.</p>
+                    <button type="button" class="fd-btn fd-btn-red" data-act="login">Entrar com Google</button>
+                </div>
+            </div>`;
+        }
+        const cover = safeImgSrc(me.cover_image);
+        const st = stats || { boards: 0, followers: 0, following: 0 };
+        const base = '#profile/' + encodeURIComponent(me.username || '');
+        return `<div class="fd-card fd-me">
+            <div class="fd-me-cover" ${cover ? `style="background-image:url('${cover}')"` : ''}></div>
+            <a href="${base}" class="fd-me-avatar"><img src="${avatarSrc(me)}" alt=""></a>
+            <div class="fd-me-body">
+                <a href="${base}" class="fd-me-name ps-uname">${unameHTML(me.display_name || me.username || '')}</a>
+                <span class="fd-me-handle ps-uname">@${unameHTML(me.username || '')}</span>
+                <div class="fd-me-stats">
+                    <a href="${base}"><b>${_fmtCount(st.boards)}</b><span>Quadros</span></a>
+                    <a href="${base}/followers"><b>${_fmtCount(st.followers)}</b><span>Seguidores</span></a>
+                    <a href="${base}/following"><b>${_fmtCount(st.following)}</b><span>A seguir</span></a>
+                </div>
+                <a href="${base}" class="fd-btn fd-btn-red">O meu perfil</a>
+            </div>
+        </div>`;
+    }
+
+    _feedShortcuts(me) {
+        const item = (href, icon, label, act = '') => `<a href="${href}" class="fd-short" ${act ? `data-act="${act}"` : ''}><span class="fd-short-ic">${ghIcon(icon, 16)}</span><span>${label}</span></a>`;
+        return `<div class="fd-card fd-shortcuts">
+            <div class="fd-card-head"><h4>Atalhos</h4></div>
+            ${item('#', 'plus', 'Novo quadro', 'new-board')}
+            ${me ? item('#profile/' + encodeURIComponent(me.username || ''), 'board', 'Os meus quadros') : item('#', 'user', 'Entrar', 'login')}
+            ${item('#notifications', 'bell', 'Notificações')}
+            ${item('#', 'home', 'Página inicial')}
+        </div>`;
+    }
+
+    _feedComposer(me, q) {
+        return `<div class="fd-card fd-composer">
+            <form class="fd-compose-row" id="fd-search" role="search">
+                <img class="fd-avatar" src="${me ? avatarSrc(me) : identicon('pinspace')}" alt="">
+                <label class="fd-compose-input">
+                    ${ghIcon('search', 16)}
+                    <input type="search" name="q" value="${escapeHTML(q)}" placeholder="Procurar quadros, #tags e pessoas…" aria-label="Procurar">
+                </label>
+            </form>
+            <div class="fd-compose-actions">
+                <button type="button" class="fd-chip" data-act="new-board">${ghIcon('image', 16)}<span>Novo quadro</span></button>
+                <a class="fd-chip" href="${me ? '#profile/' + encodeURIComponent(me.username || '') : '#profile'}">${ghIcon('board', 16)}<span>Rascunhos</span></a>
+                <a class="fd-chip" href="#notifications">${ghIcon('heart', 16)}<span>Atividade</span></a>
+                ${q ? `<a class="fd-chip fd-chip-end" href="#explore">✕ <span>Limpar pesquisa</span></a>` : `<span class="fd-chip fd-chip-end fd-chip-static">${ghIcon('globe', 15)}<span>Público</span></span>`}
+            </div>
+        </div>`;
+    }
+
+    _feedPosts(q) {
+        let items = (this._exploreItems || []).slice();
+        if (this._exploreSort === 'popular') {
+            const score = (b) => {
+                const c = this.state.counts[b.id] || { likes: b.likes_count || 0, retweets: b.retweets_count || 0 };
+                return (c.likes || 0) + 2 * (c.retweets || 0);
+            };
+            items.sort((a, b) => score(b) - score(a));
+        }
+        if (!items.length) {
+            return `<div class="fd-card fd-empty">${q ? 'Nenhum quadro encontrado.' : 'Ainda não há quadros públicos. Sê o primeiro!'}</div>`;
+        }
+        return items.map(b => this.feedPost(b)).join('');
+    }
+
+    feedPost(b) {
+        const id = escapeHTML(b.id);
+        const author = b.author || { username: '?' };
+        const isMine = !!(this.user && this.user.id === b.author_id);
+        const thumb = safeImgSrc(b.image_full || b.image_url) || safeImgSrc(b.image_url);
+        const openAct = b.legacy ? 'open-legacy' : 'open';
+        const when = b.updated_at || b.created_at;
+        const profileHref = '#profile/' + encodeURIComponent(author.username || '');
+
+        const repostHead = b.repost && b.repost.by ? `
+            <div class="fd-repost">${ghIcon('repeat', 13)}
+                <a href="#profile/${encodeURIComponent(b.repost.by.username)}" class="ps-uname">@${unameHTML(b.repost.by.username)}</a><span>repostou</span>
+            </div>` : '';
+
+        const who = b.legacy
+            ? `<span class="fd-post-avatar"><img src="${identicon(author.username || 'anon')}" alt=""></span>
+               <div class="fd-post-who"><span class="fd-post-name ps-uname">${unameHTML(author.username || 'Anónimo')}</span><span class="fd-post-sub"><span>Galeria pública</span> · ${timeAgo(when)}</span></div>`
+            : `<a href="${profileHref}" class="fd-post-avatar"><img src="${avatarSrc(author)}" alt=""></a>
+               <div class="fd-post-who">
+                   <a href="${profileHref}" class="fd-post-name ps-uname">${unameHTML(author.display_name || author.username || '?')}</a>
+                   <span class="fd-post-sub"><span class="ps-uname">@${unameHTML(author.username || '?')}</span> · ${timeAgo(when)}</span>
+               </div>`;
+
+        const headSide = b.legacy ? '' : isMine
+            ? `<button type="button" class="fd-icon-btn fd-danger" data-act="delete-board" data-board-id="${id}" title="Apagar da conta" aria-label="Apagar da conta">${ghIcon('trash', 16)}</button>`
+            : (author.id ? this.followButton(author.id, 'fd-follow') : '');
+
+        let actions;
+        if (b.legacy) {
+            actions = `<button type="button" class="fd-act" data-act="open-legacy" data-board-id="${id}">${ghIcon('open', 17)}<span>Abrir cópia</span></button>`;
+        } else {
+            const liked = this.state.likeState[b.id] === 'liked';
+            const rted = this.state.retweetState[b.id] === 'retweeted';
+            const counts = this.state.counts[b.id] || { likes: b.likes_count || 0, retweets: b.retweets_count || 0 };
+            actions = `
+                <button type="button" class="fd-act like-btn ${liked ? 'is-on' : ''}" data-act="like" data-board-id="${id}" aria-pressed="${liked}" title="${liked ? 'Remover like' : 'Gostar'}">
+                    ${ghIcon('heart', 18)}<span class="repo-stat-count" data-like-count="${id}">${_fmtCount(counts.likes)}</span>
+                </button>
+                <button type="button" class="fd-act retweet-btn ${rted ? 'is-on' : ''}" data-act="repost" data-board-id="${id}" aria-pressed="${rted}" title="${rted ? 'Desfazer repost' : 'Repostar'}">
+                    ${ghIcon('repeat', 18)}<span class="repo-stat-count" data-retweet-count="${id}">${_fmtCount(counts.retweets)}</span>
+                </button>
+                <span class="fd-act-spacer"></span>
+                <button type="button" class="fd-act" data-act="open" data-board-id="${id}" title="Abrir quadro">${ghIcon('send', 17)}<span>Abrir</span></button>`;
+        }
+
+        return `<article class="fd-card fd-post" data-board-card="${id}">
+            ${repostHead}
+            <header class="fd-post-head">${who}<span class="fd-post-side">${headSide}</span></header>
+            <div class="fd-post-text">
+                <a href="#" class="fd-post-title" data-act="${openAct}" data-board-id="${id}">${escapeHTML(b.title)}</a>
+                ${b.description ? `<p>${_richText(b.description)}</p>` : ''}
+                ${b.repost && b.repost.comment ? `<blockquote class="fd-quote">“${escapeHTML(b.repost.comment)}”</blockquote>` : ''}
+            </div>
+            <a href="#" class="fd-post-media" data-act="${openAct}" data-board-id="${id}" aria-label="Abrir ${escapeHTML(b.title)}">
+                ${thumb ? `<img src="${thumb}" alt="" loading="lazy" decoding="async">` : '<span class="fd-media-empty">📌</span>'}
+            </a>
+            <footer class="fd-post-actions">${actions}</footer>
+        </article>`;
+    }
+
+    _feedActivity(items) {
+        const row = (n) => {
+            const who = `<a href="#profile/${encodeURIComponent(n.user.username)}" class="fd-strong ps-uname">${unameHTML(n.user.display_name || n.user.username)}</a>`;
+            const text = n.type === 'like' ? 'gostou do teu quadro' : n.type === 'repost' ? 'repostou o teu quadro' : 'começou a seguir-te';
+            const thumb = n.board && safeImgSrc(n.board.image_url);
+            const side = n.type === 'follow'
+                ? this.followButton(n.user.id, 'fd-follow fd-follow-sm')
+                : (thumb ? `<a href="#" class="fd-act-thumb" data-act="open" data-board-id="${escapeHTML(n.board.id)}"><img src="${thumb}" alt=""></a>` : '');
+            return `<li class="fd-row">
+                <a href="#profile/${encodeURIComponent(n.user.username)}" class="fd-row-avatar"><img src="${avatarSrc(n.user)}" alt=""></a>
+                <div class="fd-row-body"><p>${who} <span>${text}</span></p><time>${timeAgo(n.created_at)}</time></div>
+                ${side}
+            </li>`;
+        };
+        return `<div class="fd-card fd-activity">
+            <div class="fd-card-head"><h4>Atividade</h4><a href="#notifications">Ver tudo</a></div>
+            ${items.length ? `<ul class="fd-rows">${items.slice(0, 5).map(row).join('')}</ul>` : '<p class="fd-muted">Ainda sem atividade. Publica um quadro para começar.</p>'}
+        </div>`;
+    }
+
+    _feedJoin() {
+        return `<div class="fd-card fd-activity">
+            <div class="fd-card-head"><h4>Atividade</h4></div>
+            <p class="fd-muted">Entra para veres quem gostou, repostou ou te seguiu.</p>
+            <button type="button" class="fd-btn" data-act="login">Entrar</button>
+        </div>`;
+    }
+
+    _feedPeople(title, people, emptyText = '') {
+        if (!people.length && !emptyText) return '';
+        return `<div class="fd-card fd-people">
+            <div class="fd-card-head"><h4>${escapeHTML(title)}</h4></div>
+            ${people.length ? `<ul class="fd-rows">${people.map(p => `
+                <li class="fd-row">
+                    <a href="#profile/${encodeURIComponent(p.username)}" class="fd-row-avatar"><img src="${avatarSrc(p)}" alt=""></a>
+                    <div class="fd-row-body">
+                        <a href="#profile/${encodeURIComponent(p.username)}" class="fd-strong ps-uname">${unameHTML(p.display_name || p.username)}</a>
+                        <span class="fd-row-sub ps-uname">@${unameHTML(p.username)}</span>
+                    </div>
+                    ${this.followButton(p.id, 'fd-follow fd-follow-sm')}
+                </li>`).join('')}</ul>` : `<p class="fd-muted">${escapeHTML(emptyText)}</p>`}
+        </div>`;
     }
 
     /* ---------------- Perfil ---------------- */
@@ -445,7 +691,7 @@ class SocialUI {
             profile = { id: this.user.id, username: meName, bio: this.user.bio || '', image: this.user.image || null, created_at: new Date().toISOString(), _offline: true };
         }
         if (!profile) {
-            this.main.innerHTML = `<div class="ps-blank ps-blank-hero"><h3><em>Ninguém por aqui</em></h3><p>Não existe nenhum perfil @${escapeHTML(username)}.</p><a class="ps-btn" href="#explore">Explorar</a></div>`;
+            this.main.innerHTML = `<div class="ps-blank ps-blank-hero"><h3><em>Ninguém por aqui</em></h3><p>Não existe nenhum perfil @${unameHTML(username)}.</p><a class="ps-btn" href="#explore">Explorar</a></div>`;
             return;
         }
 
@@ -456,8 +702,13 @@ class SocialUI {
         ]);
         if (!isMe) this.state.followState[profile.id] = following ? 'following' : 'none';
 
+        // Quadros do perfil: servem o separador "Quadros", o destaque e o widget de data.
+        const boardsRes = profile._offline ? { data: [], error: null } : await getUserBoards(profile.id).catch(err => ({ data: [], error: err }));
+        const allBoards = boardsRes.data || [];
+
         let content = '';
         let localOnly = null;
+        let sectionTitle = '';
         if (tab === 'followers' || tab === 'following') {
             const res = tab === 'followers' ? await getFollowers(profile.id) : await getFollowing(profile.id);
             if (res.error) throw res.error;
@@ -465,6 +716,7 @@ class SocialUI {
                 const ids = await getFollowingIds(this.user.id);
                 res.data.forEach(p => { this.state.followState[p.id] = ids.includes(p.id) ? 'following' : 'none'; });
             }
+            sectionTitle = tab === 'followers' ? 'Seguidores' : 'A seguir';
             content = res.data.length
                 ? `<div class="ps-people">${res.data.map(p => this.personRow(p)).join('')}</div>`
                 : `<p class="ps-empty-simple">${tab === 'followers' ? 'Ainda não tem nenhum seguidor.' : 'Ainda não segue ninguém.'}</p>`;
@@ -473,72 +725,207 @@ class SocialUI {
             await this._loadInteractions(reposts);
             content = this._grid(reposts, isMe ? 'Ainda não repostaste nenhum quadro.' : 'Ainda não tem nenhum repost.');
         } else {
-            const res = profile._offline ? { data: [], error: null } : await getUserBoards(profile.id);
+            const res = boardsRes;
             if (res.error && !isMe) throw res.error;
-            if (res.error) res.data = [];
-            if (isMe) this.state.userBoards = res.data;
-            await this._loadInteractions(res.data).catch(() => {});
+            if (isMe) this.state.userBoards = allBoards;
+            await this._loadInteractions(allBoards).catch(() => {});
             if (isMe) {
                 // Rascunhos: quadros guardados neste navegador (o "Continuar a
                 // editar" do início) que ainda não estão na conta — aparecem primeiro.
-                const cloudIds = new Set(res.data.map(b => b.id));
+                const cloudIds = new Set(allBoards.map(b => b.id));
                 localOnly = getAllProjects()
                     .filter(p => !p.remoteId || !cloudIds.has(p.remoteId))
                     .sort((a, b) => String(b.ultimaEdicao || '').localeCompare(String(a.ultimaEdicao || '')));
-                const pub = res.data.filter(b => b.is_public), priv = res.data.filter(b => !b.is_public);
-                const cloudPart = res.data.length
+                const pub = allBoards.filter(b => b.is_public), priv = allBoards.filter(b => !b.is_public);
+                const cloudPart = allBoards.length
                     ? (pub.length ? this._sectionHead('Publicados', `${pub.length} ${pub.length === 1 ? 'quadro público' : 'quadros públicos'}`) + this._grid(pub) : '')
                       + (priv.length ? this._sectionHead('Guardados na conta', `${priv.length} privado${priv.length === 1 ? '' : 's'} · só tu vês`, 'sky') + this._grid(priv) : '')
                     : (localOnly.length ? '' : '<p class="ps-empty-simple">Ainda não tens nenhum quadro. Cria um em “Novo quadro”.</p>');
                 content = this._localSection(localOnly) + cloudPart;
             } else {
-                content = this._grid(res.data, 'Ainda não tem nenhum quadro.');
+                content = this._grid(allBoards, 'Ainda não tem nenhum quadro.');
             }
         }
         if (token !== this._renderToken) return;
 
-        const base = '#profile/' + encodeURIComponent(profile.username);
-        const tabLink = (id, label, count) => `
-            <a href="${base}${id === 'boards' ? '' : '/' + id}" class="ps-tab ${tab === id ? 'selected' : ''}" ${tab === id ? 'aria-current="page"' : ''}>
-                ${label}${count !== null ? `<sup>${_fmtCount(count)}</sup>` : ''}
-            </a>`;
-
-        const actionBtn = isMe
-            ? `<button type="button" class="ps-btn" data-act="edit-profile">${ghIcon('edit', 13)} Editar perfil</button>
-               <button type="button" class="ms-nav-cta ps-cta" data-act="new-board">${ghIcon('plus', 15)}<span>Novo quadro</span></button>`
-            : this.followButton(profile.id, 'ps-follow-lg', 'profile-follow-btn');
-
-        const since = new Date(profile.created_at).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
-
+        this.main.classList.add('is-profile');
         this.main.innerHTML = `
-            <section class="ps-profile">
-                <div class="ps-profile-card">
-                    <div class="ps-avatar"><img id="profile-avatar" src="${avatarSrc(profile)}" alt="Avatar de ${escapeHTML(profile.username)}"></div>
-                    <div class="ps-profile-main">
-                        <span class="ms-kicker ps-kicker">→ ${isMe ? 'O teu perfil' : 'Perfil'} · desde ${escapeHTML(since)}</span>
-                        <h1 class="ps-profile-name" id="profile-username">${escapeHTML(profile.display_name || profile.username)}</h1>
-                        <p class="ps-handle"><em>@${escapeHTML(profile.username)}</em></p>
-                        ${profile.bio
-                            ? `<p class="ps-bio" id="profile-bio">${escapeHTML(profile.bio)}</p>`
-                            : (isMe ? '<p class="ps-bio ps-bio-empty">Ainda sem bio. <a href="#" data-act="edit-profile">Escreve uma →</a></p>' : '')}
-                        <div class="ps-profile-actions">${actionBtn}</div>
-                    </div>
-                    <div class="ps-stats">
-                        <a class="ps-stat" href="${base}"><b>${_fmtCount(stats.boards)}</b><span>quadros</span></a>
-                        <a class="ps-stat" href="${base}/followers"><b id="profile-followers-count">${_fmtCount(stats.followers)}</b><span>${stats.followers === 1 ? 'seguidor' : 'seguidores'}</span></a>
-                        <a class="ps-stat" href="${base}/following"><b id="profile-following-count">${_fmtCount(stats.following)}</b><span>a seguir</span></a>
-                    </div>
+            <section class="pf">
+                ${this._profileHero(profile, stats, isMe, tab, allBoards)}
+                <div class="pf-content" id="pf-content">
+                    ${sectionTitle ? this._sectionHead(sectionTitle, '', 'sky') : ''}
+                    ${content}
                 </div>
-
-                <nav class="ps-tabs" aria-label="Secções do perfil">
-                    ${tabLink('boards', 'Quadros', stats.boards)}
-                    ${tabLink('reposts', 'Reposts', null)}
-                    ${tabLink('followers', 'Seguidores', stats.followers)}
-                    ${tabLink('following', 'A seguir', stats.following)}
-                </nav>
-                <div class="ps-tab-body profile-tab-body">${content}</div>
             </section>`;
         if (localOnly) this._fillLocal(localOnly);
+        this._bindProfileHero(profile);
+        this.app.music?._syncMini?.();
+    }
+
+    _profileHero(profile, stats, isMe, tab, boards) {
+        const base = '#profile/' + encodeURIComponent(profile.username);
+        const name = profile.display_name || profile.username;
+        const cover = safeImgSrc(profile.cover_image);
+        const visible = isMe ? boards : boards.filter(b => b.is_public);
+        const byDate = visible.slice().sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')));
+        const latest = byDate[0] || null;
+        const featured = visible.slice().sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0))[0] || latest;
+
+        const loc = psLoc();
+        const d = new Date((latest && (latest.updated_at || latest.created_at)) || profile.created_at || Date.now());
+        const month = d.toLocaleDateString(loc, { month: 'short' }).replace('.', '').toUpperCase();
+        const dateTop = latest ? String(d.getDate()).padStart(2, '0') : month;
+        const dateBottom = latest ? month : String(d.getFullYear());
+
+        const tabLink = (id, label) => `<a href="${base}${id === 'boards' ? '' : '/' + id}" class="pf-tab ${tab === id ? 'on' : ''}" ${tab === id ? 'aria-current="page"' : ''}>${label}</a>`;
+
+        const actions = isMe
+            ? `<button type="button" class="pf-btn" data-act="edit-profile">${ghIcon('edit', 14)}<span>Editar perfil</span></button>
+               <button type="button" class="pf-btn pf-btn-red" data-act="new-board">${ghIcon('plus', 15)}<span>Novo quadro</span></button>`
+            : this.followButton(profile.id, 'pf-btn pf-btn-red pf-follow', 'profile-follow-btn');
+
+        const featThumb = featured && safeImgSrc(featured.image_url);
+        const featCard = featured
+            ? `<span class="pf-label">Destaque</span>
+               <a href="#" class="pf-feat-thumb" data-act="open" data-board-id="${escapeHTML(featured.id)}" title="${escapeHTML(featured.title)}">
+                   ${featThumb ? `<img src="${featThumb}" alt="">` : '<span>📌</span>'}
+               </a>
+               <button type="button" class="pf-red-btn" data-pf="scroll" aria-label="Ver quadros">${ghIcon('arrowDown', 20)}</button>`
+            : `<span class="pf-label">${isMe ? 'Criar' : 'Quadros'}</span>
+               <span class="pf-feat-thumb pf-feat-empty">${ghIcon('image', 26)}</span>
+               ${isMe
+                   ? `<button type="button" class="pf-red-btn" data-act="new-board" aria-label="Novo quadro">${ghIcon('plus', 20)}</button>`
+                   : `<button type="button" class="pf-red-btn" data-pf="scroll" aria-label="Ver quadros">${ghIcon('arrowDown', 20)}</button>`}`;
+
+        const lang = typeof window.psLang === 'function' ? window.psLang() : 'pt';
+
+        return `
+        <div class="pf-frame">
+            <aside class="pf-rail">
+                <nav class="pf-card pf-nav" aria-label="Atalhos">
+                    <a href="#" class="pf-logo" title="Página inicial">
+                        <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="currentColor"/><path d="M16 9c-2 0-3.6 1.6-3.6 3.6 0 2.4 3.6 8.1 3.6 8.1s3.6-5.7 3.6-8.1C19.6 10.6 18 9 16 9z" fill="#2a2524"/></svg>
+                    </a>
+                    <a href="#" class="pf-nav-ic" title="Página inicial">${ghIcon('home', 17)}</a>
+                    <a href="#explore" class="pf-nav-ic" title="Explorar">${ghIcon('star', 17)}</a>
+                    <a href="#notifications" class="pf-nav-ic" title="Notificações">${ghIcon('bell', 17)}</a>
+                </nav>
+
+                <div class="pf-card pf-me">
+                    <button type="button" class="pf-me-avatar" ${isMe ? 'data-act="edit-profile" title="Mudar foto"' : 'data-pf="noop" tabindex="-1"'}>
+                        <img id="profile-avatar" src="${avatarSrc(profile)}" alt="Avatar de ${escapeHTML(profile.username)}">
+                    </button>
+                    <span class="pf-label">Perfil</span>
+                </div>
+
+                <div class="pf-card pf-opts">
+                    <div class="pf-opts-ic">
+                        <button type="button" class="pf-round" data-pf="copy-link" title="Copiar link do perfil" aria-label="Copiar link do perfil">${ghIcon('link', 16)}</button>
+                        ${isMe
+                            ? `<button type="button" class="pf-round" data-act="logout" title="Sair" aria-label="Sair">${ghIcon('logout', 16)}</button>`
+                            : `<a class="pf-round" href="#explore" title="Explorar" aria-label="Explorar">${ghIcon('explore', 16)}</a>`}
+                    </div>
+                    <div class="pf-lang no-i18n" role="group" aria-label="Idioma">
+                        <button type="button" data-pf-lang="en" class="${lang === 'en' ? 'on' : ''}">EN</button>
+                        <button type="button" data-pf-lang="pt" class="${lang !== 'en' ? 'on' : ''}">PT</button>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="pf-hero ${cover ? 'has-cover' : ''}">
+                <div class="pf-cover">${cover ? `<img src="${cover}" alt="">` : ''}</div>
+                <div class="pf-bigword no-i18n" aria-hidden="true">${escapeHTML(String(name).toUpperCase())}</div>
+
+                <nav class="pf-notch" aria-label="Secções do perfil">
+                    ${tabLink('boards', 'Quadros')}
+                    ${tabLink('reposts', 'Reposts')}
+                </nav>
+
+                <div class="pf-info">
+                    <span class="pf-kicker">${isMe ? 'O teu perfil' : 'Perfil'}</span>
+                    <h1 class="pf-name ps-uname" id="profile-username">${unameHTML(name)}</h1>
+                    <p class="pf-handle ps-uname">@${unameHTML(profile.username)}</p>
+                    ${profile.bio
+                        ? `<p class="pf-bio" id="profile-bio">${escapeHTML(profile.bio)}</p>`
+                        : (isMe ? '<p class="pf-bio pf-bio-empty"><a href="#" data-act="edit-profile">Escreve uma bio →</a></p>' : '')}
+                    <div class="pf-stats">
+                        <a href="${base}"><b>${_fmtCount(stats.boards)}</b><span>Quadros</span></a>
+                        <a href="${base}/followers"><b id="profile-followers-count">${_fmtCount(stats.followers)}</b><span>Seguidores</span></a>
+                        <a href="${base}/following"><b id="profile-following-count">${_fmtCount(stats.following)}</b><span>A seguir</span></a>
+                    </div>
+                    <div class="pf-actions">${actions}</div>
+                </div>
+
+                <div class="pf-date">
+                    <span class="pf-label">${latest ? 'Último quadro' : 'Membro desde'}</span>
+                    <strong class="no-i18n">${escapeHTML(dateTop)}</strong>
+                    <strong class="no-i18n">${escapeHTML(dateBottom)}</strong>
+                </div>
+
+                ${isMe ? `<button type="button" class="pf-cover-btn" data-pf="cover" title="Mudar banner">${ghIcon('image', 15)}<span>Banner</span></button>` : ''}
+
+                <button type="button" class="pf-red-btn pf-down" data-pf="scroll" aria-label="Ver quadros">${ghIcon('arrowDown', 20)}</button>
+
+                <div class="pf-cut pf-cut-left">
+                    <div class="pf-card pf-feat">${featCard}</div>
+                </div>
+
+                <div class="pf-cut pf-cut-right">
+                    <div class="pf-music" data-music-mini>
+                        <button type="button" class="pf-music-pill" data-music-act="toggle"><span class="pf-when-paused">Ouvir</span><span class="pf-when-playing">Pausa</span></button>
+                        <div class="pf-music-card">
+                            <span class="pf-music-art" data-music-art></span>
+                            <span class="pf-music-meta"><strong data-music-title>Música</strong><small data-music-artist>carrega em ▶ para ouvir</small></span>
+                            <button type="button" class="pf-music-play" data-music-act="toggle" aria-label="Tocar">${PS_PLAY}${PS_PAUSE}</button>
+                            <span class="pf-music-ctrl">
+                                <button type="button" data-music-act="prev" aria-label="Anterior">${PS_PREV}</button>
+                                <button type="button" data-music-act="next" aria-label="Seguinte">${PS_NEXT}</button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    _bindProfileHero(profile) {
+        const root = this.main.querySelector('.pf');
+        if (!root) return;
+        root.addEventListener('click', (e) => {
+            const lang = e.target.closest('[data-pf-lang]');
+            if (lang) {
+                e.preventDefault();
+                window.psSetLang?.(lang.dataset.pfLang);
+                root.querySelectorAll('[data-pf-lang]').forEach(b => b.classList.toggle('on', b === lang));
+                return;
+            }
+            const m = e.target.closest('[data-music-act]');
+            if (m) {
+                e.preventDefault();
+                const mu = this.app.music;
+                if (!mu) return;
+                const act = m.dataset.musicAct;
+                if (act === 'toggle') mu.togglePlay();
+                else if (act === 'next') mu.widget && mu.tracks.length ? mu.next() : mu.togglePlay();
+                else if (act === 'prev') mu.widget && mu.tracks.length ? mu.prev() : mu.togglePlay();
+                return;
+            }
+            const el = e.target.closest('[data-pf]');
+            if (!el) return;
+            e.preventDefault();
+            const act = el.dataset.pf;
+            if (act === 'scroll') {
+                const target = this.main.querySelector('#pf-content');
+                if (target && this.scroller) this.scroller.scrollTo({ top: target.getBoundingClientRect().top - this.scroller.getBoundingClientRect().top + this.scroller.scrollTop - 90, behavior: 'smooth' });
+            } else if (act === 'copy-link') {
+                const url = window.location.origin + window.location.pathname + '#profile/' + encodeURIComponent(profile.username);
+                (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+                    .then(() => this.app.ui.showToast('Link do perfil copiado.'))
+                    .catch(() => window.prompt('Copia o link:', url));
+            } else if (act === 'cover') {
+                this.openProfileEditor(true);
+            }
+        });
     }
 
     // Secção "Neste dispositivo" (antiga "Recent boards" da landing).
@@ -576,7 +963,7 @@ class SocialUI {
         this._setNotifDot(false);
 
         const row = (n) => {
-            const who = `<a href="#profile/${encodeURIComponent(n.user.username)}" class="ps-strong">@${escapeHTML(n.user.username)}</a>`;
+            const who = `<a href="#profile/${encodeURIComponent(n.user.username)}" class="ps-strong">@${unameHTML(n.user.username)}</a>`;
             const board = n.board ? `<a href="#" data-act="open" data-board-id="${escapeHTML(n.board.id)}" class="ps-strong ps-board-name">${escapeHTML(n.board.title || 'Sem título')}</a>` : '';
             const text = n.type === 'like'
                 ? `${who} gostou de ${board}`
@@ -678,13 +1065,13 @@ class SocialUI {
         const repostHead = b.repost && b.repost.by ? `
             <div class="ps-card-repost">
                 ${ghIcon('repeat', 13)}
-                <a href="#profile/${encodeURIComponent(b.repost.by.username)}">@${escapeHTML(b.repost.by.username)}</a> repostou · ${timeAgo(b.repost.created_at)}
+                <a href="#profile/${encodeURIComponent(b.repost.by.username)}">@${unameHTML(b.repost.by.username)}</a> repostou · ${timeAgo(b.repost.created_at)}
                 ${b.repost.comment ? `<p><em>“${escapeHTML(b.repost.comment)}”</em></p>` : ''}
             </div>` : '';
 
         const authorHTML = b.legacy
-            ? `<span class="ps-card-author">${escapeHTML(author.username || 'Anónimo')}</span>`
-            : `<a href="#profile/${encodeURIComponent(author.username || '')}" class="ps-card-author"><img src="${avatarSrc(author)}" alt="">@${escapeHTML(author.username || '?')}</a>`;
+            ? `<span class="ps-card-author">${unameHTML(author.username || 'Anónimo')}</span>`
+            : `<a href="#profile/${encodeURIComponent(author.username || '')}" class="ps-card-author"><img src="${avatarSrc(author)}" alt="">@${unameHTML(author.username || '?')}</a>`;
 
         let actions;
         if (b.legacy) {
@@ -735,7 +1122,7 @@ class SocialUI {
         return `<div class="ps-person">
             <a href="#profile/${encodeURIComponent(p.username)}" class="ps-person-avatar"><img src="${avatarSrc(p)}" alt=""></a>
             <div class="ps-person-body">
-                <a href="#profile/${encodeURIComponent(p.username)}" class="ps-person-name">@${escapeHTML(p.username)}</a>
+                <a href="#profile/${encodeURIComponent(p.username)}" class="ps-person-name">@${unameHTML(p.username)}</a>
                 ${p.bio ? `<p>${escapeHTML(p.bio)}</p>` : ''}
             </div>
             ${this.followButton(p.id, 'ps-btn-sm')}
@@ -971,7 +1358,7 @@ class SocialUI {
         });
     }
 
-    openProfileEditor() {
+    openProfileEditor(focusCover = false) {
         if (this._needLogin()) return;
         const modal = document.getElementById('modal-perfil');
         const form = modal.querySelector('#form-perfil');
@@ -980,9 +1367,19 @@ class SocialUI {
         form.bio.value = u.bio || '';
         form.display_name.value = u.display_name || '';
         this._pendingAvatar = undefined;
+        this._pendingCover = undefined;
         modal.querySelector('#perfil-avatar-preview').src = avatarSrc(u);
+        this._paintCoverPreview(safeImgSrc(u.cover_image));
         modal.querySelector('.auth-error').hidden = true;
         modal.showModal();
+        if (focusCover) setTimeout(() => modal.querySelector('#perfil-cover-pick')?.focus(), 30);
+    }
+
+    _paintCoverPreview(src) {
+        const box = document.getElementById('perfil-cover-preview');
+        if (!box) return;
+        box.style.backgroundImage = src ? `url("${src}")` : '';
+        box.classList.toggle('has-img', !!src);
     }
 
     _bindProfileModal() {
@@ -992,6 +1389,28 @@ class SocialUI {
         const preview = modal.querySelector('#perfil-avatar-preview');
         const file = modal.querySelector('#perfil-avatar-file');
         const err = modal.querySelector('.auth-error');
+
+        const coverFile = modal.querySelector('#perfil-cover-file');
+        modal.querySelector('#perfil-cover-pick')?.addEventListener('click', () => coverFile.click());
+        modal.querySelector('#perfil-cover-remove')?.addEventListener('click', () => {
+            this._pendingCover = null;
+            this._paintCoverPreview('');
+        });
+        coverFile?.addEventListener('change', async () => {
+            const f = coverFile.files[0];
+            coverFile.value = '';
+            if (!f) return;
+            try {
+                // Banner largo: até 1600 px, ~450 KB.
+                const src = await compactarFicheiroImagem(f, { maxLado: 1600, maxBytes: 450000 });
+                if (!src) throw new Error('Imagem inválida');
+                this._pendingCover = src;
+                this._paintCoverPreview(src);
+            } catch {
+                err.textContent = 'Não foi possível ler essa imagem.';
+                err.hidden = false;
+            }
+        });
 
         modal.querySelector('#perfil-avatar-pick').addEventListener('click', () => file.click());
         modal.querySelector('#perfil-avatar-remove').addEventListener('click', () => {
@@ -1023,9 +1442,10 @@ class SocialUI {
             try {
                 const patch = { username: form.username.value, bio: form.bio.value, display_name: form.display_name.value };
                 if (this._pendingAvatar !== undefined) patch.image = this._pendingAvatar;
+                if (this._pendingCover !== undefined) patch.cover_image = this._pendingCover;
                 const updated = await updateMyProfile(patch);
                 const oldName = this.user.username;
-                Object.assign(this.app.currentUser, { username: updated.username, bio: updated.bio, image: updated.image, display_name: updated.display_name });
+                Object.assign(this.app.currentUser, { username: updated.username, bio: updated.bio, image: updated.image, cover_image: updated.cover_image, display_name: updated.display_name });
                 modal.close();
                 this.renderAuthAreas();
                 this.app.ui.showToast('Perfil atualizado.');

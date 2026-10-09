@@ -32,6 +32,12 @@ class PinSpaceApp {
         this.music.init();
         this.authReady = this.checkAuth();
         this.authReady.then(u => this._finishGoogleReturn(u)).catch(() => {});
+        try {
+            if (sessionStorage.getItem('pinspace_logged_out')) {
+                sessionStorage.removeItem('pinspace_logged_out');
+                setTimeout(() => this.ui.showToast('Sessão terminada.'), 300);
+            }
+        } catch { /* ok */ }
         this._initRouter();
         this._startAutosave();
     }
@@ -116,17 +122,18 @@ class PinSpaceApp {
     }
 
     async logout() {
-        await signOut();
+        // Guarda o quadro aberto antes de sair.
+        try { if (this.project && this.ui.editorView.classList.contains('active')) this._saveLocalNow(); } catch { /* ok */ }
         this.currentUser = null;
         this.authState = 'loggedOut';
         this.authReady = Promise.resolve(null);
         this.showLoggedOutUI();
-        this.ui.showToast('Sessão terminada.');
-        if (this.ui.isSocialActive()) {
-            const r = this._parseRoute();
-            if (r && r.name === 'notifications') window.location.hash = '#explore';
-            else if (r) this.social.render(r);
-        }
+        await signOut();
+        // Recarrega a página para que tudo (menus, perfil, likes, editor) fique sem sessão.
+        try { sessionStorage.setItem('pinspace_logged_out', '1'); } catch { /* ok */ }
+        const r = this._parseRoute();
+        if (r && r.name === 'notifications') window.location.hash = '#explore';
+        window.location.reload();
     }
 
     toggleTheme() {
