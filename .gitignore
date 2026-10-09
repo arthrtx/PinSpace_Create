@@ -1,4 +1,4 @@
-# Python
+# Python (servidor antigo — já não usado)
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -6,28 +6,20 @@ __pycache__/
 venv/
 env/
 
-# Dados locais (projetos / exportações geradas em runtime)
+# Dados locais gerados em runtime
 projects/
-!projects/.gitkeep
 *.tmp
 
-# Projetos / exportações geradas em runtime
-projects/
-!projects/.gitkeep
-*.png
-*.jpg
-*.jpeg
-*.webp
-
-# Moodboards / PDFs gerados localmente
-MOODBOARD*.pdf
-MOODBOARD*_PT.pdf
-rascunho*.html
-*.print.html
+# Nunca sobe para o GitHub
+claude outputs/
+.env
+.env.*
+*.log
+node_modules/
 
 # Sistema
 Thumbs.db
-Desktop.ini
+desktop.ini
 .DS_Store
 
 # IDEs

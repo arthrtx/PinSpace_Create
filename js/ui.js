@@ -1,7 +1,3 @@
-/**
- * ui.js — Interface: painéis, modais, toast, tema, home
- */
-
 class UIManager {
     constructor() {
         this.homeView = document.getElementById('home-view');
@@ -224,18 +220,17 @@ class UIManager {
                     <time>Por ${escapeHTML(c.autor || 'Anónimo')} · ${formatDate(c.atualizado)}</time>
                 </div>
                 <div class="project-card-actions">
-                    <button data-action="open">Abrir cópia</button>
+                    <button type="button" data-action="open">Abrir cópia</button>
                 </div>
             </div>
         `).join('');
 
         container.querySelectorAll('.project-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                this.callbacks.onOpenPublic?.(card.dataset.id);
-            });
+            const abrir = () => this.callbacks.onOpenPublic?.(card.dataset.id);
+            card.addEventListener('click', abrir);
             card.querySelector('[data-action="open"]')?.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.callbacks.onOpenPublic?.(card.dataset.id);
+                abrir();
             });
         });
     }
@@ -543,7 +538,7 @@ class UIManager {
                     <input type="text" id="pub-autor" value="${escapeHTML(info.autor || '')}" placeholder="Anónimo" maxlength="40" autocomplete="off">
                     <p class="panel-hint pub-erro" id="pub-autor-erro" style="display:none"></p>
                 </div>
-                ${!online ? '<p class="panel-hint" style="color:var(--color-danger)">⚠️ A publicação não vai funcionar: o Supabase não está configurado. Confira <code>js/supabase-config.js</code>.</p>' : ''}
+                ${!online ? '<p class="panel-hint" style="color:var(--color-danger)">⚠️ A publicação não vai funcionar: o Supabase não está configurado. Confira <code>js/data.js</code>.</p>' : ''}
                 <div class="form-group pub-termos">
                     <label class="pub-termos-label">
                         <input type="checkbox" id="pub-termos">

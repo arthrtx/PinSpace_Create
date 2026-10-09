@@ -1,15 +1,17 @@
-/* PinSpace Create — motor de animações de scroll (reveal, máscaras, letras, parallax, progresso, magnético) */
 (() => {
     'use strict';
     const root = document.documentElement;
     root.classList.add('js');
 
-    /* Abre sempre no topo (evita restauro de scroll que "salta" para o fim) */
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
-    const scroller = document.querySelector('.home-container');
+    // A home rola dentro de .home-container. Este script corre antes de o DOM
+    // estar completo, por isso procuramos aqui e voltamos a procurar no load.
+    const acharScroller = () => document.querySelector('.home-container');
+    let scroller = acharScroller();
     if (scroller) { scroller.scrollTop = 0; } else { window.scrollTo(0, 0); }
     window.addEventListener('load', () => {
+        if (!scroller) scroller = acharScroller();
         if (scroller) scroller.scrollTop = 0;
     });
 
@@ -30,46 +32,60 @@
         return;
     }
 
-    /* ---------- Revelação simples (fade + subida) ---------- */
-    const revealIO = new IntersectionObserver((entries) => {
-        entries.forEach((e) => {
-            if (e.isIntersecting) {
-                e.target.classList.add('in-view');
-                revealIO.unobserve(e.target);
+    // A home rola dentro de .home-container, e nao na janela do browser. O
+    // IntersectionObserver dava problemas aqui (a galeria ficava em
+    // opacity 0 e nao aparecia), por isso revelamos a mao no scroll: e
+    // simples e funciona sempre.
+    const revealTargets = () => [...document.querySelectorAll(
+        '[data-reveal],[data-reveal-mask],[data-reveal-cycle],[data-scroll-text],[data-pin-text]'
+    )];
+
+    const seen = new WeakSet();
+    const pending = () => revealTargets().filter((el) => !seen.has(el));
+
+    const checkReveal = () => {
+        // Procuramos de novo: o container pode ter acabado de aparecer.
+        if (!scroller || !document.body.contains(scroller)) scroller = acharScroller();
+        const box = scroller
+            ? scroller.getBoundingClientRect()
+            : { top: 0, bottom: window.innerHeight };
+
+        // Se a home ainda nao esta a ser mostrada, nao vale a pena revelar
+        // nada: as posicoes nao sao as finais e mostrariam tudo de uma vez.
+        const home = document.getElementById('home-view');
+        if (home && !home.classList.contains('active')) return;
+
+        pending().forEach((el) => {
+            const r = el.getBoundingClientRect();
+            // Basta a ponta de cima entrar na vista para revelar.
+            if (r.top < box.bottom - 8 && r.bottom > box.top + 8) {
+                seen.add(el);
+                el.classList.add('in-view');
             }
         });
-    }, { threshold: 0.15, rootMargin: '0px 0px -6% 0px' });
+    };
 
-    document.querySelectorAll('[data-reveal]').forEach((el) => {
-        applyDelay(el);
-        revealIO.observe(el);
-    });
+    // Só aplicamos os atrasos. NÃO marcamos estes elementos como vistos:
+    // checkReveal() é que decide quem entra na vista e nesse momento marca.
+    revealTargets().forEach((el) => applyDelay(el));
 
-    /* ---------- Revelação em máscara (texto sobe de dentro de um clipe) ---------- */
-    const maskIO = new IntersectionObserver((entries) => {
-        entries.forEach((e) => {
-            if (e.isIntersecting) {
-                e.target.classList.add('in-view');
-                maskIO.unobserve(e.target);
-            }
-        });
-    }, { threshold: 0.2, rootMargin: '0px 0px -6% 0px' });
+    // Scroll faseado no document: apanha o scroll do .home-container e de
+    // qualquer outro elemento, mesmo que so aparecam mais tarde. Se nos
+    // prendessemos a um elemento neste momento, podiamos ficar a ouvir o
+    // sitio errado e a galeria nunca aparecia.
+    let revealTick = false;
+    const onRevealScroll = () => {
+        if (revealTick) return;
+        revealTick = true;
+        requestAnimationFrame(() => { checkReveal(); revealTick = false; });
+    };
 
-    document.querySelectorAll('[data-reveal-mask]').forEach((el) => {
-        applyDelay(el);
-        maskIO.observe(el);
-    });
+    document.addEventListener('scroll', onRevealScroll, { capture: true, passive: true });
+    window.addEventListener('resize', onRevealScroll, { passive: true });
+    window.addEventListener('load', checkReveal);
+    setTimeout(checkReveal, 60);
+    checkReveal();
 
-    /* ---------- Ciclo: textos aparecem E desaparecem com o scroll ---------- */
-    const cycleIO = new IntersectionObserver((entries) => {
-        entries.forEach((e) => {
-            e.target.classList.toggle('in-view', e.isIntersecting);
-        });
-    }, { threshold: 0.22, rootMargin: '0px 0px -4% 0px' });
-
-    document.querySelectorAll('[data-reveal-cycle]').forEach((el) => cycleIO.observe(el));
-
-    /* ---------- Texto letra a letra ---------- */
     const splitText = (el) => {
         const words = el.textContent.trim().split(/\s+/);
         el.setAttribute('aria-label', words.join(' '));
@@ -91,22 +107,21 @@
         });
     };
 
-    const textIO = new IntersectionObserver((entries) => {
-        entries.forEach((e) => {
-            if (e.isIntersecting) {
-                e.target.classList.add('in-view');
-                textIO.unobserve(e.target);
-            }
-        });
-    }, { threshold: 0.4, rootMargin: '0px 0px -8% 0px' });
-
-    document.querySelectorAll('[data-scroll-text],[data-pin-text]').forEach((el) => {
+    // O texto segue o mesmo caminho do resto. O data-pin-text e o unico que
+    // precisa de ficar a oscilar, por isso nao entra aqui.
+    document.querySelectorAll('[data-scroll-text]').forEach((el) => {
         applyDelay(el);
         splitText(el);
-        if (!el.hasAttribute('data-pin-text')) textIO.observe(el);
     });
 
-    /* ---------- Faixa presa: o título surge quando fica mesmo preso no ecrã ---------- */
+    // A galeria publica e preenchida depois deste script correr, por isso
+    // nao estava a ser observada e os quadros nunca apareciam. Vigiamo-la
+    // para a revelar assim que os cartoes existam.
+    const galeria = document.getElementById('lista-publicos');
+    if (galeria) {
+        new MutationObserver(() => checkReveal()).observe(galeria, { childList: true });
+    }
+
     const pinTexts = [...document.querySelectorAll('[data-pin-text]')];
     if (pinTexts.length) {
         const vh = scroller ? scroller.clientHeight : window.innerHeight;
@@ -131,7 +146,6 @@
         firePin();
     }
 
-    /* ---------- Parallax controlado pelo scroll do container ---------- */
     if (scroller) {
         const par = [...document.querySelectorAll('[data-parallax]')].map((el) => ({
             el,
@@ -157,7 +171,6 @@
         applyPar();
     }
 
-    /* ---------- Barra de progresso do scroll ---------- */
     const prog = document.getElementById('scroll-progress');
     if (prog && scroller) {
         const update = () => {
@@ -170,7 +183,6 @@
         update();
     }
 
-    /* ---------- Efeito magnético no CTA ---------- */
     document.querySelectorAll('.ms-magnetic').forEach((btn) => {
         btn.addEventListener('pointermove', (e) => {
             const r = btn.getBoundingClientRect();
@@ -186,9 +198,6 @@
     });
 })();
 
-/*
- * Parede de collage — usa os quadros públicos como fundo da secção presa
- */
 (function () {
     const wall = document.querySelector('.ms-pin-wall');
     if (!wall) return;
@@ -246,9 +255,6 @@
     window.addEventListener('load', build);
 })();
 
-/*
- * Vídeos de fundo
- */
 (function () {
     const vids = document.querySelectorAll('video.ms-vid');
     if (!vids.length) return;
@@ -260,13 +266,9 @@
     vids.forEach((v) => play(v));
 })();
 
-/*
- * Intro de abertura, tilt/brilho nos painéis e coordenadas ao vivo
- */
 (() => {
     'use strict';
 
-    /* ---------- Intro de abertura ---------- */
     const intro = document.getElementById('ms-intro');
     if (intro) {
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -278,7 +280,6 @@
         }
     }
 
-    /* ---------- Coordenadas ao vivo ---------- */
     const coords = document.querySelector('.ms-coords');
     if (coords && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         coords.classList.add('is-on');
