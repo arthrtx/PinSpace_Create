@@ -1,103 +1,55 @@
-# PinSpace Create 
+# PinSpace Create
 
-**Cria murais, vision boards e collages — estilo Canva.**
+**Cria, publica e descobre murais, vision boards e collages — uma comunidade criativa estilo Canva + Pinterest.**
 
-Editor de quadros criativos para montar ideias, guardar visões e partilhar
-com o mundo. Escolhe um modelo, arrasta formas, texto e imagens
-(drag & drop de ficheiros ou links de imagem) e publica o teu quadro público.
+🔗 **Site oficial:** https://glittery-gaufre-d6756f.netlify.app/#
+
+> **Nota sobre versões:** o site no Netlify tem sempre a versão mais recente.
+> Este repositório é atualizado aos poucos — as alterações vão sendo passadas do
+> Netlify para o GitHub em commits graduais, por isso o código aqui pode estar
+> atrás do que vês no link.
 
 ---
 
-##  Como correr
+## O que é
 
-O site é estático (HTML/CSS/JS) e guarda os quadros públicos no **Supabase**.
-Precisas só de um servidor de ficheiros estáticos para abrir a página:
+O PinSpace começou como um editor de quadros e cresceu para uma rede social criativa:
+crias o teu quadro, publicas e partilhas com outras pessoas.
+
+## Funcionalidades
+
+| Área | O que faz |
+| --- | --- |
+| **Editor** | Quadros em vários tamanhos, texto estilo Canva, formas, pincel, autocolantes, imagens por drag & drop, camadas, recorte, undo/redo e exportação. |
+| **Perfis** | Perfil público com foto, capa, bio, link e contadores (quadros, seguidores, likes). |
+| **Comunidade** | Seguir pessoas, likes, reposts, feed de quem segues e notificações. |
+| **Explorar** | Galeria pública de quadros e pesquisa de pessoas. |
+| **Conta** | Login com Google (sem palavra-passe). |
+| **Música** | Música enquanto crias (SoundCloud). |
+| **Moderação** | Filtro de nomes ofensivos e aceitação obrigatória dos termos de direitos de imagem antes de publicar. |
+
+## Tecnologia
+
+HTML, CSS e JavaScript puro · Supabase (base de dados, auth e storage) · Netlify (alojamento).
+
+## Correr localmente
 
 ```bash
-# 1. Entrar na pasta do projeto
 cd PinSpace_Create
-
-# 2. Iniciar um servidor estático
 python -m http.server 8000
-#   ou:  duplo clique em iniciar.bat
-
-# 3. Abrir no navegador
-#   http://127.0.0.1:8000
+# abrir http://127.0.0.1:8000
 ```
 
-> **Ctrl + F5** (recarga forçada) depois de qualquer alteração, para o navegador
-> não usar a versão em memória.
+Para contas e quadros públicos é preciso configurar o Supabase — instruções em `supabase/leia-me.md`.
 
-Para publicar quadros públicos é preciso configurar o Supabase
-(ver `js/supabase-config.js` — são só a URL e a chave anónima + o SQL inicial).
+## Regras de publicação
 
----
-
-##  Funcionalidades
-
-| Módulo | O que faz |
-| --- | --- |
-| **Quadros (murais)** | Cria quadros com tamanho (Celular / PC / 4K / Tablet / Quadrado). Cada quadro tem fundo, texto e formas próprias. |
-| **Texto estilo Canva** | Menu de texto com presets prontos (Título, Subtítulo, Texto), escolha de fonte, tamanho (A− / A+), negrito, itálico, sublinhado, alinhamento, auto-ajuste, opacidade e rotação. |
-| **Formas arrastáveis** | Painel "Formas" no menu esquerdo — arrasta uma forma com o rato até ao quadro para a adicionares onde quiseres (ou clica para colocar no centro). |
-| **Ferramentas** | Menu "Ferramentas" no menu esquerdo — mostra os atalhos **Pincel** e **Formas**; ao clicares abre o menu de cada ferramenta. |
-| **Autocolantes e molduras** | Menu "Autocolantes" no menu esquerdo — galeria de autocolantes e molduras pré-definidas para decorar o quadro. |
-| **Imagens por drag & drop** | Arrasta ficheiros de imagem ou **links de imagem** até à tela — o sistema puxa e trata a imagem automaticamente. |
-| **Mover e editar texto** | Arrasta os títulos/textos com o rato para os posicionar; duplo clique para editar o conteúdo. |
-| **Histórico / Undo** | Desfazer e refazer cada acção de edição. |
-| **Exportar** | Exporta o quadro em formato selecionado (imagem/PDF) e abre uma pré-visualização. |
-| **Quadros públicos** | Publica um quadro para a lista pública; qualquer visitante pode abrir o quadro publicado. |
-| **Moderação e termos** | Nomes de autor com linguagem ofensiva ou links são bloqueados. Antes de publicar é obrigatório aceitar os termos de direitos de imagem. |
-| **Persistência local** | Guarda os teus quadros e projetos no navegador (localStorage). |
+Ao publicar, o autor confirma que tem direitos sobre as imagens, é responsável pelo
+conteúdo e não publica conteúdo ofensivo. Conteúdo que viole direitos pode ser removido sem aviso.
 
 ---
 
-##  Regras de publicação (quadros públicos)
-
-Antes de publicar, o autor tem de aceitar os termos e condições, confirmando que:
-
-- É o autor das imagens ou tem autorização/licença dos respetivos titulares de direitos.
-- É o único responsável pelo conteúdo que publica.
-- Não usa nomes ofensivos nem publica conteúdo de ódio, violento, sexual ou que viole direitos de terceiros.
-- Conteúdo que infrinja direitos de autor ou de imagem pode ser removido sem aviso, assumindo o autor total responsabilidade por reclamações.
-
-O filtro de nomes (`js/moderation.js`) corre no cliente e explica o motivo ao
-utilizador quando um nome é rejeitado. É um auxiliar automático — nomes
-camuflados podem escapar, por isso a remoção manual continua a ser possível.
-
----
-
-##  Estrutura do projeto
-
-```
-PinSpace_Create/
-├── index.html            A página do site (home + editor)
-├── iniciar.bat           Atalho para correr um servidor estático
-├── css/
-│   ├── board.css         Quadro / tela de edição
-│   ├── responsive.css    Adaptações para ecrãs menores
-│   ├── style.css         Base: cores, tipografia, home
-│   └── toolbar.css       Barras e painéis de ferramentas
-├── js/
-│   ├── app.js            Lógica principal (estado, projectos, undo)
-│   ├── brush.js          Ferramenta de desenho
-│   ├── export.js         Exportação de quadros
-│   ├── layers.js         Camadas
-│   ├── moderation.js     Filtro de linguagem ofensiva + termos de publicação
-│   ├── public.js         Ligação aos quadros públicos (Supabase)
-│   ├── shapes.js         Formas pré-definidas
-│   ├── supabase.js       Cliente REST do Supabase
-│   ├── supabase-config.js Config da nuvem (URL + chave anónima)
-│   ├── text.js           Presets e painel de texto
-│   └── ui.js             Interface (componentes/rendering)
-└── projects/             * Projetos guardados — criados em runtime
-```
-
-\* Diretório gerado em runtime, não faz parte do repositório (ver `.gitignore`).
-
----
-
-##  Roadmap (próximas versões)
+Autor: **Arthur Sal**
 
 - [ ] Menu **Formas** mais completo (mais formas, edição própria)
 - [ ] Mais modelos prontos + collage automática
