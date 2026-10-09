@@ -80,7 +80,7 @@ function createEmptyProject(id, titulo = 'Sem título', boardWidth = 3000, board
             tipo: 'cor',
             valor: '#e8e8e8'
         },
-        grade: 'pontos',
+        grade: 'none',
         elementos: [],
         boardWidth,
         boardHeight
@@ -210,9 +210,21 @@ function _toLocalView(collages, remoto) {
     };
 }
 
+// Galeria do início: quadros públicos das contas (com autor) + a galeria
+// antiga, se ainda tiver alguma coisa. Os das contas abrem com "b:<id>".
 async function getPublicCollages() {
-    if (!supabaseConfigured()) return { remoto: false, collages: [] };
-    return _toLocalView(await supabaseListQuadros(), true);
+    if (!supabaseConfigured() && !authAvailable()) return { remoto: false, collages: [] };
+    const { items } = await getExploreAll('', 30);
+    return {
+        remoto: true,
+        collages: items.map(b => ({
+            id: b.legacy ? b.id : 'b:' + b.id,
+            titulo: b.title || 'Sem título',
+            autor: (b.author && b.author.username) || 'Anónimo',
+            thumb: b.image_url || '',
+            atualizado: b.updated_at || b.created_at
+        }))
+    };
 }
 
 async function getPublicCollage(id) {
@@ -412,21 +424,33 @@ async function getCurrentUser() {
     }
     const u = session.user;
     let profile = null;
-    try { profile = await getProfileById(u.id); } catch (err) { console.warn('Perfil indisponível:', err); }
+    let profileErr = null;
+    try { profile = await getProfileById(u.id); } catch (err) { profileErr = err; console.warn('Perfil indisponível:', err); }
+    // Conta criada antes do trigger que cria perfis: cria agora o perfil em falta.
+    if (!profile && !profileErr) {
+        try {
+            const raw = String((u.user_metadata && u.user_metadata.username) || (u.email || '').split('@')[0] || 'user').replace(/[^A-Za-z0-9_-]/g, '');
+            const name = (raw.length >= 3 ? raw : raw + 'user').slice(0, 24);
+            const { data } = await sb.from('profiles').insert({ id: u.id, username: name }).select(PROFILE_COLS).maybeSingle();
+            profile = data || null;
+        } catch (err) { console.warn('Não foi possível criar o perfil:', err); }
+    }
     const user = {
         id: u.id,
         email: u.email,
         username: (profile && profile.username) || (u.user_metadata && u.user_metadata.username) || null,
         image: (profile && profile.image) || null,
-        bio: (profile && profile.bio) || ''
+        bio: (profile && profile.bio) || '',
+        display_name: (profile && profile.display_name) || ''
     };
     localStorage.setItem(USER_KEY, JSON.stringify({ id: user.id, email: user.email, username: user.username, image: user.image }));
+    if (profile) touchSession().catch(() => {});
     return user;
 }
 
 /* ---------- Perfis ---------- */
 
-const PROFILE_COLS = 'id,username,bio,image,created_at';
+const PROFILE_COLS = 'id,username,display_name,bio,image,created_at,boards_count,public_boards_count,followers_count,following_count,likes_received,last_active_at';
 
 async function getProfileById(id) {
     const { data, error } = await _requireSb().from('profiles').select(PROFILE_COLS).eq('id', id).maybeSingle();
@@ -460,7 +484,14 @@ async function updateMyProfile(patch) {
     const user = _requireUser();
     const clean = {};
     if (patch.bio !== undefined) clean.bio = String(patch.bio || '').slice(0, 300);
-    if (patch.image !== undefined) clean.image = patch.image || null;
+    if (patch.image !== undefined) {
+        clean.image = patch.image || null;
+        // Foto nova (data:…) → vai para o Storage; na tabela fica só o link.
+        if (clean.image && clean.image.startsWith('data:')) {
+            try { clean.image = await uploadAvatar(clean.image); } catch (err) { console.warn('Avatar no Storage falhou, fica na tabela:', err); }
+        }
+    }
+    if (patch.display_name !== undefined) clean.display_name = String(patch.display_name || '').trim().slice(0, 60) || null;
     if (patch.username !== undefined) {
         const check = validateUsername(patch.username);
         if (!check.ok) throw new Error(check.error);
@@ -490,7 +521,7 @@ async function searchProfiles(query, limit = 12) {
 /* ---------- Quadros com dono ---------- */
 
 // Sem a coluna "projeto" (pesada) — só o necessário para os cartões.
-const BOARD_SELECT = 'id,title,description,image_url,author_id,is_public,created_at,updated_at,' +
+const BOARD_SELECT = 'id,title,description,image_url,image_full,author_id,is_public,created_at,updated_at,' +
     'author:profiles!boards_author_id_fkey(id,username,image),likes(count),retweets(count)';
 
 function _normalizeBoard(row) {
@@ -501,6 +532,7 @@ function _normalizeBoard(row) {
         title: row.title || 'Sem título',
         description: row.description || '',
         image_url: row.image_url || '',
+        image_full: row.image_full || '',
         author_id: row.author_id,
         author: row.author || null,
         is_public: !!row.is_public,
@@ -548,7 +580,12 @@ async function saveBoardToCloud(project) {
         image_url: project.thumbnail || null,
         author_id: user.id,
         is_public: !!project.perfilPublico,
-        projeto
+        projeto,
+        // dados úteis para listas e estatísticas (sem abrir o quadro todo)
+        board_width: Math.round(project.boardWidth || 0) || null,
+        board_height: Math.round(project.boardHeight || 0) || null,
+        elements_count: Array.isArray(project.elementos) ? project.elementos.length : 0,
+        copied_from: project.copiadoDe && /^[0-9a-f-]{36}$/i.test(project.copiadoDe.remoteId || '') ? project.copiadoDe.remoteId : null
     };
 
     const { error } = await sb.from('boards').upsert(row, { onConflict: 'id' });
@@ -585,6 +622,118 @@ async function createBoard(title, description, isPublic = false, projectData = n
         }
     }
     return id;
+}
+
+/* ---------- Imagem completa dos quadros públicos (Supabase Storage) ----------
+   Ficheiro: bucket "quadros", <id do utilizador>/<id do quadro>.jpg
+   O URL público fica em boards.image_full. */
+async function _uploadImage(bucket, path, blob) {
+    const sb = _requireSb();
+    const { error } = await sb.storage.from(bucket).upload(path, blob, { upsert: true, contentType: blob.type || 'image/jpeg', cacheControl: '60' });
+    if (error) {
+        if (/bucket not found/i.test(error.message || '')) {
+            throw new Error('A pasta de imagens ainda não existe no Supabase — corre supabase/social.sql.');
+        }
+        throw error;
+    }
+    const { data } = sb.storage.from(bucket).getPublicUrl(path);
+    return data && data.publicUrl ? data.publicUrl + '?v=' + Date.now() : null;
+}
+
+function _canvasToBlob(canvas, maxSide, quality = 0.9) {
+    let c = canvas;
+    const k = Math.min(1, maxSide / Math.max(canvas.width, canvas.height));
+    if (k < 1) {
+        c = document.createElement('canvas');
+        c.width = Math.round(canvas.width * k);
+        c.height = Math.round(canvas.height * k);
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(canvas, 0, 0, c.width, c.height);
+    }
+    return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Não foi possível criar a imagem do quadro.')), 'image/jpeg', quality));
+}
+
+// Guarda a imagem do quadro público no Storage (pasta "quadros"):
+//   <utilizador>/<quadro>.jpg        imagem grande (até 2048 px) → boards.image_full
+//   <utilizador>/<quadro>-thumb.jpg  miniatura (480 px)          → boards.image_url
+async function uploadBoardImage(project) {
+    const user = _requireUser();
+    const sb = _requireSb();
+    if (!project.remoteId || !sb.storage) return null;
+    const full = await renderToCanvas(project);
+    const [big, small] = await Promise.all([_canvasToBlob(full, 2048, 0.9), _canvasToBlob(full, 480, 0.82)]);
+    const base = `${user.id}/${project.remoteId}`;
+    const [fullUrl, thumbUrl] = await Promise.all([
+        _uploadImage('quadros', base + '.jpg', big),
+        _uploadImage('quadros', base + '-thumb.jpg', small)
+    ]);
+    const { error } = await sb.from('boards').update({ image_full: fullUrl, image_url: thumbUrl }).eq('id', project.remoteId);
+    if (error) throw error;
+    project.imageFull = fullUrl;
+    project.imageThumbUrl = thumbUrl;
+    return fullUrl;
+}
+
+async function removeBoardImage(project) {
+    const user = _requireUser();
+    const sb = _requireSb();
+    if (!project.remoteId || !sb.storage) return;
+    const base = `${user.id}/${project.remoteId}`;
+    await sb.storage.from('quadros').remove([base + '.jpg', base + '-thumb.jpg']).catch(() => {});
+    await sb.from('boards').update({ image_full: null }).eq('id', project.remoteId);
+    project.imageFull = null;
+}
+
+// Quadros públicos meus que ainda não têm imagem no Storage (ex.: vindos
+// da galeria antiga) → gera e envia a imagem. Corre uma vez por visita.
+async function backfillMyBoardImages(limit = 6) {
+    const user = getCachedUser();
+    const sb = getSupabase();
+    if (!user || !sb || !sb.storage) return 0;
+    try { if (sessionStorage.getItem('ps_backfill')) return 0; sessionStorage.setItem('ps_backfill', '1'); } catch { /* ok */ }
+    const { data, error } = await sb.from('boards').select('id,projeto').eq('author_id', user.id).eq('is_public', true).is('image_full', null).limit(limit);
+    if (error || !Array.isArray(data)) return 0;
+    let n = 0;
+    for (const row of data) {
+        if (!row.projeto || !Array.isArray(row.projeto.elementos)) continue;
+        try {
+            await uploadBoardImage({ ...row.projeto, remoteId: row.id });
+            n++;
+        } catch (err) { console.warn('Imagem do quadro ' + row.id + ' não foi enviada:', err); }
+    }
+    return n;
+}
+
+// Foto de perfil no Storage (pasta "avatars") em vez de texto gigante na tabela.
+async function uploadAvatar(dataUrl) {
+    const user = _requireUser();
+    const blob = await (await fetch(dataUrl)).blob();
+    return _uploadImage('avatars', `${user.id}/avatar.jpg`, blob);
+}
+
+// Último acesso, idioma, fuso horário, tema e navegador (uma vez por visita).
+async function touchSession() {
+    const sb = getSupabase();
+    if (!sb) return;
+    try { if (sessionStorage.getItem('ps_touch')) return; sessionStorage.setItem('ps_touch', '1'); } catch { /* ok */ }
+    let tz = null;
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { /* ok */ }
+    const theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    const { error } = await sb.rpc('touch_session', {
+        p_language: navigator.language || null,
+        p_timezone: tz,
+        p_theme: theme,
+        p_user_agent: navigator.userAgent || null
+    });
+    if (error) console.warn('touch_session:', error.message);
+}
+
+async function registerBoardView(boardId) {
+    const sb = getSupabase();
+    if (!sb || !boardId) return;
+    const { error } = await sb.rpc('register_view', { p_board: boardId });
+    if (error) console.warn('register_view:', error.message);
 }
 
 async function deleteCloudBoard(remoteId) {
@@ -747,7 +896,16 @@ async function getFollowing(userId) {
     return { data: (data || []).map(r => r.user).filter(Boolean), error };
 }
 
-async function getProfileStats(userId) {
+async function getProfileStats(userId, profile) {
+    // Com a base de dados nova os contadores já vêm no perfil (mantidos por triggers).
+    if (profile && typeof profile.followers_count === 'number') {
+        const mine = getCachedUser() && getCachedUser().id === userId;
+        return {
+            boards: mine ? (profile.boards_count || 0) : (profile.public_boards_count || 0),
+            followers: profile.followers_count || 0,
+            following: profile.following_count || 0
+        };
+    }
     const sb = _requireSb();
     const head = { count: 'exact', head: true };
     const [boards, followers, following] = await Promise.all([
@@ -846,9 +1004,21 @@ async function getMyInteractions(boardIds) {
 
 /* ---------- Notificações ---------- */
 
-async function getNotifications(limit = 40) {
+async function getNotifications(limit = 40, markRead = false) {
     const user = _requireUser();
     const sb = _requireSb();
+    // Base de dados nova: notificações guardadas (criadas pelos triggers).
+    const saved = await sb.from('notifications')
+        .select('id,type,comment,created_at,read_at,user:profiles!notifications_actor_id_fkey(id,username,image),board:boards(id,title,author_id)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+    if (!saved.error && Array.isArray(saved.data)) {
+        const unread = (saved.data || []).filter(n => !n.read_at).map(n => n.id);
+        if (markRead && unread.length) sb.from('notifications').update({ read_at: new Date().toISOString() }).in('id', unread).then(() => {}, () => {});
+        return (saved.data || []).filter(n => n.user).map(n => ({ type: n.type, created_at: n.created_at, user: n.user, board: n.board, comment: n.comment, unread: !n.read_at }));
+    }
+    // Base de dados antiga (sem a tabela notifications): calcula a partir dos likes, reposts e seguidores.
     const [likes, reposts, follows] = await Promise.all([
         sb.from('likes')
             .select('created_at,user:profiles!likes_user_id_fkey(id,username,image),boards!inner(id,title,author_id)')

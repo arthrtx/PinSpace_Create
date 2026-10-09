@@ -248,6 +248,27 @@ class SocialUI {
             }
         }
 
+        // Topo do editor: avatar + @utilizador (ou "Entrar").
+        const edUser = document.getElementById('ed-user');
+        if (edUser) {
+            if (state === 'loading') {
+                edUser.innerHTML = '<span class="ed-user-skel" aria-hidden="true"></span>';
+            } else if (!u) {
+                edUser.innerHTML = `<button type="button" class="ed-user-login" data-ed-act="login">${ghIcon('user', 15)}<span>Entrar</span></button>`;
+            } else {
+                edUser.innerHTML = `<a class="ed-user-chip" href="#profile/${encodeURIComponent(u.username || '')}" title="Ver o meu perfil">
+                        <img src="${avatarSrc(u)}" alt="">
+                        <span class="ed-user-name"><strong>@${escapeHTML(u.username || '')}</strong><small>O meu perfil</small></span>
+                    </a>`;
+            }
+            if (!edUser._bound) {
+                edUser._bound = true;
+                edUser.addEventListener('click', (e) => {
+                    if (e.target.closest('[data-ed-act="login"]')) { e.preventDefault(); this.openAuth('login'); }
+                });
+            }
+        }
+
         const profileLink = this.root?.querySelector('.ps-link[data-route="profile"]');
         if (profileLink) profileLink.setAttribute('href', u ? '#profile/' + encodeURIComponent(u.username || '') : '#profile');
     }
@@ -408,8 +429,21 @@ class SocialUI {
             username = this.user.username;
         }
 
-        const profile = await getProfileByUsername(username);
+        const meName = this.user && this.user.username;
+        const lookingAtMe = !!(meName && String(username).toLowerCase() === String(meName).toLowerCase());
+        let profile = null;
+        try {
+            profile = await getProfileByUsername(username);
+        } catch (err) {
+            // Sem acesso aos perfis (base de dados por configurar ou sem rede):
+            // o meu perfil continua a abrir com os rascunhos deste navegador.
+            if (!lookingAtMe) throw err;
+            console.warn('Perfil remoto indisponível:', err);
+        }
         if (token !== this._renderToken) return;
+        if (!profile && lookingAtMe) {
+            profile = { id: this.user.id, username: meName, bio: this.user.bio || '', image: this.user.image || null, created_at: new Date().toISOString(), _offline: true };
+        }
         if (!profile) {
             this.main.innerHTML = `<div class="ps-blank ps-blank-hero"><h3><em>Ninguém por aqui</em></h3><p>Não existe nenhum perfil @${escapeHTML(username)}.</p><a class="ps-btn" href="#explore">Explorar</a></div>`;
             return;
@@ -417,8 +451,8 @@ class SocialUI {
 
         const isMe = !!(this.user && this.user.id === profile.id);
         const [stats, following] = await Promise.all([
-            getProfileStats(profile.id),
-            this.user && !isMe ? isFollowing(this.user.id, profile.id) : Promise.resolve(false)
+            profile._offline ? Promise.resolve({ boards: 0, followers: 0, following: 0 }) : getProfileStats(profile.id, profile).catch(() => ({ boards: 0, followers: 0, following: 0 })),
+            this.user && !isMe ? isFollowing(this.user.id, profile.id).catch(() => false) : Promise.resolve(false)
         ]);
         if (!isMe) this.state.followState[profile.id] = following ? 'following' : 'none';
 
@@ -439,18 +473,24 @@ class SocialUI {
             await this._loadInteractions(reposts);
             content = this._grid(reposts, isMe ? 'Ainda não repostaste nenhum quadro.' : 'Ainda não tem nenhum repost.');
         } else {
-            const res = await getUserBoards(profile.id);
-            if (res.error) throw res.error;
+            const res = profile._offline ? { data: [], error: null } : await getUserBoards(profile.id);
+            if (res.error && !isMe) throw res.error;
+            if (res.error) res.data = [];
             if (isMe) this.state.userBoards = res.data;
-            await this._loadInteractions(res.data);
+            await this._loadInteractions(res.data).catch(() => {});
             if (isMe) {
-                // Quadros só neste dispositivo (ainda não guardados na conta).
+                // Rascunhos: quadros guardados neste navegador (o "Continuar a
+                // editar" do início) que ainda não estão na conta — aparecem primeiro.
                 const cloudIds = new Set(res.data.map(b => b.id));
-                localOnly = getAllProjects().filter(p => !p.remoteId || !cloudIds.has(p.remoteId));
+                localOnly = getAllProjects()
+                    .filter(p => !p.remoteId || !cloudIds.has(p.remoteId))
+                    .sort((a, b) => String(b.ultimaEdicao || '').localeCompare(String(a.ultimaEdicao || '')));
+                const pub = res.data.filter(b => b.is_public), priv = res.data.filter(b => !b.is_public);
                 const cloudPart = res.data.length
-                    ? (localOnly.length ? this._sectionHead('Na conta', `${res.data.length} ${res.data.length === 1 ? 'quadro' : 'quadros'}`) : '') + this._grid(res.data)
-                    : (localOnly.length ? '' : '<p class="ps-empty-simple">Ainda não tens nenhum quadro.</p>');
-                content = cloudPart + this._localSection(localOnly);
+                    ? (pub.length ? this._sectionHead('Publicados', `${pub.length} ${pub.length === 1 ? 'quadro público' : 'quadros públicos'}`) + this._grid(pub) : '')
+                      + (priv.length ? this._sectionHead('Guardados na conta', `${priv.length} privado${priv.length === 1 ? '' : 's'} · só tu vês`, 'sky') + this._grid(priv) : '')
+                    : (localOnly.length ? '' : '<p class="ps-empty-simple">Ainda não tens nenhum quadro. Cria um em “Novo quadro”.</p>');
+                content = this._localSection(localOnly) + cloudPart;
             } else {
                 content = this._grid(res.data, 'Ainda não tem nenhum quadro.');
             }
@@ -476,7 +516,7 @@ class SocialUI {
                     <div class="ps-avatar"><img id="profile-avatar" src="${avatarSrc(profile)}" alt="Avatar de ${escapeHTML(profile.username)}"></div>
                     <div class="ps-profile-main">
                         <span class="ms-kicker ps-kicker">→ ${isMe ? 'O teu perfil' : 'Perfil'} · desde ${escapeHTML(since)}</span>
-                        <h1 class="ps-profile-name" id="profile-username">${escapeHTML(profile.username)}</h1>
+                        <h1 class="ps-profile-name" id="profile-username">${escapeHTML(profile.display_name || profile.username)}</h1>
                         <p class="ps-handle"><em>@${escapeHTML(profile.username)}</em></p>
                         ${profile.bio
                             ? `<p class="ps-bio" id="profile-bio">${escapeHTML(profile.bio)}</p>`
@@ -505,7 +545,7 @@ class SocialUI {
     _localSection(projects) {
         if (!projects || !projects.length) return '';
         return `<section class="ps-local">
-            ${this._sectionHead('Neste dispositivo', `${projects.length} ${projects.length === 1 ? 'quadro' : 'quadros'} · ${this.user ? 'carrega em Guardar no editor para enviar para a conta' : 'entra para os guardares na conta'}`, 'sky')}
+            ${this._sectionHead('Rascunhos', `${projects.length} ${projects.length === 1 ? 'quadro' : 'quadros'} · guardados neste navegador${this.user ? ' — publica-os no editor (Publicar)' : ' — entra para os publicares'}`, 'sky')}
             <div id="lista-projetos" class="projects-grid ps-grid ps-local-grid"></div>
         </section>`;
     }
@@ -523,7 +563,13 @@ class SocialUI {
                 ${this._loginBlankslate('Entra para veres a tua atividade', 'Quando alguém gostar, repostar ou te seguir, aparece aqui.')}`;
             return;
         }
-        const items = await getNotifications(60);
+        let items = [];
+        try {
+            items = await getNotifications(60, true);
+        } catch (err) {
+            console.warn('Notificações indisponíveis:', err);
+            items = [];
+        }
         if (token !== this._renderToken) return;
 
         try { localStorage.setItem('pinspace_notif_seen', new Date().toISOString()); } catch { /* ok */ }
@@ -548,7 +594,7 @@ class SocialUI {
 
         // Estado do botão "seguir de volta"
         if (items.some(n => n.type === 'follow')) {
-            const ids = await getFollowingIds(this.user.id);
+            const ids = await getFollowingIds(this.user.id).catch(() => []);
             items.filter(n => n.type === 'follow').forEach(n => { this.state.followState[n.user.id] = ids.includes(n.user.id) ? 'following' : 'none'; });
         }
 
@@ -996,6 +1042,7 @@ class SocialUI {
         const u = this.user;
         form.username.value = u.username || '';
         form.bio.value = u.bio || '';
+        form.display_name.value = u.display_name || '';
         this._pendingAvatar = undefined;
         modal.querySelector('#perfil-avatar-preview').src = avatarSrc(u);
         modal.querySelector('.auth-error').hidden = true;
@@ -1021,7 +1068,7 @@ class SocialUI {
             if (!f) return;
             try {
                 // Avatar pequeno guardado como data URL na coluna profiles.image.
-                const src = await compactarFicheiroImagem(f, { maxLado: 256, maxBytes: 60000 });
+                const src = await compactarFicheiroImagem(f, { maxLado: 512, maxBytes: 200000 });
                 if (!src) throw new Error('Imagem inválida');
                 this._pendingAvatar = src;
                 preview.src = src;
@@ -1038,11 +1085,11 @@ class SocialUI {
             btn.disabled = true;
             btn.textContent = 'A guardar…';
             try {
-                const patch = { username: form.username.value, bio: form.bio.value };
+                const patch = { username: form.username.value, bio: form.bio.value, display_name: form.display_name.value };
                 if (this._pendingAvatar !== undefined) patch.image = this._pendingAvatar;
                 const updated = await updateMyProfile(patch);
                 const oldName = this.user.username;
-                Object.assign(this.app.currentUser, { username: updated.username, bio: updated.bio, image: updated.image });
+                Object.assign(this.app.currentUser, { username: updated.username, bio: updated.bio, image: updated.image, display_name: updated.display_name });
                 modal.close();
                 this.renderAuthAreas();
                 this.app.ui.showToast('Perfil atualizado.');

@@ -51,12 +51,18 @@ class BoardManager {
     }
 
     zoomFit() {
+        const ins = this._insets();
         const availW = this.viewport.clientWidth - 48;
-        const availH = this.viewport.clientHeight - 48;
+        const availH = this.viewport.clientHeight - ins.top - ins.bottom;
         const scale = Math.min(availW / this.boardWidth, availH / this.boardHeight, 1);
         this.setZoom(scale);
         this.centerBoard();
         return scale;
+    }
+
+    _insets() {
+        const narrow = this.viewport.clientWidth < 560;
+        return narrow ? { top: 56, bottom: 74 } : { top: 66, bottom: 86 };
     }
 
     centerBoard() {
@@ -67,11 +73,13 @@ class BoardManager {
         const visualW = this.boardWidth * this.zoom;
         const visualH = this.boardHeight * this.zoom;
         const padX = Math.max(24, Math.round((cw - visualW) / 2));
-        const padY = Math.max(24, Math.round((ch - visualH) / 2));
+        // Deixa espaço livre em cima (zoom) e em baixo (leitor de música).
+        const ins = this._insets();
+        const padY = Math.max(0, Math.round((ch - ins.top - ins.bottom - visualH) / 2));
         desk.style.paddingLeft = padX + 'px';
         desk.style.paddingRight = padX + 'px';
-        desk.style.paddingTop = padY + 'px';
-        desk.style.paddingBottom = padY + 'px';
+        desk.style.paddingTop = (ins.top + padY) + 'px';
+        desk.style.paddingBottom = (ins.bottom + padY) + 'px';
         if (visualW <= cw && visualH <= ch) {
             this.viewport.scrollLeft = 0;
             this.viewport.scrollTop = 0;
@@ -80,22 +88,23 @@ class BoardManager {
 
     applyBackground(bg) {
         if (!bg) return;
+        let base = '';
         switch (bg.tipo) {
             case 'cor':
-                this.canvas.style.background = bg.valor;
-                this.canvas.style.backgroundImage = 'none';
+                base = bg.valor || '#ffffff';
                 break;
             case 'gradiente':
-                if (bg.valor) {
-                    this.canvas.style.background = `linear-gradient(${bg.valor.angulo || 135}deg, ${bg.valor.cor1}, ${bg.valor.cor2})`;
-                }
+                base = bg.valor ? `linear-gradient(${bg.valor.angulo || 135}deg, ${bg.valor.cor1}, ${bg.valor.cor2})` : '#ffffff';
                 break;
             case 'imagem':
-                if (bg.valor) {
-                    this.canvas.style.background = `url(${bg.valor}) center/cover no-repeat`;
-                }
+                base = bg.valor ? `url(${bg.valor}) center/cover no-repeat` : '#ffffff';
                 break;
+            default:
+                base = '#ffffff';
         }
+        const pattern = typeof bgPatternCSS === 'function' ? bgPatternCSS(bg.padrao) : '';
+        // Padrão por cima da base (cor/gradiente/imagem), tudo no mesmo fundo.
+        this.canvas.style.background = pattern ? `${pattern}, ${base}` : base;
     }
 
     setGrid(mode) {
@@ -176,8 +185,9 @@ class BoardManager {
         return null;
     }
 
-    startResizeFromEdge(clientX, clientY, zone) {
+    startResizeFromEdge(clientX, clientY, zone, keepAspect = false) {
         this._startResize({ clientX, clientY }, zone);
+        if (this.dragStart) this.dragStart.keepAspect = keepAspect;
     }
 
     _showSnapGuides(vertical, horizontal) {
@@ -198,7 +208,8 @@ class BoardManager {
         }, { passive: false });
 
         this.viewport.addEventListener('mousedown', (e) => {
-            if (e.button === 1 || (e.button === 0 && this._spacePressed)) {
+            const onEmpty = !e.target.closest('.board-element') && !e.target.closest('.handle') && !e.target.closest('.ed-modes, .ed-zoom, .ed-music, .ed-crop-bar');
+            if (e.button === 1 || (e.button === 0 && this._spacePressed) || (e.button === 0 && this.handMode && onEmpty)) {
                 e.preventDefault();
                 this.isPanning = true;
                 this.panStart = {
@@ -317,11 +328,10 @@ class BoardManager {
         if (dom) {
             const w = parseFloat(dom.style.width) || 100;
             const h = parseFloat(dom.style.height) || 100;
-            const minX = 0, minY = 0;
-            const maxX = Math.max(0, this.boardWidth - w);
-            const maxY = Math.max(0, this.boardHeight - h);
-            let newX = clamp(this.dragStart.elX + dx, minX, maxX);
-            let newY = clamp(this.dragStart.elY + dy, minY, maxY);
+            // Pode sair do quadro: a parte de fora fica recortada (e se sair
+            // toda, a app apaga o elemento quando se larga).
+            let newX = this.dragStart.elX + dx;
+            let newY = this.dragStart.elY + dy;
 
             const bcX = this.boardWidth / 2;
             const bcY = this.boardHeight / 2;
@@ -350,7 +360,9 @@ class BoardManager {
             x: parseFloat(el.style.left),
             y: parseFloat(el.style.top),
             id: this.selectedId,
-            aspectRatio: rect.width / rect.height
+            aspectRatio: rect.width / rect.height,
+            w0: parseFloat(el.style.width) || rect.width / this.zoom,
+            h0: parseFloat(el.style.height) || rect.height / this.zoom
         };
     }
 
@@ -371,10 +383,20 @@ class BoardManager {
         width = Math.max(20, width);
         height = Math.max(20, height);
 
-        width = Math.min(width, Math.max(20, this.boardWidth - x));
-        height = Math.min(height, Math.max(20, this.boardHeight - y));
-        x = clamp(x, 0, Math.max(0, this.boardWidth - width));
-        y = clamp(y, 0, Math.max(0, this.boardHeight - height));
+        // Modo Redimensionar: mantém a proporção (cantos).
+        if (this.dragStart.keepAspect && h.length === 2) {
+            const ds = this.dragStart;
+            const ratio = ds.h0 / ds.w0;
+            const byW = Math.abs(width - ds.w0) >= Math.abs(height - ds.h0) / ratio;
+            if (byW) height = width * ratio; else width = height / ratio;
+            if (h.includes('w')) x = ds.x + ds.w0 - width;
+            if (h.includes('n')) y = ds.y + ds.h0 - height;
+        }
+
+        // A app pode ajustar o redimensionamento (ex.: texto escala a letra nos cantos).
+        const adj = this.onResizing ? this.onResizing(this.dragStart, { width, height, x, y }) : null;
+        if (adj) ({ width, height, x, y } = adj);
+
 
         dom.style.width = width + 'px';
         dom.style.height = height + 'px';
@@ -442,6 +464,8 @@ class BoardManager {
         dom.dataset.rotation = el.rotation || 0;
 
         dom.classList.toggle('locked', !!el.bloqueada);
+        // Molduras ficam por cima mas não apanham cliques (escolhe-se nas Camadas).
+        dom.classList.toggle('pass-through', !!el.moldura);
         dom.classList.toggle('hidden-el', el.visivel === false);
 
         return dom;

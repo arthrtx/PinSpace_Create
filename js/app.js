@@ -1,4 +1,5 @@
-const BACKGROUND_REMOVAL_CDN = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.7/dist/index.mjs';
+const BACKGROUND_REMOVAL_CDN = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.7/+esm';
+const CLIP_MARKER = 'pinspace:elemento';
 
 class PinSpaceApp {
     constructor() {
@@ -62,6 +63,11 @@ class PinSpaceApp {
         this.social.renderAuthAreas();
         this.social.startNotifPolling();
         if (this.project && this.ui.editorView.classList.contains('active') && this.ui.currentTool === 'settings') this._refreshPanel();
+        // Quadros públicos sem imagem no Supabase → gera-a em segundo plano.
+        const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+        idle(() => backfillMyBoardImages().then((n) => {
+            if (n > 0) { this.homeWidgets?.loadFeatured?.(); this._loadPublicGallery?.(); }
+        }).catch((err) => console.warn('Imagens dos quadros:', err)), { timeout: 4000 });
     }
 
     showLoggedOutUI() {
@@ -202,6 +208,7 @@ class PinSpaceApp {
             }
 
             const isMine = !!(user && row.author_id === user.id);
+            if (!isMine) registerBoardView(remoteId).catch(() => {});
             const shared = {
                 boardWidth: base.boardWidth || 3000,
                 boardHeight: base.boardHeight || 3000,
@@ -251,6 +258,8 @@ class PinSpaceApp {
         } catch (err) {
             console.error('Abrir quadro da conta falhou:', err);
             this.ui.showToast(_socialErrMsg(err));
+            this.homeWidgets?.loadFeatured?.();
+            this._loadPublicGallery?.();
         }
     }
 
@@ -275,6 +284,15 @@ class PinSpaceApp {
             const n = await compactarProjeto(project);
             if (n > 0 && this.project === project) this._rerenderAll();
             await saveWithOwner(project);
+            // Quadros públicos ficam também guardados como imagem (Storage).
+            try {
+                if (project.perfilPublico) await uploadBoardImage(project);
+                else if (project.imageFull) await removeBoardImage(project);
+                saveProject(project);
+            } catch (imgErr) {
+                console.warn('Imagem do quadro não foi enviada:', imgErr);
+                this.ui.showToast('Quadro guardado, mas a imagem não foi para o Supabase: ' + (imgErr.message || imgErr), 6000);
+            }
             return true;
         } catch (err) {
             console.error('Sincronizar com a conta falhou:', err);
@@ -291,6 +309,8 @@ class PinSpaceApp {
         }
         this.project.descricao = String(descricao || '').slice(0, 500);
         this.project.perfilPublico = !!perfilPublico;
+        // O autor é sempre quem tem a sessão iniciada.
+        this.project.autor = this.currentUser.username || this.project.autor;
         this._syncAllFromDOM();
         try {
             this.project.thumbnail = await generateThumbnailDataURL(this.project);
@@ -300,7 +320,7 @@ class PinSpaceApp {
         if (ok) {
             this.isDirty = false;
             this.ui.showToast(this.project.perfilPublico
-                ? 'Guardado na conta e visível no teu perfil.'
+                ? `Publicado como @${this.currentUser.username} — já aparece no teu perfil e em Explorar.`
                 : 'Guardado na conta (privado — só tu vês).');
         }
         if (this.ui.currentTool === 'settings') this._refreshPanel();
@@ -336,17 +356,45 @@ class PinSpaceApp {
 
         this.board.onSelectionChange = (id) => {
             this._refreshPanel();
+            if (id) this._maybePreloadBg();
+        };
+
+        // Texto: puxar um canto aumenta/diminui a letra (como no Canva);
+        // as pegas laterais só mudam a largura da caixa.
+        this.board.onResizing = (ds, r) => {
+            const el = this.project && this.project.elementos.find(e => e.id === ds.id);
+            if (!el || el.tipo !== 'texto' || !ds.handle || ds.handle.length !== 2) return null;
+            if (ds.tam0 == null) ds.tam0 = el.tamanho || 24;
+            const s = Math.max(0.05, r.width / ds.w0);
+            const W = ds.w0 * s, H = ds.h0 * s;
+            const x = ds.handle.includes('w') ? ds.x + ds.w0 - W : ds.x;
+            const y = ds.handle.includes('n') ? ds.y + ds.h0 - H : ds.y;
+            el.tamanho = clamp(Math.round(ds.tam0 * s * 10) / 10, 6, 800);
+            const t = this.board.getElementDOM(el.id)?.querySelector('.text-content');
+            if (t) t.style.fontSize = el.tamanho + 'px';
+            ds.textScaled = true;
+            return { width: W, height: H, x, y };
         };
 
         this.board.onElementUpdate = () => {
             this._syncSelectedFromDOM();
+            const id = this.board.getSelectedId();
+            const el = id && this.project.elementos.find(e => e.id === id);
+            if (el && this._removeIfOffBoard(el)) return;
             this._commitHistory();
+            if (el && el.tipo === 'texto') this._refreshPanel(); // mostra o novo tamanho da letra
         };
     }
 
     _bindUI() {
         this.ui.bindHomeEvents();
         this.ui.bindEditorEvents();
+        this.ui.bindEditorChrome?.(this);
+        document.getElementById('ed-modes')?.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-mode]');
+            if (b) this.setInteractMode(b.dataset.mode);
+        });
+        this.setInteractMode('select');
 
         this.ui.on('onNewProject', (size) => this.createNewProject(size));
         this.ui.on('onOpenProject', (id) => this.openProject(id));
@@ -375,12 +423,32 @@ class PinSpaceApp {
             this.ui.updateHistoryButtons(canUndo, canRedo);
         });
 
+        let resizeRaf = 0;
         window.addEventListener('resize', () => {
-            if (this.project) {
-                this.board.zoomFit();
-                this.ui.updateZoomLevel(this.board.getZoom());
-            }
+            if (resizeRaf) return;
+            resizeRaf = requestAnimationFrame(() => {
+                resizeRaf = 0;
+                if (this.project && this.ui.editorView.classList.contains('active')) {
+                    this.board.zoomFit();
+                    this.ui.updateZoomLevel(this.board.getZoom());
+                    this.board.updateSelectionBox();
+                }
+            });
         });
+        // Abrir/fechar painéis muda a largura do palco sem mudar a janela:
+        // recentra o quadro e a caixa de seleção acompanha.
+        if ('ResizeObserver' in window) {
+            let roRaf = 0;
+            new ResizeObserver(() => {
+                if (roRaf) return;
+                roRaf = requestAnimationFrame(() => {
+                    roRaf = 0;
+                    if (!this.project || !this.ui.editorView.classList.contains('active')) return;
+                    this.board.centerBoard();
+                    this.board.updateSelectionBox();
+                });
+            }).observe(document.getElementById('board-viewport'));
+        }
 
         this._imageInputMode = 'add';
         document.getElementById('input-imagem').addEventListener('change', async (e) => {
@@ -409,7 +477,16 @@ class PinSpaceApp {
             dropOverlay.classList.toggle('hidden', this._dragDepth === 0);
         };
 
+        // Arrastos de dentro da página (camadas, etc.) não são imagens para largar.
+        this._internalDrag = false;
+        document.addEventListener('dragstart', (e) => {
+            const types = Array.from(e.dataTransfer?.types || []);
+            this._internalDrag = !types.includes(SHAPE_DRAG_MIME);
+        });
+        document.addEventListener('dragend', () => { this._internalDrag = false; });
+
         window.addEventListener('dragenter', (e) => {
+            if (this._internalDrag) return;
             if (!this.project || (!hasDraggableImage(e.dataTransfer) && !hasDraggableShape(e.dataTransfer))) return;
             e.preventDefault();
             if (hasDraggableImage(e.dataTransfer) && this._dragDepth === 0) this._prepareDropChip(e);
@@ -418,6 +495,7 @@ class PinSpaceApp {
         });
 
         window.addEventListener('dragover', (e) => {
+            if (this._internalDrag) return;
             if (!this.project || (!hasDraggableImage(e.dataTransfer) && !hasDraggableShape(e.dataTransfer))) return;
             e.preventDefault();
             this._moveDropChip(e);
@@ -437,6 +515,7 @@ class PinSpaceApp {
         });
 
         window.addEventListener('drop', async (e) => {
+            if (this._internalDrag) { this._internalDrag = false; return; }
             e.preventDefault();
             this._dragDepth = 0;
             this._hideDropChip();
@@ -452,15 +531,32 @@ class PinSpaceApp {
                 this.ui.showToast('Forma adicionada!');
                 return;
             }
-            const file = await getDroppedImageFile(e.dataTransfer);
-            if (!file) {
+            // Tudo o que vem no arrasto tem de ser lido já: depois do primeiro
+            // "await" o browser esvazia o dataTransfer (era por isso que os links falhavam).
+            const payload = readDropPayload(e.dataTransfer);
+            const pos = this._dropToCanvasCoords(e.clientX, e.clientY);
+            if (payload.file) {
+                await this._addImage(payload.file, pos.x, pos.y);
+                this.ui.showToast('Imagem adicionada!');
+                return;
+            }
+            if (!payload.urls.length) {
                 this.ui.showToast('Arraste um ficheiro de imagem ou um link de imagem para o quadro.');
                 return;
             }
-            const pos = this._dropToCanvasCoords(e.clientX, e.clientY);
-            await this._addImage(file, pos.x, pos.y);
-            this.ui.showToast('Imagem adicionada!');
+            this.ui.showToast('A carregar imagem do link…', 20000);
+            for (const u of payload.urls) {
+                const file = await fileFromUrl(u);
+                if (file) {
+                    await this._addImage(file, pos.x, pos.y);
+                    this.ui.showToast('Imagem adicionada!');
+                    return;
+                }
+            }
+            this.ui.showToast('Não consegui abrir essa imagem. Se arrastaste o link de uma página, abre a imagem e arrasta-a (ou copia o endereço da imagem).', 6000);
         });
+
+        document.addEventListener('paste', (e) => this._onPaste(e));
 
         document.addEventListener('keydown', (e) => {
             if (!this.project) return;
@@ -477,7 +573,14 @@ class PinSpaceApp {
                 if (e.key === 'd') { e.preventDefault(); this._duplicateSelected(); return; }
                 if (e.key === 'c' && selectedEl) { e.preventDefault(); this._copyElement(selectedEl); return; }
                 if (e.key === 'x' && selectedEl) { e.preventDefault(); this._cutElement(selectedEl); return; }
-                if (e.key === 'v') { e.preventDefault(); this._pasteElement(); return; }
+                if (e.key === 'v') return; // tratado no evento 'paste'
+            }
+
+            if (!ctrl && !e.altKey) {
+                const k = e.key.toLowerCase();
+                if (k === 'v') { this.setInteractMode('select'); return; }
+                if (k === 'h') { this.setInteractMode('move'); return; }
+                if (k === 'r') { this.setInteractMode('resize'); return; }
             }
 
             if (e.key === 'Delete' && selectedEl) {
@@ -503,14 +606,15 @@ class PinSpaceApp {
                 if (dx || dy) {
                     e.preventDefault();
                     if (e.shiftKey) { dx *= 10; dy *= 10; }
-                    selectedEl.x = clamp(selectedEl.x + dx, 0, Math.max(0, (this.project.boardWidth || 3000) - selectedEl.width));
-                    selectedEl.y = clamp(selectedEl.y + dy, 0, Math.max(0, (this.project.boardHeight || 3000) - selectedEl.height));
+                    selectedEl.x += dx;
+                    selectedEl.y += dy;
                     const dom = this.board.getElementDOM(selectedEl.id);
                     if (dom) {
                         dom.style.left = selectedEl.x + 'px';
                         dom.style.top = selectedEl.y + 'px';
                     }
                     this.board.updateSelectionBox();
+                    if (this._removeIfOffBoard(selectedEl)) return;
                     if (!e.repeat) { this._commitHistory(); this.isDirty = true; }
                 }
             }
@@ -526,6 +630,15 @@ class PinSpaceApp {
 
             e.stopPropagation();
             this._selectElement(data.id);
+            const mode = this.interactMode || 'select';
+            if (mode === 'move') { this.board.startDrag(e, data); return; }
+            if (mode === 'resize') {
+                // Puxa a partir do canto mais próximo de onde se clicou, sem deformar.
+                const r = el.getBoundingClientRect();
+                const zone = (e.clientY < r.top + r.height / 2 ? 'n' : 's') + (e.clientX < r.left + r.width / 2 ? 'w' : 'e');
+                this.board.startResizeFromEdge(e.clientX, e.clientY, zone, data.tipo === 'imagem' || data.tipo === 'texto');
+                return;
+            }
             const zone = this.board.getEdgeZone(e.clientX, e.clientY, el);
             if (zone) {
                 this.board.startResizeFromEdge(e.clientX, e.clientY, zone);
@@ -588,6 +701,7 @@ class PinSpaceApp {
     }
 
     async _openPublic(id) {
+        if (String(id).startsWith('b:')) return this.openCloudBoard(String(id).slice(2));
         const local = getAllProjects().find(p => p.publicKey === id);
         if (local) {
             this.openProject(local.id);
@@ -627,6 +741,8 @@ class PinSpaceApp {
         } catch (err) {
             console.error('Abrir quadro público falhou:', err);
             this.ui.showToast(err.message || 'Não foi possível abrir o quadro público.');
+            this.homeWidgets?.loadFeatured?.();   // tira dos destaques o que já não existe
+            this._loadPublicGallery?.();
         }
     }
 
@@ -778,12 +894,17 @@ class PinSpaceApp {
         this.brush.syncSize();
         this.board.zoomFit();
         this.board.applyBackground(this.project.background);
-        this.board.setGrid(this.project.grade == null ? 'pontos' : this.project.grade);
+        this.board.setGrid(this._gridMode());
         this.board.clearElements();
 
         this.project.elementos.forEach(el => this._renderElement(el));
         this.ui.updateZoomLevel(this.board.getZoom());
         this._updateSizeBadge();
+        this._renderRight();
+        // Estado de partida do histórico (o primeiro Ctrl+Z volta aqui).
+        this.history.clear();
+        this.history.push(captureState(this.project));
+        if (typeof animateBoardEntry === 'function') animateBoardEntry(document.getElementById('board-elements'));
     }
 
     async saveCurrentProject(silent = false) {
@@ -860,6 +981,79 @@ class PinSpaceApp {
         this._selectElement(el.id);
         this._commitHistory();
         this.isDirty = true;
+    }
+
+    /* ---------- Fora do quadro ----------
+       Um elemento pode ficar parcialmente fora: o quadro recorta-o e só
+       aparece (e só se exporta) a parte de dentro. Totalmente fora → apagado. */
+    _isOffBoard(el) {
+        const W = this.project.boardWidth || 3000, H = this.project.boardHeight || 3000;
+        const a = (el.rotation || 0) * Math.PI / 180;
+        const cos = Math.abs(Math.cos(a)), sin = Math.abs(Math.sin(a));
+        const w = el.width * cos + el.height * sin, h = el.width * sin + el.height * cos;
+        const cx = el.x + el.width / 2, cy = el.y + el.height / 2;
+        return cx + w / 2 <= 0 || cy + h / 2 <= 0 || cx - w / 2 >= W || cy - h / 2 >= H;
+    }
+
+    _removeIfOffBoard(el) {
+        if (!el || !this._isOffBoard(el)) return false;
+        this._deleteElement(el.id);
+        this.ui.showToast('Elemento removido — ficou totalmente fora do quadro. (Ctrl+Z para recuperar)');
+        return true;
+    }
+
+    /* ---------- Imagens por link ---------- */
+    _onPaste(e) {
+        if (!this.project || !this.ui.editorView.classList.contains('active')) return;
+        const t = e.target;
+        if (t && (t.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(t.tagName))) return;
+        const cd = e.clipboardData;
+        if (!cd) return;
+        const file = Array.from(cd.files || []).find(f => f.type && f.type.startsWith('image/'));
+        if (file) {
+            e.preventDefault();
+            this._addImage(file).then(() => this.ui.showToast('Imagem colada!'));
+            return;
+        }
+        const text = (cd.getData('text/plain') || '').trim();
+        if (text === CLIP_MARKER || (!text && this._clipboard)) {
+            e.preventDefault();
+            this._pasteElement();
+            return;
+        }
+        const html = cd.getData('text/html') || '';
+        const htmlImg = (html.match(/<img[^>]+src=["']([^"']+)["']/i) || [])[1];
+        const url = /^(https?:\/\/|data:image\/)/i.test(text) ? text : htmlImg;
+        if (url) {
+            e.preventDefault();
+            this._addImageFromUrl(url);
+            return;
+        }
+        if (this._clipboard) {
+            e.preventDefault();
+            this._pasteElement();
+        }
+    }
+
+    async _addImageFromUrl(raw, x, y) {
+        if (!this.project) return;
+        const url = normalizeImageUrl(raw);
+        if (!url) {
+            this.ui.showToast('Isso não parece um link. Cola o endereço da imagem (começa por https://).');
+            return;
+        }
+        if (/pinterest\.[a-z.]+\/pin\//i.test(url) || /instagram\.com\/p\//i.test(url)) {
+            this.ui.showToast('Esse é o link da página, não da imagem. Abre a imagem, clica com o botão direito → "Copiar endereço da imagem" e cola aqui.', 7000);
+            return;
+        }
+        this.ui.showToast('A carregar imagem do link…', 20000);
+        const file = await fileFromUrl(url);
+        if (!file) {
+            this.ui.showToast('Não consegui abrir essa imagem. Confirma que o link leva diretamente a uma imagem (.jpg, .png, .webp…).', 6000);
+            return;
+        }
+        await this._addImage(file, x, y);
+        this.ui.showToast('Imagem adicionada!');
     }
 
     _dropToCanvasCoords(clientX, clientY) {
@@ -1012,89 +1206,87 @@ class PinSpaceApp {
         this.isDirty = true;
     }
 
+    // Borracha: apaga só a parte tocada de CADA elemento, que continua a
+    // ser um elemento separado na sua camada (antes juntava tudo — fundo
+    // incluído — numa única imagem, e a colagem deixava de ser editável
+    // por partes ao publicar/copiar).
     async _commitEraserStroke(strokeResult) {
-        const boardW = this.board.boardWidth;
-        const boardH = this.board.boardHeight;
         if (!strokeResult.points || strokeResult.points.length < 2) return;
-
-        const pad = Math.max(40, strokeResult.size * 3);
+        const pad = Math.max(4, strokeResult.size);
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         for (const p of strokeResult.points) {
             minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
             maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
         }
-        const b = {
-            x: Math.max(0, Math.floor(minX - pad)),
-            y: Math.max(0, Math.floor(minY - pad)),
-            w: 0,
-            h: 0
-        };
-        b.w = Math.min(boardW, Math.ceil(maxX + pad)) - b.x;
-        b.h = Math.min(boardH, Math.ceil(maxY + pad)) - b.y;
-        if (b.w < 2 || b.h < 2) return;
+        const stroke = { x: minX - pad, y: minY - pad, w: maxX - minX + 2 * pad, h: maxY - minY + 2 * pad };
 
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = b.w;
-        tempCanvas.height = b.h;
-        const tempCtx = tempCanvas.getContext('2d');
-
-        await drawBackground(tempCtx, this.project.background, b.w, b.h);
-
-        const sorted = sortByLayer(this.project.elementos);
-        for (const el of sorted) {
-            if (el.visivel === false) continue;
-            if (!this._elementOverlapsBounds(el, b)) continue;
-            tempCtx.save();
-            tempCtx.translate(-b.x, -b.y);
-            await drawElement(tempCtx, el);
-            tempCtx.restore();
-        }
-
-        tempCtx.globalCompositeOperation = 'destination-out';
-        tempCtx.lineCap = 'round';
-        tempCtx.lineJoin = 'round';
-        tempCtx.lineWidth = Math.max(1, strokeResult.size);
-        tempCtx.beginPath();
-        tempCtx.moveTo(strokeResult.points[0].x - b.x, strokeResult.points[0].y - b.y);
-        for (let i = 1; i < strokeResult.points.length; i++) {
-            tempCtx.lineTo(strokeResult.points[i].x - b.x, strokeResult.points[i].y - b.y);
-        }
-        tempCtx.stroke();
-        tempCtx.globalCompositeOperation = 'source-over';
-
-        const composite = {
-            tipo: 'imagem',
-            id: generateId(),
-            src: tempCanvas.toDataURL('image/png'),
-            x: b.x,
-            y: b.y,
-            width: b.w,
-            height: b.h,
-            rotation: 0,
-            escala: 1,
-            opacidade: 1,
-            filtro: 'none',
-            brilho: 1,
-            contraste: 1,
-            saturacao: 1,
-            flipX: false,
-            flipY: false,
-            layer: 0,
-            bloqueada: false,
-            visivel: true,
-            nome: 'Borracha'
+        const aabb = (el) => {
+            const a = (el.rotation || 0) * Math.PI / 180;
+            const cos = Math.abs(Math.cos(a)), sin = Math.abs(Math.sin(a));
+            const w = el.width * cos + el.height * sin;
+            const h = el.width * sin + el.height * cos;
+            const cx = el.x + el.width / 2, cy = el.y + el.height / 2;
+            return { x: Math.floor(cx - w / 2), y: Math.floor(cy - h / 2), w: Math.ceil(w), h: Math.ceil(h) };
         };
 
-        this.project.elementos = this.project.elementos.filter(el => {
-            if (el.visivel === false) return true;
-            return !this._elementOverlapsBounds(el, b);
-        });
-        this.project.elementos.push(composite);
+        let changed = 0;
+        const removed = new Set();
+        for (const el of this.project.elementos) {
+            if (el.visivel === false || el.bloqueada || el.moldura) continue;
+            const box = aabb(el);
+            if (!this._elementOverlapsBounds({ x: box.x, y: box.y, width: box.w, height: box.h }, stroke)) continue;
+            if (box.w < 2 || box.h < 2 || box.w * box.h > 40e6) continue;
 
+            try {
+                const c = document.createElement('canvas');
+                c.width = box.w;
+                c.height = box.h;
+                const ctx = c.getContext('2d');
+                ctx.translate(-box.x, -box.y);
+                // opacidade fica como propriedade; o resto (rotação, filtros, cantos) é "cozido".
+                await drawElement(ctx, { ...el, opacidade: 1 });
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = Math.max(1, strokeResult.size);
+                ctx.beginPath();
+                ctx.moveTo(strokeResult.points[0].x - box.x, strokeResult.points[0].y - box.y);
+                for (let i = 1; i < strokeResult.points.length; i++) {
+                    ctx.lineTo(strokeResult.points[i].x - box.x, strokeResult.points[i].y - box.y);
+                }
+                ctx.stroke();
+
+                // Ficou totalmente apagado? Remove o elemento.
+                const data = ctx.getImageData(0, 0, box.w, box.h).data;
+                let opaque = false;
+                for (let i = 3; i < data.length; i += 16) { if (data[i] > 8) { opaque = true; break; } }
+                if (!opaque) { removed.add(el.id); changed++; continue; }
+
+                const src = c.toDataURL('image/png');
+                const keep = { id: el.id, layer: el.layer, nome: el.nome || getElementLabel(el), opacidade: el.opacidade ?? 1, bloqueada: false, visivel: true };
+                Object.keys(el).forEach(k => delete el[k]);
+                Object.assign(el, keep, {
+                    tipo: 'imagem', src, x: box.x, y: box.y, width: box.w, height: box.h,
+                    rotation: 0, escala: 1, filtro: 'none', brilho: 1, contraste: 1, saturacao: 1,
+                    flipX: false, flipY: false, raio: 0
+                });
+                changed++;
+            } catch (err) {
+                // Imagem de outro site (canvas "tainted"): não dá para apagar essa.
+                console.warn('Borracha: elemento ignorado', el.id, err);
+            }
+        }
+
+        if (!changed) {
+            this.ui.showToast('Nada para apagar aí.');
+            return;
+        }
+        if (removed.size) this.project.elementos = this.project.elementos.filter(e => !removed.has(e.id));
         this._rerenderAll();
         this._commitHistory();
         this.isDirty = true;
-        this.ui.showToast('Área apagada.');
+        this.ui.showToast(changed === 1 ? 'Área apagada.' : `Área apagada em ${changed} elementos (continuam separados).`);
     }
 
     _elementOverlapsBounds(el, b) {
@@ -1113,9 +1305,14 @@ class PinSpaceApp {
 
     _addSticker(stickerId) {
         if (!this.project) return;
-        const el = createStickerElement(stickerId, this.project.elementos);
-        el.x = (this.project.boardWidth / 2) - el.width / 2;
-        el.y = (this.project.boardHeight / 2) - el.height / 2;
+        const el = createStickerElement(stickerId, this.project.elementos, this.project.boardWidth || 3000, this.project.boardHeight || 3000);
+        // Espalha os elementos novos para não ficarem todos empilhados ao centro.
+        const SPOTS = [[0, 0], [-.22, -.18], [.22, .16], [.2, -.2], [-.2, .2], [0, -.28], [0, .28], [-.28, 0], [.28, 0]];
+        const n = this.project.elementos.filter(e => e.elemento).length;
+        const [ox, oy] = SPOTS[n % SPOTS.length];
+        const bw = this.project.boardWidth || 3000, bh = this.project.boardHeight || 3000;
+        el.x = bw / 2 - el.width / 2 + ox * bw + (Math.random() - .5) * bw * .04;
+        el.y = bh / 2 - el.height / 2 + oy * bh + (Math.random() - .5) * bh * .04;
         this._clampElementBounds(el);
         this.project.elementos.push(el);
         this._renderElement(el);
@@ -1131,7 +1328,7 @@ class PinSpaceApp {
         this._renderElement(el);
         this._commitHistory();
         this.isDirty = true;
-        this.ui.showToast('Moldura adicionada (atrás do conteúdo).');
+        this.ui.showToast('Moldura adicionada — fica por cima, mas os cliques passam para as fotos.');
     }
 
     _getSelectedImage() {
@@ -1227,60 +1424,137 @@ class PinSpaceApp {
         }
     }
 
+    // Carrega a biblioteca (uma vez) e escolhe GPU quando o browser tem WebGPU.
+    async _bgLib() {
+        if (!this._bgModule) this._bgModule = await import(BACKGROUND_REMOVAL_CDN);
+        return this._bgModule;
+    }
+
+    _bgConfig(device, onProgress) {
+        return {
+            device,
+            model: device === 'gpu' ? 'isnet_fp16' : 'isnet_quint8',
+            output: { format: 'image/png', quality: 1 },
+            progress: onProgress
+        };
+    }
+
+    // Pré-carrega o modelo em segundo plano quando se seleciona uma foto,
+    // para o clique em "Remover fundo" ser rápido.
+    _preloadBgRemoval() {
+        if (this._bgPreloaded || !('requestIdleCallback' in window)) return;
+        this._bgPreloaded = true;
+        requestIdleCallback(async () => {
+            try {
+                const m = await this._bgLib();
+                await m.preload?.(this._bgConfig(navigator.gpu ? 'gpu' : 'cpu'));
+            } catch { this._bgPreloaded = false; }
+        }, { timeout: 4000 });
+    }
+
+    // Animação por cima da foto enquanto a IA trabalha (para não parecer parado).
+    _aiBusy(el, on) {
+        const dom = this.board.getElementDOM(el.id);
+        if (!dom) return null;
+        dom.querySelector('.ai-busy')?.remove();
+        if (!on) return null;
+        const o = document.createElement('div');
+        o.className = 'ai-busy is-indeterminate';
+        o.innerHTML = '<i class="ai-busy-dots"></i><i class="ai-busy-scan"></i><span class="ai-busy-pill"><i class="ai-busy-ring"></i><span class="ai-busy-txt">A preparar a IA…</span></span>';
+        const pill = o.querySelector('.ai-busy-pill');
+        pill.style.transform = `translate(-50%, -50%) scale(${1 / Math.max(0.05, this.board.getZoom())})`;
+        dom.appendChild(o);
+        return {
+            set: (txt, pct) => {
+                o.querySelector('.ai-busy-txt').textContent = txt;
+                o.classList.toggle('is-indeterminate', pct == null);
+                if (pct != null) o.style.setProperty('--p', Math.round(pct));
+            }
+        };
+    }
+
     async _removeBackgroundSelected() {
         const el = this._getSelectedImage();
         if (!el || !el.src) {
             this.ui.showToast('Selecione uma imagem.');
             return;
         }
-        this.ui.showToast('A preparar remoção de fundo (1ª vez descarrega o modelo)…');
+        if (this._bgBusy) { this.ui.showToast('A remoção de fundo já está a correr…'); return; }
+        this._bgBusy = true;
+        const busy = this._aiBusy(el, true);
+        const t0 = performance.now();
+        const onProgress = (key, cur, total) => {
+            if (String(key).startsWith('fetch') && total) busy?.set(`A descarregar a IA (só da 1.ª vez) ${Math.round(cur / total * 100)}%`, cur / total * 100);
+            else if (String(key).startsWith('compute')) busy?.set('A recortar a imagem…', null);
+        };
         try {
-            if (!this._bgModule) {
-                this._bgModule = await import(BACKGROUND_REMOVAL_CDN);
-            }
-            const startTime = Date.now();
-            let timer = null;
-            const updateToast = () => {
-                const secs = Math.floor((Date.now() - startTime) / 1000);
-                this.ui.showToast(`A remover fundo com IA… ${secs}s (1ª vez é mais lento)`, 120000);
-            };
-            timer = setInterval(updateToast, 700);
-            updateToast();
+            const m = await this._bgLib();
+            // Otimização: a IA trabalha numa cópia pequena (≤1024 px, o tamanho
+            // com que o modelo vê a imagem) e a máscara é aplicada à foto original
+            // em tamanho real — muito mais rápido e sem perder qualidade.
+            const img = await loadImage(el.src);
+            const nw = img.naturalWidth, nh = img.naturalHeight;
+            const k = Math.min(1, 1024 / Math.max(nw, nh));
+            const small = document.createElement('canvas');
+            small.width = Math.max(1, Math.round(nw * k));
+            small.height = Math.max(1, Math.round(nh * k));
+            small.getContext('2d').drawImage(img, 0, 0, small.width, small.height);
+            const input = await new Promise(r => small.toBlob(r, 'image/png'));
+            busy?.set('A recortar a imagem…', null);
 
+            let fg;
+            const devices = navigator.gpu ? ['gpu', 'cpu'] : ['cpu'];
+            let lastErr;
+            for (const d of devices) {
+                try { fg = await m.removeBackground(input, this._bgConfig(d, onProgress)); break; }
+                catch (err) { lastErr = err; console.warn('removeBackground (' + d + ') falhou', err); }
+            }
+            if (!fg) throw lastErr || new Error('sem resultado');
+
+            busy?.set('Quase…', 95);
+            const mask = await createImageBitmap(fg);
+            const K = Math.min(1, 2400 / Math.max(nw, nh));
+            const out = document.createElement('canvas');
+            out.width = Math.round(nw * K);
+            out.height = Math.round(nh * K);
+            const ctx = out.getContext('2d');
+            ctx.drawImage(img, 0, 0, out.width, out.height);
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(mask, 0, 0, out.width, out.height);
+            mask.close?.();
+
+            const target = this.project && this.project.elementos.find(e => e.id === el.id);
+            if (!target) return;
+            target.src = await compactarImagem(out.toDataURL('image/png'));
+            this._aiBusy(target, false);
+            this._renderElement(target);
+            const dom = this.board.getElementDOM(target.id);
+            dom?.classList.add('ai-done');
+            setTimeout(() => dom?.classList.remove('ai-done'), 800);
+            this.board.updateSelectionBox();
+            this._commitHistory();
+            this.isDirty = true;
+            this._refreshPanel();
+            this.ui.showToast(`Fundo removido! (${((performance.now() - t0) / 1000).toFixed(1)} s)`);
+        } catch (aiErr) {
+            console.warn('IA indisponível, a usar o método local:', aiErr);
             try {
-                const blob = await this._bgModule.removeBackground(el.src, {
-                    model: 'isnet_quint8',
-                    output: { format: 'image/png' }
-                });
-                clearInterval(timer);
-                el.src = await compactarImagem(await blobToDataURL(blob));
+                busy?.set('A usar o método simples…', null);
+                el.src = await compactarImagem(await removeBackgroundManual(el.src));
+                this._aiBusy(el, false);
                 this._renderElement(el);
-                this.board.updateSelectionBox();
                 this._commitHistory();
                 this.isDirty = true;
                 this._refreshPanel();
-                this.ui.showToast('Fundo removido!');
-                return;
-            } catch (aiErr) {
-                clearInterval(timer);
-                console.warn('AI removeBackground failed, trying manual fallback:', aiErr);
-                this.ui.showToast('A remover fundo localmente (rápido)…');
-                try {
-                    el.src = await compactarImagem(await removeBackgroundManual(el.src));
-                    this._renderElement(el);
-                    this.board.updateSelectionBox();
-                    this._commitHistory();
-                    this.isDirty = true;
-                    this._refreshPanel();
-                    this.ui.showToast('Fundo removido (método local)!');
-                } catch (manualErr) {
-                    console.error(manualErr);
-                    this.ui.showToast('Não foi possível remover o fundo.');
-                }
+                this.ui.showToast('Sem ligação ao modelo de IA — fundo removido pelo método simples. Para afinar, usa "Apagar fundo".', 6000);
+            } catch (manualErr) {
+                console.error(manualErr);
+                this.ui.showToast('Não foi possível remover o fundo.');
             }
-        } catch (loadErr) {
-            console.error(loadErr);
-            this.ui.showToast('Não foi possível carregar o módulo de remoção.');
+        } finally {
+            this._bgBusy = false;
+            this._aiBusy(el, false);
         }
     }
 
@@ -1310,13 +1584,33 @@ class PinSpaceApp {
                 break;
         }
 
-        dom.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
-            if (e.target.classList.contains('text-content')) {
-                this._selectElement(el.id);
-                return;
-            }
+        // Só um ouvinte por elemento (antes juntava-se um novo a cada redesenho).
+        if (!dom._psBound) {
+            dom._psBound = true;
+            dom.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                if (e.target.classList.contains('text-content')) this._selectElement(dom.dataset.id);
+            });
+        }
+    }
+
+    /* Modos do rato: Selecionar (normal), Mão (arrasta elementos e o
+       quadro, sem editar texto), Redimensionar (puxa para aumentar). */
+    setInteractMode(mode) {
+        if (!['select', 'move', 'resize'].includes(mode)) mode = 'select';
+        this.interactMode = mode;
+        document.documentElement.dataset.edMode = mode;
+        this.board.handMode = mode === 'move';
+        document.querySelectorAll('#ed-modes [data-mode]').forEach(b => {
+            const on = b.dataset.mode === mode;
+            b.classList.toggle('on', on);
+            b.setAttribute('aria-pressed', String(on));
         });
+        if (mode !== 'select') {
+            // sai da edição de texto se estiver aberta
+            const ae = document.activeElement;
+            if (ae && ae.classList && ae.classList.contains('text-content')) ae.blur();
+        }
     }
 
     _selectElement(id) {
@@ -1324,12 +1618,34 @@ class PinSpaceApp {
         this._refreshPanel();
     }
 
+    _maybePreloadBg() {
+        const el = this._getSelectedImage();
+        if (el && !el.moldura && !el.elemento) this._preloadBgRemoval();
+    }
+
     _refreshPanel() {
         const selectedId = this.board.getSelectedId();
         const selected = selectedId
             ? this.project.elementos.find(e => e.id === selectedId)
             : null;
-        this.ui.showPanel(this.ui.currentTool, selected, this._getPanelCallbacks());
+        const cbs = this._getPanelCallbacks();
+        this.ui.showPanel(this.ui.currentTool, selected, cbs);
+        this._renderRight(cbs);
+    }
+
+    // Painel fixo da direita (camadas + propriedades). Agrupado num frame.
+    _renderRight(cbs) {
+        if (!this.project || !this.ui.renderRightPanel) return;
+        this.ui.setRightPanelContext(this.project, cbs || this._getPanelCallbacks());
+        this.ui.renderRightPanel(this.project, this.board.getSelectedId());
+    }
+
+    _scheduleRight() {
+        if (this._rightRaf) return;
+        this._rightRaf = requestAnimationFrame(() => {
+            this._rightRaf = 0;
+            if (this.project && this.ui.editorView.classList.contains('active')) this._renderRight();
+        });
     }
 
     _getPanelCallbacks() {
@@ -1347,6 +1663,7 @@ class PinSpaceApp {
             onAddShape: (type) => this._addShape(type),
             onShowFormas: () => this._changeTool('shapes'),
             onUpdate: (el, commit = true) => {
+                if (commit && this._removeIfOffBoard(el)) return;
                 this._renderElement(el);
                 this.board.updateSelectionBox();
                 if (commit) this._commitHistory();
@@ -1361,6 +1678,7 @@ class PinSpaceApp {
             onBackgroundChange: (bg) => this._setBackground(bg),
             getBackground: () => this.project?.background,
             onImportBgImage: () => document.getElementById('input-bg-imagem').click(),
+            onAddImageUrl: (url) => this._addImageFromUrl(url),
             getGrid: () => this.project?.grade || null,
             onGridChange: (mode) => {
                 this.project.grade = mode === null ? 'none' : mode;
@@ -1372,6 +1690,15 @@ class PinSpaceApp {
             onAddFrame: (frameId) => this._addFrame(frameId),
             onCropImage: () => this._openCropImage(),
             onRemoveBackground: () => this._removeBackgroundSelected(),
+            onManualBg: () => this._openManualBg?.(),
+            onFlipImage: () => {
+                const el = this._getSelectedImage();
+                if (!el) return;
+                el.flipX = !el.flipX;
+                this._renderElement(el);
+                this._commitHistory();
+                this.isDirty = true;
+            },
             onAutoCollage: () => this._autoColagem(),
             getElements: () => this.project?.elementos || [],
             onSelectElement: (id) => this._selectElement(id),
@@ -1383,6 +1710,7 @@ class PinSpaceApp {
             onAlign: (align) => this._alignSelected(align),
             onOrder: (action) => this._orderSelected(action),
             onLayersReordered: () => {
+                this._rerenderAll();
                 this._commitHistory();
                 this.isDirty = true;
                 this._refreshPanel();
@@ -1402,7 +1730,7 @@ class PinSpaceApp {
                 foreign: !!(this.project && this.project.copiadoDe && !this.project.remoteId)
             }),
             onAccountSave: (opts) => this._saveAccountSettings(opts),
-            onShowLogin: () => this.showLoginModal('login', 'Entra para guardar este quadro na tua conta.'),
+            onShowLogin: () => this.showLoginModal('login', 'Entra para publicar este quadro com o teu nome.'),
             onPublish: (autor) => this._publishProject(autor, false),
             onUpdatePublic: (autor) => this._publishProject(autor, true),
             onUnpublish: () => this._unpublishProject(),
@@ -1411,10 +1739,24 @@ class PinSpaceApp {
     }
 
     _setBackground(bg) {
+        // Mudar a cor/gradiente/imagem não apaga o padrão escolhido.
+        if (bg && !('padrao' in bg) && this.project.background && this.project.background.padrao) {
+            bg = { ...bg, padrao: this.project.background.padrao };
+        }
         this.project.background = bg;
         this.board.applyBackground(bg);
+        // Com um padrão (linhas, pontos…) a grelha guia sai, para não ficarem bolinhas por cima.
+        if (bg && bg.padrao) { this.project.grade = 'none'; }
+        this.board.setGrid(this._gridMode());
         this._commitHistory();
         this.isDirty = true;
+    }
+
+    // Grelha guia do editor: desligada por omissão e sempre que o fundo tem padrão.
+    _gridMode() {
+        const p = this.project;
+        if (!p || (p.background && p.background.padrao)) return null;
+        return (!p.grade || p.grade === 'none') ? null : p.grade;
     }
 
     _changeTool(tool) {
@@ -1508,6 +1850,8 @@ class PinSpaceApp {
     _copyElement(el) {
         this._clipboard = JSON.parse(JSON.stringify(el));
         this._pasteOffset = 0;
+        // Marca a área de transferência para o Ctrl+V saber que é um elemento.
+        try { navigator.clipboard?.writeText(CLIP_MARKER).catch(() => {}); } catch { /* ok */ }
         this.ui.showToast('Elemento copiado.');
     }
 
@@ -1596,6 +1940,7 @@ class PinSpaceApp {
 
     _commitHistory() {
         this.history.push(captureState(this.project));
+        this._scheduleRight();
     }
 
     undo() {
@@ -1604,7 +1949,7 @@ class PinSpaceApp {
         applyState(this.project, state);
         this._rerenderAll();
         this.board.applyBackground(this.project.background);
-        this.board.setGrid(this.project.grade == null ? 'pontos' : this.project.grade);
+        this.board.setGrid(this._gridMode());
         this.ui.setProjectTitle(this.project.titulo);
         this._refreshPanel();
         this.isDirty = true;
@@ -1616,7 +1961,7 @@ class PinSpaceApp {
         applyState(this.project, state);
         this._rerenderAll();
         this.board.applyBackground(this.project.background);
-        this.board.setGrid(this.project.grade == null ? 'pontos' : this.project.grade);
+        this.board.setGrid(this._gridMode());
         this.ui.setProjectTitle(this.project.titulo);
         this._refreshPanel();
         this.isDirty = true;
@@ -1641,15 +1986,8 @@ function hasDraggableImage(dataTransfer) {
     if (types.includes('files')
         || types.includes('text/uri-list')
         || types.some(t => t.includes('image'))) return true;
-    if (types.includes('text/plain')) {
-        try {
-            const txt = dataTransfer.getData('text/plain') || '';
-            return /^https?:\/\/\S+$/i.test(txt.trim());
-        } catch {
-            return false;
-        }
-    }
-    return false;
+    // Durante o arrasto o browser esconde o texto; aceitamos e validamos no drop.
+    return types.includes('text/plain') || types.includes('text/html');
 }
 
 const SHAPE_DRAG_MIME = 'application/x-pinshape';
@@ -1665,6 +2003,35 @@ function getDraggedShapeType(dataTransfer) {
 
 function hasDraggableShape(dataTransfer) {
     return !!getDraggedShapeType(dataTransfer);
+}
+
+// Lê o arrasto de forma síncrona: ficheiro de imagem e/ou links candidatos,
+// do mais provável para o menos (imagem do HTML > link > texto).
+function readDropPayload(dt) {
+    const out = { file: null, urls: [] };
+    if (!dt) return out;
+    const files = Array.from(dt.files || []);
+    out.file = files.find(f => f.type && f.type.startsWith('image/')) || null;
+    if (out.file) return out;
+    const get = (t) => { try { return dt.getData(t) || ''; } catch { return ''; } };
+    const add = (u) => {
+        u = normalizeImageUrl(u);
+        if (!u) return;
+        // Pinterest: pede a versão grande da imagem
+        const big = u.replace(/(i\.pinimg\.com\/)\d+x\//i, '$1736x/');
+        for (const v of (big !== u ? [big, u] : [u])) if (!out.urls.includes(v)) out.urls.push(v);
+    };
+    const html = get('text/html');
+    if (html) {
+        const m = html.match(/<img[^>]+src\s*=\s*["']([^"']+)["']/i);
+        if (m) add(m[1].replace(/&amp;/g, '&'));
+        const ss = html.match(/<img[^>]+srcset\s*=\s*["']([^"']+)["']/i);
+        if (ss) { const last = ss[1].split(',').map(x => x.trim().split(/\s+/)[0]).filter(Boolean).pop(); if (last) add(last.replace(/&amp;/g, '&')); }
+    }
+    get('text/uri-list').split(/\r?\n/).map(x => x.trim()).filter(x => x && !x.startsWith('#')).forEach(add);
+    const txt = get('text/plain').trim();
+    if (/^(https?:\/\/|data:image\/|www\.)\S+$/i.test(txt)) add(txt);
+    return out;
 }
 
 async function getDroppedImageFile(dataTransfer) {
@@ -1717,19 +2084,55 @@ async function fileFromUriList(uriList) {
     return fileFromUrl(url);
 }
 
-async function fileFromUrl(url) {
+// Aceita links de pesquisa (Google Imagens, etc.) e devolve o link da imagem.
+function normalizeImageUrl(raw) {
+    let url = String(raw || '').trim().replace(/^<|>$/g, '');
     if (!url) return null;
-    if (!/^https?:\/\//i.test(url)) return null;
-    try {
-        const res = await fetch(url, { mode: 'cors' });
-        if (!res.ok) return null;
-        const blob = await res.blob();
-        if (!blob.type.startsWith('image/')) return null;
-        const ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
-        return new File([blob], 'imagem.' + ext, { type: blob.type });
-    } catch {
-        return null;
+    if (/^data:image\//i.test(url)) return url;
+    if (/^\/\//.test(url)) url = 'https:' + url;
+    if (!/^https?:\/\//i.test(url)) {
+        if (/^[\w-]+(\.[\w-]+)+\/\S+$/.test(url)) url = 'https://' + url; else return null;
     }
+    try {
+        const u = new URL(url);
+        const inner = u.searchParams.get('imgurl') || u.searchParams.get('mediaurl') || u.searchParams.get('img_url');
+        if (inner && /^https?:/i.test(inner)) return inner;
+    } catch { return null; }
+    return url;
+}
+
+async function _blobToImageFile(blob) {
+    if (!blob || !blob.size) return null;
+    let type = blob.type || '';
+    if (!type.startsWith('image/')) {
+        // Alguns servidores não dizem o tipo: confirmamos que o browser a consegue abrir.
+        try { const bmp = await createImageBitmap(blob); bmp.close?.(); type = 'image/png'; } catch { return null; }
+    }
+    const ext = (type.split('/')[1] || 'png').replace('jpeg', 'jpg').replace('svg+xml', 'svg');
+    return new File([blob], 'imagem.' + ext, { type });
+}
+
+async function _fetchWithTimeout(url, ms = 12000) {
+    const ctrl = 'AbortController' in window ? new AbortController() : null;
+    const t = ctrl ? setTimeout(() => ctrl.abort(), ms) : null;
+    try {
+        const res = await fetch(url, { mode: 'cors', signal: ctrl?.signal, referrerPolicy: 'no-referrer' });
+        if (!res.ok) return null;
+        return await res.blob();
+    } catch { return null; } finally { if (t) clearTimeout(t); }
+}
+
+async function fileFromUrl(url) {
+    url = normalizeImageUrl(url);
+    if (!url) return null;
+    if (url.startsWith('data:')) return _blobToImageFile(await (await fetch(url)).blob());
+    // 1) direto (sites que permitem CORS, ex.: Pinterest, Unsplash)
+    let file = await _blobToImageFile(await _fetchWithTimeout(url));
+    if (file) return file;
+    // 2) através de um proxy de imagens público (para sites que bloqueiam CORS)
+    const proxied = 'https://wsrv.nl/?url=' + encodeURIComponent(url.replace(/^https?:\/\//i, '')) + '&n=-1';
+    file = await _blobToImageFile(await _fetchWithTimeout(proxied, 15000));
+    return file;
 }
 
 document.addEventListener('DOMContentLoaded', () => {

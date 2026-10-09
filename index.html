@@ -14,7 +14,8 @@
     <link rel="stylesheet" href="css/responsive.css?v=2.4">
     <link rel="stylesheet" href="css/social.css?v=2.1">
     <link rel="stylesheet" href="css/glass.css?v=2.4">
-    <link rel="stylesheet" href="css/music.css?v=1.2">
+    <link rel="stylesheet" href="css/music.css?v=1.4">
+    <link rel="stylesheet" href="css/editor-theme.css?v=2.3">
 </head>
 <body>
 
@@ -454,18 +455,19 @@
                 </button>
             </div>
             <div class="topbar-right">
-                <div class="zoom-controls">
-                    <button id="btn-zoom-out" class="btn-icon-only" title="Diminuir zoom">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
-                    </button>
-                    <span id="zoom-level">100%</span>
-                    <button id="btn-zoom-in" class="btn-icon-only" title="Aumentar zoom">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                    </button>
-                    <button id="btn-zoom-fit" class="btn-icon-only" title="Ajustar">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                    </button>
-                </div>
+                <button id="btn-layers-toggle" class="topbar-btn topbar-btn-icon ed-only-narrow" title="Camadas" aria-label="Mostrar camadas" aria-expanded="false">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    <span>Camadas</span>
+                </button>
+                <div class="ed-user" id="ed-user" aria-label="Conta"></div>
+                <button id="btn-theme-toggle" class="topbar-btn topbar-btn-icon ed-theme-btn" title="Mudar tema claro/escuro" aria-label="Mudar tema">
+                    <svg class="i-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+                    <svg class="i-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+                </button>
+                <button id="btn-publicar" class="topbar-btn ed-publish-btn" title="Publicar ou partilhar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                    <span>Publicar</span>
+                </button>
             </div>
         </header>
 
@@ -490,23 +492,17 @@
                         </span>
                         <span class="tool-label">Texto</span>
                     </button>
-                    <button class="tool-btn" data-tool="shapes" title="Formas">
-                        <span class="tool-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-                        </span>
-                        <span class="tool-label">Formas</span>
-                    </button>
-                    <button class="tool-btn" data-tool="brush" title="Ferramentas">
+                    <button class="tool-btn" data-tool="brush" title="Ferramentas — pincel, borracha e formas">
                         <span class="tool-icon">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.4 1.4a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
                         </span>
                         <span class="tool-label">Ferramentas</span>
                     </button>
-                    <button class="tool-btn" data-tool="design" title="Stickers">
+                    <button class="tool-btn" data-tool="design" title="Elementos e molduras">
                         <span class="tool-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M12 3c.8 4.6 3.4 7.2 8 8-4.6.8-7.2 3.4-8 8-.8-4.6-3.4-7.2-8-8 4.6-.8 7.2-3.4 8-8z"/></svg>
                         </span>
-                        <span class="tool-label">Stickers</span>
+                        <span class="tool-label">Elementos</span>
                     </button>
                     </div>
                 <div class="toolbar-divider"></div>
@@ -517,13 +513,7 @@
                         </span>
                         <span class="tool-label">Fundo</span>
                     </button>
-                    <button class="tool-btn" data-tool="layers" title="Camadas">
-                        <span class="tool-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                        </span>
-                        <span class="tool-label">Camadas</span>
-                    </button>
-                    <button class="tool-btn" data-tool="settings" title="Configurações">
+                    <button class="tool-btn tool-btn-settings" data-tool="settings" title="Ajustes, conta e publicação">
                         <span class="tool-icon">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
                         </span>
@@ -576,11 +566,41 @@
                             <span>Arraste do seu computador ou de uma página</span>
                         </div>
                     </div>
-                    <div class="board-size-badge" id="board-size-badge">3000 × 3000 px</div>
                     <div id="drop-chip" class="drop-chip hidden">
                         <img id="drop-chip-img" alt="">
                         <span>Solte para adicionar</span>
                     </div>
+                </div>
+
+                <!-- Modos do rato, ao lado do quadro -->
+                <div class="ed-modes" id="ed-modes" role="toolbar" aria-label="Modo do rato">
+                    <button type="button" data-mode="select" class="on" title="Selecionar (V)" aria-label="Selecionar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 3l7.07 17 2.51-7.39L21 10.07z"/></svg>
+                    </button>
+                    <button type="button" data-mode="move" title="Mão — arrastar texto, imagens e o quadro (H)" aria-label="Mão para arrastar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+                    </button>
+                    <button type="button" data-mode="resize" title="Redimensionar — puxa para aumentar ou diminuir (R)" aria-label="Redimensionar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                    </button>
+                </div>
+
+                <!-- Zoom e tamanho do quadro (pílula flutuante em baixo à esquerda) -->
+                <div class="ed-zoom">
+                    <span class="board-size-badge" id="board-size-badge">3000 × 3000 px</span>
+                    <span class="ed-zoom-sep" aria-hidden="true"></span>
+                    <div class="zoom-controls">
+                    <button id="btn-zoom-out" class="btn-icon-only" title="Diminuir zoom">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+                    </button>
+                    <span id="zoom-level">100%</span>
+                    <button id="btn-zoom-in" class="btn-icon-only" title="Aumentar zoom">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                    <button id="btn-zoom-fit" class="btn-icon-only" title="Ajustar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                    </button>
+                </div>
                 </div>
 
                 <!-- Mini leitor de música no editor (sincronizado com js/music.js) -->
@@ -620,6 +640,24 @@
                     </div>
                 </div>
             </main>
+
+            <!-- Painel fixo à direita: camadas + propriedades da seleção -->
+            <aside class="ed-right" id="ed-right" aria-label="Camadas e propriedades">
+                <section class="ed-card ed-layers-card">
+                    <header class="ed-card-head">
+                        <h3>Camadas</h3>
+                        <span class="ed-count" id="ed-layers-count">0</span>
+                        <button type="button" class="btn-icon-only ed-right-close" id="ed-right-close" aria-label="Fechar camadas">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                    </header>
+                    <div class="ed-layers" id="ed-layers"></div>
+                </section>
+                <section class="ed-card ed-sel-card" id="ed-sel-card">
+                    <header class="ed-card-head"><h3 id="ed-sel-title">Quadro</h3></header>
+                    <div class="ed-sel" id="ed-sel"></div>
+                </section>
+            </aside>
         </div>
     </div>
 
@@ -814,6 +852,10 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label for="perfil-display">Nome</label>
+                    <input type="text" id="perfil-display" name="display_name" maxlength="60" placeholder="Como queres aparecer (opcional)">
+                </div>
+                <div class="form-group">
                     <label for="perfil-username">Username</label>
                     <input type="text" id="perfil-username" name="username" maxlength="30" spellcheck="false" required>
                 </div>
@@ -862,19 +904,23 @@
 
     <div id="toast" class="toast hidden"></div>
 
-    <script src="js/core.js?v=2.5"></script>
+    <script src="js/core.js?v=2.8"></script>
     <script src="js/reveal.js?v=2.5"></script>
     <script src="js/smooth-scroll.js?v=1.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="js/data.js?v=2.7"></script>
+    <script src="js/data.js?v=3.2"></script>
     <script src="js/color-palettes.js?v=2.4"></script>
-    <script src="js/editor.js?v=2.4"></script>
-    <script src="js/tools.js?v=2.4"></script>
-    <script src="js/board.js?v=2.5"></script>
-    <script src="js/ui.js?v=2.7"></script>
-    <script src="js/social-ui.js?v=2.3"></script>
-    <script src="js/home-widgets.js?v=1.2"></script>
+    <script src="js/editor.js?v=2.9"></script>
+    <script src="js/elements.js?v=1.2"></script>
+    <script src="js/tools.js?v=2.8"></script>
+    <script src="js/board.js?v=3.0"></script>
+    <script src="js/ui.js?v=3.1"></script>
+    <script src="js/editor-layout.js?v=1.2"></script>
+    <script src="js/social-ui.js?v=2.6"></script>
+    <script src="js/home-widgets.js?v=1.3"></script>
     <script src="js/music.js?v=1.4"></script>
-    <script src="js/app.js?v=3.0"></script>
+    <script src="js/app.js?v=3.9"></script>
+    <script src="js/crop-inline.js?v=1.0"></script>
+    <script src="js/bg-manual.js?v=1.0"></script>
 </body>
 </html>

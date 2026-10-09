@@ -1,8 +1,13 @@
 # Contas e rede social — instalação
 
-1. **Base de dados** — Supabase → SQL Editor → New query → colar `supabase/social.sql` → Run.
-   Cria `profiles`, `boards`, `likes`, `retweets`, `follows`, o trigger que cria o perfil no registo e as políticas RLS.
-   É seguro voltar a correr.
+1. **Base de dados** — Supabase → SQL Editor → New query → colar `supabase/social.sql` → Run. É seguro voltar a correr.
+   Tabelas:
+   - `profiles` — perfil público: username, nome, bio, avatar, capa, site, localização, verificado, contadores (quadros, públicos, seguidores, a seguir, likes recebidos), último acesso;
+   - `profile_private` — só o dono vê: email, idioma, fuso horário, tema, navegador, último login, nº de sessões, aceitação dos termos;
+   - `boards` — quadros: conteúdo, miniatura e imagem completa (Storage), tamanho, nº de elementos, tags, cópia de, data de publicação, likes/reposts/visualizações;
+   - `likes`, `retweets`, `follows`, `notifications` (criadas automaticamente por triggers).
+   Storage: pastas públicas `quadros` (imagens dos quadros públicos) e `avatars` (fotos de perfil); cada utilizador só escreve na sua pasta.
+   Os contadores são mantidos pela base de dados — o site não os consegue alterar.
 2. **Auth** — Supabase → Authentication → URL Configuration:
    - *Site URL*: o endereço onde o site está publicado (ex.: `https://pinspace.exemplo.pt`).
    - *Redirect URLs*: o mesmo endereço (o link de confirmação volta para `…/#feed`).
@@ -46,3 +51,7 @@ O SoundCloud exige uma app registada (conta **Artist Pro**) e um segredo que nã
 3. Em `js/music.js`, preenche `clientId: '...'` no `SOUNDCLOUD_CONFIG`.
 
 O botão passa a dizer "Entrar com SoundCloud" e, depois do login, o carrossel mostra `/me/followings/tracks` (músicas novas de quem a pessoa segue), ou os likes, se esse feed vier vazio.
+
+## Publicar
+
+Só se publica com sessão iniciada: o autor é sempre o utilizador da sessão e o quadro fica na tabela `boards` (público). Os rascunhos ficam no navegador e aparecem no teu perfil em **Rascunhos**.

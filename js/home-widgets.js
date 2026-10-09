@@ -48,7 +48,7 @@ class HomeWidgets {
     // Chamado sempre que a landing é mostrada.
     refresh() {
         this.refreshLocal();
-        if (Date.now() - this._featLoadedAt > 120000) this.loadFeatured();
+        if (Date.now() - this._featLoadedAt > 15000) this.loadFeatured();
         else this._startAutoplay();
     }
 
@@ -239,7 +239,7 @@ class HomeWidgets {
             return;
         }
 
-        const src = safeImgSrc(item.image_url);
+        const src = safeImgSrc(item.image_full) || safeImgSrc(item.image_url);
         bg.classList.remove('gw-swap');
         void bg.offsetWidth;
         bg.classList.add('gw-swap');
