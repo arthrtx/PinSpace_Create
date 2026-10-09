@@ -955,3 +955,5 @@ a.ps-card-author:hover { color: #FFF; text-decoration: underline; text-decoratio
     font-weight: 700;
 }
 .project-card-actions button.publish:hover { filter: brightness(1.06); }
+
+html[lang="en"] .ps-follow.is-following:hover span::after { content: 'Unfollow'; }

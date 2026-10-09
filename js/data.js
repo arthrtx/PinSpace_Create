@@ -353,6 +353,7 @@ function getSupabase() {
             persistSession: true,
             autoRefreshToken: true,
             detectSessionInUrl: true,
+            flowType: 'pkce', // o regresso do Google vem em ?code=… e não mexe no #hash das rotas
             storageKey: 'pinspace_auth'
         }
     });
@@ -426,6 +427,7 @@ function _ptAuthError(error) {
     if (/password should be at least/i.test(m)) return 'A palavra-passe tem de ter pelo menos 6 caracteres.';
     if (/rate limit|too many/i.test(m)) return 'Demasiadas tentativas. Espera um pouco e tenta de novo.';
     if (/unable to validate email|invalid email/i.test(m)) return 'Esse email não é válido.';
+    if (/provider is not enabled|unsupported provider/i.test(m)) return 'O login com Google ainda não está ativo no Supabase (Authentication → Providers → Google).';
     if (/database error saving new user/i.test(m)) return 'O servidor não conseguiu criar o perfil. Confirma que correste supabase/social.sql.';
     return m;
 }
@@ -443,35 +445,31 @@ function validateUsername(username) {
 
 /* ---------- Auth ---------- */
 
-async function signUp(email, password, username) {
+// Login único: conta Google (OAuth). Sem palavra-passe nem código de verificação —
+// a conta é criada automaticamente no primeiro login (trigger handle_new_user).
+const AUTH_RETURN_KEY = 'pinspace_auth_return';
+
+async function signInWithGoogle() {
     const sb = _requireSb();
-    const check = validateUsername(username);
-    if (!check.ok) return { data: null, error: { message: check.error } };
-
-    const free = await isUsernameAvailable(check.value);
-    if (!free) return { data: null, error: { message: 'Esse username já está ocupado.' } };
-
-    const { data, error } = await sb.auth.signUp({
-        email: String(email || '').trim(),
-        password,
+    // Lembra onde a pessoa estava para voltar lá depois do Google.
+    try { sessionStorage.setItem(AUTH_RETURN_KEY, window.location.hash || ''); } catch {}
+    const { data, error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
         options: {
-            data: { username: check.value },
-            emailRedirectTo: window.location.origin + window.location.pathname + '#profile'
+            redirectTo: window.location.origin + window.location.pathname,
+            queryParams: { prompt: 'select_account' }
         }
     });
     if (error) return { data, error: { message: _ptAuthError(error) } };
-    // Com "Confirm email" ligado no Supabase, não há sessão até confirmar.
-    return { data, error: null, needsConfirmation: !data.session };
+    return { data, error: null };
 }
 
-async function signIn(email, password) {
-    const sb = _requireSb();
-    const { data, error } = await sb.auth.signInWithPassword({
-        email: String(email || '').trim(),
-        password
-    });
-    if (error) return { data, error: { message: _ptAuthError(error) } };
-    return { data, error: null };
+function takeAuthReturnHash() {
+    try {
+        const h = sessionStorage.getItem(AUTH_RETURN_KEY);
+        sessionStorage.removeItem(AUTH_RETURN_KEY);
+        return h;
+    } catch { return null; }
 }
 
 async function signOut() {
@@ -500,7 +498,11 @@ async function getCurrentUser() {
         try {
             const raw = String((u.user_metadata && u.user_metadata.username) || (u.email || '').split('@')[0] || 'user').replace(/[^A-Za-z0-9_-]/g, '');
             const name = (raw.length >= 3 ? raw : raw + 'user').slice(0, 24);
-            const { data } = await sb.from('profiles').insert({ id: u.id, username: name }).select(PROFILE_COLS).maybeSingle();
+            const meta = u.user_metadata || {};
+            const row = { id: u.id, username: name };
+            if (meta.full_name || meta.name) row.display_name = String(meta.full_name || meta.name).slice(0, 50);
+            if (meta.avatar_url || meta.picture) row.image = meta.avatar_url || meta.picture;
+            const { data } = await sb.from('profiles').insert(row).select(PROFILE_COLS).maybeSingle();
             profile = data || null;
         } catch (err) { console.warn('Não foi possível criar o perfil:', err); }
     }

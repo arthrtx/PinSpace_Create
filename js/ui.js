@@ -193,7 +193,7 @@ class UIManager {
         if (!container) return;
 
         if (projects.length === 0) {
-            container.innerHTML = '<p class="empty-state">No boards found.</p>';
+            container.innerHTML = '<p class="empty-state">Nenhum quadro encontrado.</p>';
             return;
         }
 
@@ -221,12 +221,12 @@ class UIManager {
 
         if (!collages) {
             const detalhe = erro ? ` ${escapeHTML(erro)}` : '';
-            container.innerHTML = `<p class="empty-state" id="empty-publicos">Public server unavailable — publish boards so everyone can see them.${detalhe}</p>`;
+            container.innerHTML = `<p class="empty-state" id="empty-publicos"><span>Servidor público indisponível — publica quadros para que todos os possam ver.</span>${detalhe}</p>`;
             return;
         }
 
         if (collages.length === 0) {
-            container.innerHTML = '<p class="empty-state" id="empty-publicos">No public boards yet. In the editor, open Settings → Share and publish yours.</p>';
+            container.innerHTML = '<p class="empty-state" id="empty-publicos">Ainda não há quadros públicos. No editor, abre Definições → Partilha e publica o teu.</p>';
             return;
         }
 
@@ -239,10 +239,10 @@ class UIManager {
                 </div>
                 <div class="project-card-info">
                     <h3>${escapeHTML(c.titulo)}</h3>
-                    <time>By ${escapeHTML(c.autor || 'Anonymous')} · ${formatDate(c.atualizado)}</time>
+                    <time>Por ${escapeHTML(c.autor || 'Anónimo')} · ${formatDate(c.atualizado)}</time>
                 </div>
                 <div class="project-card-actions">
-                    <button type="button" data-action="open">Open a copy</button>
+                    <button type="button" data-action="open">Abrir cópia</button>
                 </div>
             </div>
         `).join('');

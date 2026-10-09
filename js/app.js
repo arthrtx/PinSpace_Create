@@ -31,6 +31,7 @@ class PinSpaceApp {
         this.homeWidgets.init();
         this.music.init();
         this.authReady = this.checkAuth();
+        this.authReady.then(u => this._finishGoogleReturn(u)).catch(() => {});
         this._initRouter();
         this._startAutosave();
     }
@@ -78,6 +79,25 @@ class PinSpaceApp {
         this.social.renderAuthAreas();
         this.social.stopNotifPolling();
         if (this.project && this.ui.editorView.classList.contains('active') && this.ui.currentTool === 'settings') this._refreshPanel();
+    }
+
+    // Regresso do Google: limpa ?code=… do endereço e volta à página onde a pessoa estava.
+    _finishGoogleReturn(user) {
+        const params = new URLSearchParams(window.location.search);
+        const err = params.get('error_description') || params.get('error');
+        if (params.has('code') || err) {
+            window.history.replaceState(window.history.state, '', window.location.pathname + window.location.hash);
+        }
+        const ret = takeAuthReturnHash();
+        if (err) {
+            this.ui.showToast('Não foi possível entrar com Google: ' + err.replace(/\+/g, ' '));
+            return;
+        }
+        if (ret === null || !user) return;
+        this.ui.showToast(`Olá, @${user.username}!`);
+        const target = (ret && ret !== '#') ? ret : '#profile/' + encodeURIComponent(user.username || '');
+        if (window.location.hash === target) this._handleHashChange();
+        else window.location.hash = target;
     }
 
     showLoginModal(mode = 'login', hint = '') {

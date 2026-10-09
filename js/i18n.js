@@ -18,6 +18,7 @@
         "(cópia)": "(copy)",
         "A abrir quadro…": "Opening board…",
         "A carregar imagem do link…": "Loading image from link…",
+        "A carregar quadros públicos…": "Loading public boards…",
         "A carregar quadros…": "Loading boards…",
         "A carregar…": "Loading…",
         "A criar conta…": "Creating account…",
@@ -58,6 +59,7 @@
         "Adicione um título": "Add a title",
         "Ainda não há elementos. Adiciona imagens, texto ou elementos — cada um fica numa camada própria.": "No elements yet. Add images, text or elements — each one gets its own layer.",
         "Ainda não há quadros em destaque": "No featured boards yet",
+        "Ainda não há quadros públicos. No editor, abre Definições → Partilha e publica o teu.": "No public boards yet. In the editor, open Settings → Share and publish yours.",
         "Ainda não há quadros públicos. Sê o primeiro!": "No public boards yet. Be the first!",
         "Ainda não repostaste nenhum quadro.": "You haven't reposted any boards yet.",
         "Ainda não segue ninguém.": "Not following anyone yet.",
@@ -209,6 +211,7 @@
         "Coração cromado": "Chrome heart",
         "Creme": "Cream",
         "Cria uma": "Create one",
+        "Criar colagem": "Start a collage",
         "Criar conta": "Sign up",
         "Criar novo projeto? Alterações não guardadas serão perdidas.": "Create a new project? Unsaved changes will be lost.",
         "Criar o meu quadro": "Create my board",
@@ -280,6 +283,11 @@
         "Entrar / Criar conta": "Log in / Sign up",
         "Entrar com SoundCloud": "Sign in with SoundCloud",
         "Entrar no PinSpace": "Log in to PinSpace",
+        "Entra ou cria a tua conta com um clique. Sem palavra-passe nem código de verificação.": "Log in or create your account in one click. No password or verification code.",
+        "Continuar com Google": "Continue with Google",
+        "A abrir o Google…": "Opening Google…",
+        "Na primeira vez, a conta é criada automaticamente com o teu nome e foto do Google. Podes mudar o username depois em Editar perfil.": "The first time, your account is created automatically with your Google name and photo. You can change your username later in Edit profile.",
+        "O login com Google ainda não está ativo no Supabase (Authentication → Providers → Google).": "Google login isn't enabled in Supabase yet (Authentication → Providers → Google).",
         "Enviar para trás": "Send to back",
         "Erro ao recortar a imagem.": "Error cropping the image.",
         "Erro na exportação.": "Export failed.",
@@ -357,6 +365,7 @@
         "Fundo": "Background",
         "Fundo apagado!": "Background erased!",
         "Galeria": "Gallery",
+        "Galeria pública": "Public Gallery",
         "Gostar": "Like",
         "Gota": "Drop",
         "Gradiente": "Gradient",
@@ -451,6 +460,7 @@
         "Nenhum elemento com esse nome.": "No element with that name.",
         "Nenhum elemento no quadro.": "No elements on the board.",
         "Nenhum quadro com esse título.": "No board with that title.",
+        "Nenhum quadro encontrado.": "No boards found.",
         "Neve": "Snow",
         "Nevoeiro": "Fog",
         "Ninguém com esse nome.": "Nobody with that name.",
@@ -565,6 +575,7 @@
         "Quadros em destaque": "Featured boards",
         "Quadros públicos": "Public boards",
         "quadros públicos": "public boards",
+        "quadros públicos — abre um, copia-o e faz teu": "public boards — open one, copy it, make it yours",
         "Quadros públicos da comunidade aparecem aqui.": "Public boards from the community show up here.",
         "Qualquer pessoa pode ver este quadro no início do site e fazer uma cópia.": "Anyone can see this board on the home page and make a copy.",
         "Quando alguém gostar, repostar ou te seguir, aparece aqui.": "When someone likes, reposts or follows you, it shows up here.",
@@ -633,6 +644,7 @@
         "Sem músicas para mostrar.": "No tracks to show.",
         "Sem sessão do SoundCloud.": "Not signed in to SoundCloud.",
         "Sem título": "Untitled",
+        "Servidor público indisponível — publica quadros para que todos os possam ver.": "Public server unavailable — publish boards so everyone can see them.",
         "Sessão iniciada": "Logged in",
         "Sessão terminada.": "Logged out.",
         "Seta": "Arrow",
@@ -715,6 +727,7 @@
         "a procurar o teu perfil…": "looking for your profile…",
         "ainda não guardado na conta": "not saved to your account yet",
         "carrega em ▶ para ouvir": "press ▶ to listen",
+        "começa a criar": "start creating",
         "começar →": "start →",
         "editado agora mesmo": "edited just now",
         "escolhe uma faixa": "pick a track",
@@ -809,6 +822,7 @@
         [/^agora mesmo$/, () => 'just now'],
         [/^editado (?:há (\d+) (min|h|dias?|mês|meses|anos?)|agora mesmo)$/, (m, n, u) => 'edited ' + (n ? ago(n, u) : 'just now')],
         [/^por @(\S+) · (?:há (\d+) (min|h|dias?|mês|meses|anos?)|agora mesmo)$/, (m, who, n, u) => `by @${who} · ${n ? ago(n, u) : 'just now'}`],
+        [/^por (.+) · (.+)$/i, (m, who, when) => `by ${tr(who)} · ${tr(when)}`],
         [/^@(\S+) repostou · (?:há (\d+) (min|h|dias?|mês|meses|anos?)|agora mesmo)$/, (m, who, n, u) => `@${who} reposted · ${n ? ago(n, u) : 'just now'}`],
         [/^repostou · (?:há (\d+) (min|h|dias?|mês|meses|anos?)|agora mesmo)$/, (m, n, u) => `reposted · ${n ? ago(n, u) : 'just now'}`],
         [/^(\d+) quadros? · da comunidade e da galeria$/, (m, n) => `${n} ${PL(n, 'board', 'boards')} · from the community and the gallery`],
@@ -881,11 +895,14 @@
 
     /* ---------- DOM ---------- */
     const ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
-    const SKIP = '#board-elements, [contenteditable="true"], script, style, .no-i18n';
+    const SKIP = '#board-elements, [contenteditable="true"], script, style, .no-i18n, .tw, .twc';
     const NOTEXT = 'textarea, select'; // só os atributos (o texto é do utilizador)
+    const SCROLL = '[data-scroll-text]';
     const ORIG = new WeakMap(); // nó de texto → texto original (pt)
     const DONE = new WeakMap(); // nó de texto → último texto escrito por nós
     const AORIG = new WeakMap(); // elemento → { atributo: original }
+    const SSRC = new WeakMap(); // [data-scroll-text] → texto original (pt)
+    const SBUILT = new WeakMap(); // [data-scroll-text] → último texto escrito por nós
 
     const skipped = (el) => !el || (el.closest && el.closest(SKIP));
 
@@ -912,11 +929,50 @@
         }
     }
 
+    // reveal.js parte o texto em spans por palavra/caractere (.tw/.twc);
+    // traduzimos o texto inteiro e voltamos a partir com a mesma estrutura.
+    function splitLike(el, text) {
+        const words = text.split(/\s+/);
+        el.textContent = '';
+        let ci = 0;
+        words.forEach((word, wi) => {
+            const w = document.createElement('span');
+            w.className = 'tw';
+            w.style.setProperty('--wi', wi);
+            [...word].forEach((ch) => {
+                const s = document.createElement('span');
+                s.className = 'twc';
+                s.style.setProperty('--ci', ci++);
+                s.textContent = ch;
+                w.appendChild(s);
+            });
+            el.appendChild(w);
+            if (wi < words.length - 1) el.appendChild(document.createTextNode(' '));
+        });
+    }
+
+    function doScroll(el) {
+        const cur = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!cur) return;
+        let src = SSRC.get(el);
+        if (src == null || (SBUILT.get(el) != null && SBUILT.get(el) !== cur)) {
+            src = cur; // texto novo vindo da app
+            SSRC.set(el, src);
+        }
+        const want = lang === 'en' ? tr(src) : src;
+        SBUILT.set(el, want);
+        if (want === cur) return;
+        // só re-partimos se o reveal já tiver partido o texto (.tw);
+        // caso contrário substituímos o texto simples.
+        if (el.querySelector(':scope > .tw')) splitLike(el, want);
+        else el.textContent = want;
+    }
+
     function walk(root) {
         if (!root) return;
         if (root.nodeType === 3) { const pe = root.parentElement; if (!skipped(pe) && !(pe && pe.closest(NOTEXT))) doText(root); return; }
         if (root.nodeType !== 1 && root.nodeType !== 11) return;
-        if (root.nodeType === 1) { if (skipped(root)) return; doAttrs(root); }
+        if (root.nodeType === 1) { if (skipped(root)) return; doAttrs(root); if (root.matches(SCROLL)) { doScroll(root); return; } }
         const w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
             acceptNode: (n) => {
                 if (n.nodeType !== 1) return NodeFilter.FILTER_ACCEPT;
@@ -928,7 +984,7 @@
         let n;
         while ((n = w.nextNode())) {
             if (n.nodeType === 3) { if (/[A-Za-zÀ-ÿ]/.test(n.nodeValue)) doText(n); }
-            else doAttrs(n);
+            else { doAttrs(n); if (n.matches(SCROLL)) doScroll(n); }
         }
     }
 
