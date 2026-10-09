@@ -110,11 +110,27 @@ class UIManager {
     showHome() {
         this.homeView.classList.add('active');
         this.editorView.classList.remove('active');
+        document.getElementById('social-view')?.classList.remove('active');
+        document.body.classList.remove('social-active');
     }
 
     showEditor() {
         this.homeView.classList.remove('active');
         this.editorView.classList.add('active');
+        document.getElementById('social-view')?.classList.remove('active');
+        document.body.classList.remove('social-active');
+    }
+
+    // Vista "rede social" (feed, explorar, perfil, notificações).
+    showSocial() {
+        this.homeView.classList.remove('active');
+        this.editorView.classList.remove('active');
+        document.getElementById('social-view')?.classList.add('active');
+        document.body.classList.add('social-active');
+    }
+
+    isSocialActive() {
+        return !!document.getElementById('social-view')?.classList.contains('active');
     }
 
     setProjectTitle(title) {
@@ -127,7 +143,7 @@ class UIManager {
         if (!container) return;
 
         if (projects.length === 0) {
-            container.innerHTML = '<p class="empty-state" id="empty-projects">Nenhum projeto ainda. Crie o seu primeiro quadro!</p>';
+            container.innerHTML = '<p class="ps-empty-simple" id="empty-projects">Ainda não tens nenhum quadro.</p>';
             return;
         }
 
@@ -135,7 +151,7 @@ class UIManager {
             <div class="project-card" data-id="${p.id}">
                 <div class="project-card-thumb">
                     ${p.thumbnail
-                        ? `<img src="${p.thumbnail}" alt="${p.titulo}">`
+                        ? `<img src="${p.thumbnail}" alt="${escapeHTML(p.titulo)}" loading="lazy" decoding="async">`
                         : '<span class="placeholder">📌</span>'}
                 </div>
                 <div class="project-card-info">
@@ -144,7 +160,7 @@ class UIManager {
                 </div>
                 <div class="project-card-actions">
                     <button data-action="open">Abrir</button>
-                    <button data-action="delete" class="delete">Eliminar</button>
+                    <button data-action="delete" class="delete">Apagar</button>
                 </div>
             </div>
         `).join('');
@@ -160,7 +176,7 @@ class UIManager {
             });
             card.querySelector('[data-action="delete"]')?.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (confirm('Eliminar este projeto?')) {
+                if (confirm('Apagar este quadro deste dispositivo?')) {
                     this.callbacks.onDeleteProject?.(card.dataset.id);
                 }
             });
@@ -172,7 +188,7 @@ class UIManager {
         if (!container) return;
 
         if (projects.length === 0) {
-            container.innerHTML = '<p class="empty-state">Nenhum projeto encontrado.</p>';
+            container.innerHTML = '<p class="empty-state">No boards found.</p>';
             return;
         }
 
@@ -194,17 +210,18 @@ class UIManager {
         });
     }
 
-    renderPublicList(collages) {
+    renderPublicList(collages, erro) {
         const container = document.getElementById('lista-publicos');
         if (!container) return;
 
         if (!collages) {
-            container.innerHTML = '<p class="empty-state" id="empty-publicos">Servidor público não disponível — publique quadros para serem vistos por todos.</p>';
+            const detalhe = erro ? ` ${escapeHTML(erro)}` : '';
+            container.innerHTML = `<p class="empty-state" id="empty-publicos">Public server unavailable — publish boards so everyone can see them.${detalhe}</p>`;
             return;
         }
 
         if (collages.length === 0) {
-            container.innerHTML = '<p class="empty-state" id="empty-publicos">Ainda não há quadros públicos. No editor, abra Ajustes → Partilha e publique o seu.</p>';
+            container.innerHTML = '<p class="empty-state" id="empty-publicos">No public boards yet. In the editor, open Settings → Share and publish yours.</p>';
             return;
         }
 
@@ -212,15 +229,15 @@ class UIManager {
             <div class="project-card public-card" data-id="${escapeHTML(c.id)}">
                 <div class="project-card-thumb">
                     ${c.thumb
-                        ? `<img src="${c.thumb}" alt="${escapeHTML(c.titulo)}" loading="lazy">`
+                        ? `<img src="${c.thumb}" alt="${escapeHTML(c.titulo)}" loading="lazy" decoding="async">`
                         : '<span class="placeholder">📌</span>'}
                 </div>
                 <div class="project-card-info">
                     <h3>${escapeHTML(c.titulo)}</h3>
-                    <time>Por ${escapeHTML(c.autor || 'Anónimo')} · ${formatDate(c.atualizado)}</time>
+                    <time>By ${escapeHTML(c.autor || 'Anonymous')} · ${formatDate(c.atualizado)}</time>
                 </div>
                 <div class="project-card-actions">
-                    <button type="button" data-action="open">Abrir cópia</button>
+                    <button type="button" data-action="open">Open a copy</button>
                 </div>
             </div>
         `).join('');
@@ -264,8 +281,17 @@ class UIManager {
                 if (!selectedElement) {
                     this.panelContent.innerHTML = `
                         <div class="panel-section">
-                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Importe uma imagem do seu computador.</p>
-                            <button class="btn btn-primary" id="btn-import-image" style="width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Importar imagem</button>
+                            <h4>Adicionar Imagem</h4>
+                            <p class="panel-hint">Arraste uma imagem para o quadro ou clique no botão abaixo.</p>
+                            <button class="btn btn-primary" id="btn-import-image" style="width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Importar Imagem</button>
+                        </div>
+                        <div class="panel-section">
+                            <h4>Dicas</h4>
+                            <ul class="tips-list">
+                                <li>Arraste imagens diretamente do seu computador</li>
+                                <li>Use Ctrl+V para colar imagens da área de transferência</li>
+                                <li>Selecione a imagem para editar filtros e ajustes</li>
+                            </ul>
                         </div>
                     `;
                     this.panelContent.querySelector('#btn-import-image')?.addEventListener('click', () => {
@@ -290,6 +316,14 @@ class UIManager {
 
             case 'design':
                 this._renderDesignPanel(projectCallbacks);
+                break;
+
+            case 'background':
+                this._renderBackgroundPanel(projectCallbacks);
+                break;
+
+            case 'layers':
+                this._renderLayersPanel(selectedElement, projectCallbacks);
                 break;
 
             case 'settings':
@@ -643,7 +677,11 @@ class UIManager {
                 </div>
             </div>
             <div class="panel-section">
-                <h4>🌐 Partilha</h4>
+                <h4>👤 Conta e perfil</h4>
+                <div id="settings-conta"></div>
+            </div>
+            <div class="panel-section">
+                <h4>🌐 Galeria pública (anónima)</h4>
                 <div id="settings-partilha"></div>
             </div>
             <div class="panel-section">
@@ -659,8 +697,56 @@ class UIManager {
             });
         });
 
+        const conta = this.panelContent.querySelector('#settings-conta');
+        if (conta) this.renderContaPanel(conta, callbacks);
+
         const container = this.panelContent.querySelector('#settings-partilha');
         if (container) this.renderPartilhaPanel(container, callbacks);
+    }
+
+    // Quadro ligado à conta: descrição, visibilidade no perfil e sincronização.
+    renderContaPanel(container, callbacks) {
+        const info = callbacks.getAccountInfo ? callbacks.getAccountInfo() : { user: null };
+        if (!info.user) {
+            container.innerHTML = `
+                <p class="panel-hint">Entra na tua conta para guardar este quadro no teu perfil, receber likes e reposts e ser seguido.</p>
+                <button class="btn btn-primary" id="btn-conta-login" style="width:100%">Entrar / Criar conta</button>
+            `;
+            container.querySelector('#btn-conta-login')?.addEventListener('click', () => callbacks.onShowLogin?.());
+            return;
+        }
+
+        const synced = info.syncedAt ? 'Sincronizado ' + formatDate(info.syncedAt) : 'Ainda não guardado na conta';
+        const foreign = info.foreign
+            ? '<p class="panel-hint">Este quadro é uma cópia do quadro de outra pessoa. Ao guardar, passa a ser um quadro novo teu.</p>'
+            : '';
+        container.innerHTML = `
+            <p class="panel-hint">Dono: <strong>@${escapeHTML(info.user.username || '')}</strong> · <span id="conta-sync">${escapeHTML(synced)}</span></p>
+            ${foreign}
+            <div class="form-group">
+                <label for="conta-desc">Descrição (opcional)</label>
+                <textarea id="conta-desc" rows="3" maxlength="500" placeholder="Sobre o que é este quadro?">${escapeHTML(info.descricao || '')}</textarea>
+            </div>
+            <label class="pub-termos-label" style="margin-bottom:12px">
+                <input type="checkbox" id="conta-publico" ${info.perfilPublico ? 'checked' : ''}>
+                <span>Público — aparece no meu perfil, no feed de quem me segue e em Explorar.</span>
+            </label>
+            <button class="btn btn-primary" id="btn-conta-guardar" style="width:100%">Guardar na minha conta</button>
+            <a class="btn btn-secondary" href="#profile" style="width:100%;margin-top:8px;text-decoration:none">Ver o meu perfil</a>
+        `;
+        const desc = container.querySelector('#conta-desc');
+        const pub = container.querySelector('#conta-publico');
+        container.querySelector('#btn-conta-guardar')?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn.disabled = true;
+            btn.textContent = 'A guardar…';
+            try {
+                await callbacks.onAccountSave?.({ descricao: desc.value, perfilPublico: pub.checked });
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Guardar na minha conta';
+            }
+        });
     }
 
     updateHistoryButtons(canUndo, canRedo) {

@@ -30,8 +30,30 @@ function debounce(fn, delay = 300) {
     };
 }
 
+// Cópia profunda rápida. As strings (incluindo imagens em base64 de
+// centenas de KB) são imutáveis em JS e ficam partilhadas em vez de
+// serem serializadas — o JSON.parse(JSON.stringify()) antigo copiava-as
+// inteiras a cada ação do histórico. Mantém a semântica do JSON:
+// ignora undefined/funções e converte Date em string.
 function deepClone(obj) {
-    return JSON.parse(JSON.stringify(obj));
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return obj.toJSON();
+    if (Array.isArray(obj)) {
+        const out = new Array(obj.length);
+        for (let i = 0; i < obj.length; i++) {
+            const v = obj[i];
+            out[i] = (v === undefined || typeof v === 'function') ? null : deepClone(v);
+        }
+        return out;
+    }
+    const out = {};
+    for (const k in obj) {
+        if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+        const v = obj[k];
+        if (v === undefined || typeof v === 'function') continue;
+        out[k] = deepClone(v);
+    }
+    return out;
 }
 
 function getElementIcon(type) {

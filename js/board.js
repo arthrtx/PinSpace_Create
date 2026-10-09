@@ -458,3 +458,24 @@ class BoardManager {
         this.selectElement(null);
     }
 }
+
+/* ---------------------------------------------------------------------
+   Guardar com dono: localStorage (sempre) + Supabase (se houver sessão).
+   O BoardManager acima continua a tratar só do canvas.
+   --------------------------------------------------------------------- */
+async function saveWithOwner(project, options = {}) {
+    const cloud = options.cloud !== false;
+    const user = typeof getCachedUser === 'function' ? getCachedUser() : null;
+
+    if (user && (!project.autor || project.autor === 'Anónimo')) {
+        project.autor = user.username || project.autor;
+    }
+
+    saveProject(project);
+
+    if (!cloud || !user || !authAvailable()) return { cloud: false };
+
+    await saveBoardToCloud(project);   // define project.remoteId / authorId / cloudSyncedAt
+    saveProject(project);
+    return { cloud: true, remoteId: project.remoteId };
+}
