@@ -9,17 +9,13 @@
         <link rel="preconnect" href="https://i.pinimg.com">
         <link rel="dns-prefetch" href="https://i.pinimg.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;600;700&family=Open+Sans&family=Roboto&family=Lato&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Lora&family=Merriweather&family=Oswald:wght@400;500;600&family=Bebas+Neue&family=Archivo+Black&family=Abril+Fatface&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;600;700&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Advent+Pro:wght@400;600&family=Courier+Prime&family=Goudy+Bookletter+1911&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=2.1">
-    <link rel="stylesheet" href="css/toolbar.css?v=2.1">
-    <link rel="stylesheet" href="css/board.css?v=2.1">
-    <link rel="stylesheet" href="css/responsive.css?v=2.1">
+    <link rel="stylesheet" href="css/style.css?v=2.2">
 </head>
 <body>
 
     <div id="scroll-progress" aria-hidden="true"></div>
     <div class="ms-grain" aria-hidden="true"></div>
 
-    <!-- INTRO — letras que surgem ao abrir -->
     <div class="ms-intro" id="ms-intro" aria-hidden="true">
         <div class="ms-intro-word">
             <span class="mi-i" style="--i:0">p</span><span class="mi-i" style="--i:1">i</span><span class="mi-i" style="--i:2">n</span><span class="mi-i" style="--i:3">&nbsp;&nbsp;space</span><span class="mi-i mi-dot" style="--i:4">.</span>
@@ -27,14 +23,11 @@
         <span class="ms-intro-sub" style="--i:5">start creating</span>
     </div>
 
-    <!-- Coordenadas do cursor (detalhe ao vivo) -->
     <div class="ms-coords" aria-hidden="true">0000 X · 0000 Y</div>
 
-    <!-- ===================== TELA INICIAL ===================== -->
     <div id="home-view" class="view active">
         <div class="home-container">
 
-            <!-- NAV + HERO -->
             <header class="ms-hero">
                 <img class="ms-hero-bg" src="https://i.pinimg.com/originals/a8/be/00/a8be002065390491cd1c67a3902333d5.jpg" alt="" aria-hidden="true" loading="eager" fetchpriority="high">
                 <nav class="ms-nav" data-reveal>
@@ -75,7 +68,6 @@
                 </div>
             </header>
 
-            <!-- FAIXA PRESA — palavra gigante que fica presa no scroll (à la haoqi) -->
             <section class="ms-pin">
                 <div class="ms-pin-inner">
                     <div class="ms-pin-wall" aria-hidden="true"></div>
@@ -85,7 +77,6 @@
                 </div>
             </section>
 
-            <!-- OS TEUS QUADROS -->
             <section class="ms-feature">
                 <div class="ms-mask ms-feature-mask" data-reveal-mask>
                     <div class="section-header">
@@ -120,7 +111,6 @@
                     </section>
             </section>
 
-            <!-- FAIXA MARQUEE — scroll automático para a direita no fim da página -->
             <div class="ms-marquee" aria-hidden="true">
                 <div class="ms-marquee-track">
                     <div class="ms-marquee-run">
@@ -142,7 +132,6 @@
                 </div>
             </div>
 
-            <!-- RODAPÉ -->
             <footer class="ms-footer">
                 <div class="ms-footer-top" data-reveal>
                     <div>
@@ -177,7 +166,6 @@
         </div>
     </div>
 
-    <!-- ===================== EDITOR ===================== -->
     <div id="editor-view" class="view">
         <header class="topbar">
             <div class="topbar-left">
@@ -484,23 +472,13 @@
 
     <div id="toast" class="toast hidden"></div>
 
-    <script src="js/utils.js?v=2.1"></script>
-    <script src="js/moderation.js?v=2.1"></script>
-    <script src="js/reveal.js?v=2.1"></script>
-    <script src="js/storage.js?v=2.1"></script>
-    <script src="js/supabase-config.js?v=2.1"></script>
-    <script src="js/supabase.js?v=2.1"></script>
-    <script src="js/public.js?v=2.1"></script>
-    <script src="js/history.js?v=2.1"></script>
-    <script src="js/layers.js?v=2.1"></script>
-    <script src="js/image.js?v=2.1"></script>
-    <script src="js/text.js?v=2.1"></script>
-    <script src="js/shapes.js?v=2.1"></script>
-    <script src="js/assets.js?v=2.1"></script>
-    <script src="js/brush.js?v=2.1"></script>
-    <script src="js/export.js?v=2.1"></script>
-    <script src="js/board.js?v=2.1"></script>
-    <script src="js/ui.js?v=2.1"></script>
-    <script src="js/app.js?v=2.1"></script>
+    <script src="js/core.js?v=2.2"></script>
+    <script src="js/reveal.js?v=2.2"></script>
+    <script src="js/data.js?v=2.2"></script>
+    <script src="js/editor.js?v=2.2"></script>
+    <script src="js/tools.js?v=2.2"></script>
+    <script src="js/board.js?v=2.2"></script>
+    <script src="js/ui.js?v=2.2"></script>
+    <script src="js/app.js?v=2.2"></script>
 </body>
 </html>

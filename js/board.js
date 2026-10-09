@@ -1,7 +1,3 @@
-/**
- * board.js — Viewport do quadro: zoom, pan, scroll, seleção e transformação
- */
-
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.1;
@@ -192,7 +188,6 @@ class BoardManager {
     }
 
     _bindEvents() {
-        // Zoom com scroll
         this.viewport.addEventListener('wheel', (e) => {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
@@ -202,7 +197,6 @@ class BoardManager {
             }
         }, { passive: false });
 
-        // Pan com botão do meio ou espaço+arrastar
         this.viewport.addEventListener('mousedown', (e) => {
             if (e.button === 1 || (e.button === 0 && this._spacePressed)) {
                 e.preventDefault();
@@ -246,7 +240,6 @@ class BoardManager {
             }
         });
 
-        // Tecla espaço para pan
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && !e.target.isContentEditable) {
                 e.preventDefault();
@@ -262,7 +255,6 @@ class BoardManager {
             }
         });
 
-        // Clique no viewport para desselecionar
         this.viewport.addEventListener('mousedown', (e) => {
             if (e.target === this.viewport || e.target === this.canvas || e.target === this.elementsContainer) {
                 if (!this._spacePressed && e.button === 0) {
@@ -271,7 +263,6 @@ class BoardManager {
             }
         });
 
-        // Handles de seleção
         this.selectionBox.querySelectorAll('.handle').forEach(handle => {
             handle.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
@@ -285,12 +276,10 @@ class BoardManager {
             });
         });
 
-        // Atualizar seleção ao scroll
         this.viewport.addEventListener('scroll', () => {
             if (this.selectedId) this._updateSelectionBox();
         });
 
-        // Cursor de resize ao pairar nas bordas do elemento selecionado
         this.elementsContainer.addEventListener('mousemove', (e) => {
             if (!this.selectedId) return;
             const el = e.target.closest('.board-element');
@@ -382,7 +371,6 @@ class BoardManager {
         width = Math.max(20, width);
         height = Math.max(20, height);
 
-        // Manter dentro da área de edição do quadro
         width = Math.min(width, Math.max(20, this.boardWidth - x));
         height = Math.min(height, Math.max(20, this.boardHeight - y));
         x = clamp(x, 0, Math.max(0, this.boardWidth - width));

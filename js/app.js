@@ -1,7 +1,3 @@
-/**
- * app.js — Orquestrador principal da aplicação PinSpace Create
- */
-
 const BACKGROUND_REMOVAL_CDN = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.7/dist/index.mjs';
 
 class PinSpaceApp {
@@ -79,12 +75,14 @@ class PinSpaceApp {
         this.ui.on('onContextAction', (action, id) => this._contextAction(action, id));
         this.ui.on('onSelectElement', (id) => this._selectElement(id));
         this.ui.on('onCropApply', (rect) => this._applyCrop(rect));
+        // A galeria publica chama este callback. Sem ele, o botao "Abrir
+        // copia" nao fazia nada e nao dava erro nenhum.
+        this.ui.on('onOpenPublic', (id) => this._openPublic(id));
 
         this.history.onChange(({ canUndo, canRedo }) => {
             this.ui.updateHistoryButtons(canUndo, canRedo);
         });
 
-        // Responsividade: ajusta o quadro ao redimensionar a janela
         window.addEventListener('resize', () => {
             if (this.project) {
                 this.board.zoomFit();
@@ -92,7 +90,6 @@ class PinSpaceApp {
             }
         });
 
-        // Input de imagem
         this._imageInputMode = 'add';
         document.getElementById('input-imagem').addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -109,15 +106,11 @@ class PinSpaceApp {
         document.getElementById('input-bg-imagem').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                this._setBackground({ tipo: 'imagem', valor: ev.target.result });
-            };
-            reader.readAsDataURL(file);
+            const src = await compactarFicheiroImagem(file, { maxLado: FUNDO_MAX_LADO, maxBytes: FUNDO_MAX_BYTES });
+            if (src) this._setBackground({ tipo: 'imagem', valor: src });
             e.target.value = '';
         });
 
-        // Arrastar-e-soltar imagens para o quadro (estilo Canva)
         const dropOverlay = document.getElementById('drop-overlay');
         this._dragDepth = 0;
         const repaintDropOverlay = () => {
@@ -177,7 +170,6 @@ class PinSpaceApp {
             this.ui.showToast('Imagem adicionada!');
         });
 
-        // Atalhos de teclado
         document.addEventListener('keydown', (e) => {
             if (!this.project) return;
             if (e.target.isContentEditable || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -210,7 +202,6 @@ class PinSpaceApp {
             if (e.key === '-') { e.preventDefault(); this.board.zoomOut(); this.ui.updateZoomLevel(this.board.getZoom()); return; }
             if (e.key === '0' && !ctrl) { e.preventDefault(); this.board.zoomFit(); this.ui.updateZoomLevel(this.board.getZoom()); return; }
 
-            // Mover com setas (Shift = 10 px)
             if (selectedEl && !selectedEl.bloqueada) {
                 let dx = 0, dy = 0;
                 if (e.key === 'ArrowLeft') dx = -1;
@@ -233,7 +224,6 @@ class PinSpaceApp {
             }
         });
 
-        // Drag de elementos
         document.getElementById('board-elements').addEventListener('mousedown', (e) => {
             const el = e.target.closest('.board-element');
             if (!el || e.button !== 0) return;
@@ -252,7 +242,6 @@ class PinSpaceApp {
             }
         });
 
-        // Scroll por cima de um texto = aumentar / diminuir o tamanho da letra
         document.getElementById('board-elements').addEventListener('wheel', (e) => {
             if (!this.project) return;
             const domEl = e.target.closest('.board-element');
@@ -295,7 +284,8 @@ class PinSpaceApp {
         try {
             const data = await getPublicCollages();
             this.ui.renderPublicList(data.collages || []);
-        } catch {
+        } catch (err) {
+            console.error('Falha ao carregar os quadros públicos:', err);
             this.ui.renderPublicList(null);
         }
     }
@@ -309,22 +299,21 @@ class PinSpaceApp {
         }
 
         try {
-            const data = await getPublicCollage(id);
-            const original = data.collage;
-            if (!original || !original.projeto) throw new Error('Quadro vazio');
+            // getPublicCollage ja avisa quando o quadro nao existe ou foi
+            // publicado sem conteudo, por isso nao repetimos a validacao.
+            const base = await getPublicCollage(id);
 
             if (this.project && this.isDirty) {
                 if (!confirm('Abrir este quadro público? Alterações não guardadas serão perdidas.')) return;
             }
 
-            const base = original.projeto;
             const copy = {
                 ...createEmptyProject(generateId(), (base.titulo || 'Sem título') + ' (cópia)'),
                 boardWidth: base.boardWidth || 3000,
                 boardHeight: base.boardHeight || 3000,
                 background: base.background || { tipo: 'cor', valor: '#e8e8e8' },
                 grade: base.grade == null ? 'pontos' : base.grade,
-                elementos: (base.elementos || []).map(el => {
+                elementos: base.elementos.map(el => {
                     const nel = JSON.parse(JSON.stringify(el));
                     nel.id = generateId();
                     nel.layer = el.layer;
@@ -338,8 +327,9 @@ class PinSpaceApp {
             this.isDirty = true;
             this._loadProjectIntoEditor();
             this.ui.showToast('Quadro público copiado para os seus projetos — edite à vontade!');
-        } catch {
-            this.ui.showToast('Não foi possível abrir o quadro público. Tente novamente.');
+        } catch (err) {
+            console.error('Abrir quadro público falhou:', err);
+            this.ui.showToast(err.message || 'Não foi possível abrir o quadro público.');
         }
     }
 
@@ -354,24 +344,56 @@ class PinSpaceApp {
         this.project.autor = check.value;
         this._syncAllFromDOM();
 
+        // Quadros abertos antes de existir a redução podem ainda ter fotos
+        // pesadas. Encolhemos antes de tentar, senão o servidor recusa.
+        try {
+            const n = await compactarProjeto(this.project);
+            if (n > 0) {
+                saveProject(this.project);
+                this._rerenderAll();
+                this.ui.showToast(`${n} imagem${n > 1 ? 'ns' : ''} reduzida${n > 1 ? 's' : ''} para caber na publicação.`);
+            }
+        } catch (err) {
+            console.warn('Não foi possível reduzir as imagens:', err);
+        }
+
         let thumb = this.project.thumbnail;
         try {
             if (!thumb) thumb = await generateThumbnailDataURL(this.project);
         } catch { /* thumb opcional */ }
 
-        const payload = {
-            publicId: this.project.publico ? this.project.publicKey : null,
-            titulo: this.project.titulo || 'Sem título',
-            autor: this.project.autor,
-            termosAceitos: true,
-            thumb,
-            projeto: JSON.parse(JSON.stringify({ ...this.project, thumbnail: undefined, publicKey: undefined }))
+        const enviar = async (publicId, ownerToken) => {
+            const corpo = {
+                publicId,
+                ownerToken,
+                titulo: this.project.titulo || 'Sem título',
+                autor: this.project.autor,
+                termosAceitos: true,
+                thumb,
+                projeto: JSON.parse(JSON.stringify({ ...this.project, thumbnail: undefined, publicKey: undefined, ownerToken: undefined }))
+            };
+            return await publishPublicCollage(corpo);
         };
 
         try {
-            const res = await publishPublicCollage(payload);
+            let res;
+            try {
+                res = await enviar(
+                    this.project.publico ? this.project.publicKey : null,
+                    this.project.ownerToken || null
+                );
+            } catch (err) {
+                // O quadro antigo na BD não tem dono (foi publicado antes do
+                // token existir). Republicamos como quadro novo em vez de
+                // deixar o utilizador preso.
+                const semDono = this.project.publico && !this.project.ownerToken && err && err.status === 403;
+                if (!semDono) throw err;
+                res = await enviar(null, null);
+            }
+
             this.project.publico = true;
             this.project.publicKey = res.id;
+            this.project.ownerToken = res.ownerToken || null;
             this.project.publicadoAt = new Date().toISOString();
             this.project.thumbnail = thumb;
             saveProject(this.project);
@@ -388,7 +410,7 @@ class PinSpaceApp {
         if (!this.project || !this.project.publicKey) return;
 
         try {
-            await deletePublicCollage(this.project.publicKey);
+            await deletePublicCollage(this.project.publicKey, this.project.ownerToken);
         } catch (err) {
             const msg = err && err.message ? String(err.message) : '';
             this.ui.showToast(msg || 'Falha ao remover da base de dados. Tente novamente.');
@@ -397,6 +419,7 @@ class PinSpaceApp {
 
         this.project.publico = false;
         this.project.publicKey = null;
+        this.project.ownerToken = null;
         this.project.publicadoAt = null;
         saveProject(this.project);
         this._refreshPanel();
@@ -492,6 +515,10 @@ class PinSpaceApp {
 
     async _addImage(file, x, y) {
         const el = await importImageFromFile(file, this.project.elementos, x, y);
+        if (!el) {
+            this.ui.showToast('Não foi possível ler essa imagem.');
+            return;
+        }
         this._clampElementBounds(el);
         this.project.elementos.push(el);
         this._renderElement(el);
@@ -571,14 +598,12 @@ class PinSpaceApp {
             await this._addImage(file);
             return;
         }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            el.src = ev.target.result;
-            this._renderElement(el);
-            this._commitHistory();
-            this.isDirty = true;
-        };
-        reader.readAsDataURL(file);
+        const src = await compactarFicheiroImagem(file);
+        if (!src) return;
+        el.src = src;
+        this._renderElement(el);
+        this._commitHistory();
+        this.isDirty = true;
     }
 
     _addText(conteudo) {
@@ -853,7 +878,7 @@ class PinSpaceApp {
             canvas.height = Math.round(px.h);
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, px.x, px.y, px.w, px.h, 0, 0, canvas.width, canvas.height);
-            el.src = canvas.toDataURL('image/png');
+            el.src = await compactarImagem(canvas.toDataURL('image/png'));
             el.height = el.width * (canvas.height / canvas.width);
             this._renderElement(el);
             this.board.updateSelectionBox();
@@ -893,7 +918,7 @@ class PinSpaceApp {
                     output: { format: 'image/png' }
                 });
                 clearInterval(timer);
-                el.src = await blobToDataURL(blob);
+                el.src = await compactarImagem(await blobToDataURL(blob));
                 this._renderElement(el);
                 this.board.updateSelectionBox();
                 this._commitHistory();
@@ -906,7 +931,7 @@ class PinSpaceApp {
                 console.warn('AI removeBackground failed, trying manual fallback:', aiErr);
                 this.ui.showToast('A remover fundo localmente (rápido)…');
                 try {
-                    el.src = await removeBackgroundManual(el.src);
+                    el.src = await compactarImagem(await removeBackgroundManual(el.src));
                     this._renderElement(el);
                     this.board.updateSelectionBox();
                     this._commitHistory();
@@ -1056,7 +1081,6 @@ class PinSpaceApp {
         this.ui.showPanel(tool, selected, this._getPanelCallbacks());
 
         if (tool === 'image') {
-            // Não abrir automaticamente — utilizador clica no botão do painel
         }
     }
 
@@ -1300,7 +1324,6 @@ function hasDraggableShape(dataTransfer) {
 async function getDroppedImageFile(dataTransfer) {
     if (!dataTransfer) return null;
 
-    // 1. dataTransfer.items (mais fiável em drag de ficheiros)
     try {
         const items = Array.from(dataTransfer.items || []);
         const fileItem = items.find(it => it.kind === 'file');
@@ -1316,13 +1339,11 @@ async function getDroppedImageFile(dataTransfer) {
         }
     } catch { /* continua */ }
 
-    // 2. fallback: dataTransfer.files
     const files = Array.from(dataTransfer.files || []);
     const imageFile = files.find(f => f.type && f.type.startsWith('image/'));
     if (imageFile) return imageFile;
     if (files[0]) return files[0];
 
-    // 3. text/uri-list (imagens arrastadas de páginas web)
     try {
         const uriList = dataTransfer.getData('text/uri-list') || '';
         const f = await fileFromUriList(uriList);
@@ -1331,7 +1352,6 @@ async function getDroppedImageFile(dataTransfer) {
         return null;
     }
 
-    // 4. text/plain — link de imagem arrastado como texto simples
     try {
         const txt = dataTransfer.getData('text/plain') || '';
         return await fileFromUrl(txt.trim());
