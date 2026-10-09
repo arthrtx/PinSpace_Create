@@ -50,11 +50,3 @@ conteúdo e não publica conteúdo ofensivo. Conteúdo que viole direitos pode s
 ---
 
 Autor: **Arthur Sal**
-
-- [ ] Menu **Formas** mais completo (mais formas, edição própria)
-- [ ] Mais modelos prontos + collage automática
-- [ ] Multi-página / publicação direta
-
----
-
-Autor: Arthur Sal
