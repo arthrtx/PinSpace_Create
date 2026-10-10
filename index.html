@@ -9,13 +9,16 @@
         <link rel="preconnect" href="https://i.pinimg.com">
         <link rel="dns-prefetch" href="https://i.pinimg.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;600;700&family=Open+Sans&family=Roboto&family=Lato&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Lora&family=Merriweather&family=Oswald:wght@400;500;600&family=Bebas+Neue&family=Archivo+Black&family=Abril+Fatface&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;600;700&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Advent+Pro:wght@400;600&family=Courier+Prime&family=Goudy+Bookletter+1911&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=3.1">
+    <link rel="stylesheet" href="css/style.css?v=3.2">
     <link rel="stylesheet" href="css/editor-improvements.css?v=2.4">
     <link rel="stylesheet" href="css/responsive.css?v=2.4">
     <link rel="stylesheet" href="css/social.css?v=2.2">
-    <link rel="stylesheet" href="css/glass.css?v=2.4">
+    <link rel="stylesheet" href="css/glass.css?v=3.1">
     <link rel="stylesheet" href="css/music.css?v=1.4">
     <link rel="stylesheet" href="css/editor-theme.css?v=2.3">
+    <link rel="preload" href="fonts/host-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/montserrat-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="css/fonts.css?v=1.6">
 </head>
 <body>
 
@@ -47,12 +50,15 @@
                         <span>pin space.</span>
                     </a>
                     <div class="ms-nav-right">
-                        <div id="landing-auth" class="ms-nav-auth"></div>
-                        <button type="button" id="btn-abrir-projeto" class="ms-nav-link">Abrir quadro</button>
-                        <button type="button" id="btn-novo-projeto" class="ms-nav-cta ms-magnetic">
+                        <button type="button" id="btn-abrir-projeto" class="ms-nav-cta">
+                            <span>Abrir quadro</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </button>
+                        <button type="button" id="btn-novo-projeto" class="ms-nav-cta">
                             <span>Start a collage</span>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                         </button>
+                        <div id="landing-auth" class="ms-nav-auth"></div>
                     </div>
                 </nav>
 
@@ -78,6 +84,9 @@
             <div class="ms-glass-zone">
             <section class="ms-feature">
                 <!-- Doca vertical (como os ícones à esquerda da referência) -->
+                <!-- Palco da galeria: fundo próprio (foto desfocada) só nesta parte -->
+                <div class="gw-stage">
+                <div class="gw-stage-bg" aria-hidden="true"></div>
                 <nav class="gw-dock" aria-label="Atalhos">
                     <button type="button" class="gw-dock-btn" data-dock="top" title="Início"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></button>
                     <a class="gw-dock-btn" href="#explore" title="Explorar a comunidade"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg></a>
@@ -129,9 +138,15 @@
                             <ul class="gw-list" id="w-continue"></ul>
                         </div>
 
-                        <div class="gw-widget gw-palette">
-                            <div class="gw-w-head"><h5>Paleta pin space</h5><span class="gw-mini-note">clica para copiar</span></div>
-                            <div class="gw-swatches" id="w-palette"></div>
+                        <div class="gw-widget gw-weather" id="w-weather" aria-label="Previsão do tempo em Lisboa">
+                            <div class="gw-w-head"><h5>Tempo · Lisboa</h5><span class="gw-mini-note" id="w-weather-hl"></span></div>
+                            <div class="gw-weather-body">
+                                <div class="gw-weather-now">
+                                    <span class="gw-weather-icon" id="w-weather-icon" aria-hidden="true">·</span>
+                                    <div class="gw-weather-temp"><b id="w-weather-temp">--°</b><small id="w-weather-desc">a carregar…</small></div>
+                                </div>
+                                <ol class="gw-weather-days" id="w-weather-days"></ol>
+                            </div>
                         </div>
 
                         <div class="gw-widget gw-tip">
@@ -184,6 +199,7 @@
                     </div>
                 </div>
                 </div>
+                </div><!-- /gw-stage -->
 
                 <!-- =====================================================
                      Música (SoundCloud): caixa de ligação + coverflow +
@@ -904,20 +920,21 @@
 
     <div id="toast" class="toast hidden"></div>
 
+    <script src="js/i18n.js?v=1.0"></script>
     <script src="js/core.js?v=2.8"></script>
     <script src="js/reveal.js?v=2.5"></script>
-    <script src="js/smooth-scroll.js?v=1.1"></script>
+    <script src="js/smooth-scroll.js?v=1.2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="js/data.js?v=3.3"></script>
     <script src="js/color-palettes.js?v=2.4"></script>
-    <script src="js/editor.js?v=2.9"></script>
+    <script src="js/editor.js?v=3.0"></script>
     <script src="js/elements.js?v=1.2"></script>
     <script src="js/tools.js?v=2.8"></script>
-    <script src="js/board.js?v=3.0"></script>
+    <script src="js/board.js?v=3.1"></script>
     <script src="js/ui.js?v=3.2"></script>
     <script src="js/editor-layout.js?v=1.2"></script>
     <script src="js/social-ui.js?v=2.7"></script>
-    <script src="js/home-widgets.js?v=1.3"></script>
+    <script src="js/home-widgets.js?v=1.33"></script>
     <script src="js/music.js?v=1.4"></script>
     <script src="js/app.js?v=4.0"></script>
     <script src="js/crop-inline.js?v=1.0"></script>

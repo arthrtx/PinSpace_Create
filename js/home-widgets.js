@@ -38,7 +38,7 @@ class HomeWidgets {
 
     init() {
         this._startClock();
-        this._renderPalette();
+        this._renderWeather();
         this._renderTip();
         this._bindDock();
         this._bindChips();
@@ -96,25 +96,64 @@ class HomeWidgets {
         });
     }
 
-    /* ---------- Paleta (enfeite, copia o hex) ---------- */
-    _renderPalette() {
-        const box = this.$('w-palette');
+    /* ---------- Previsão do tempo (Lisboa, Open-Meteo, sem chave) ---------- */
+    async _renderWeather() {
+        const box = this.$('w-weather');
         if (!box) return;
-        box.innerHTML = HW_PALETTE.map(c => `
-            <button type="button" class="gw-swatch" style="--sw:${c.hex}" data-hex="${c.hex}" title="${c.name} · ${c.hex}" aria-label="Copiar ${c.name} ${c.hex}"></button>`).join('');
-        box.addEventListener('click', async (e) => {
-            const b = e.target.closest('[data-hex]');
-            if (!b) return;
+        const KEY = 'ps_weather_lx';
+        let data = null;
+        try {
+            const c = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+            if (c && Date.now() - c.t < 30 * 60 * 1000) data = c.d;
+        } catch { /* sem cache */ }
+        if (!data) {
             try {
-                await navigator.clipboard.writeText(b.dataset.hex);
-                this.app.ui.showToast(`Copiado ${b.dataset.hex}`);
+                const url = 'https://api.open-meteo.com/v1/forecast?latitude=38.72&longitude=-9.14'
+                    + '&current=temperature_2m,weather_code,is_day'
+                    + '&daily=weather_code,temperature_2m_max,temperature_2m_min'
+                    + '&timezone=Europe%2FLisbon&forecast_days=5';
+                const r = await fetch(url);
+                if (!r.ok) throw new Error(r.status);
+                data = await r.json();
+                try { sessionStorage.setItem(KEY, JSON.stringify({ t: Date.now(), d: data })); } catch { /* ok */ }
             } catch {
-                this.app.ui.showToast(b.dataset.hex);
+                this.$('w-weather-desc').textContent = 'previsão indisponível';
+                return;
             }
-            b.classList.remove('copied');
-            void b.offsetWidth;
-            b.classList.add('copied');
-        });
+        }
+        const W = (code, day = 1) => {
+            const c = Number(code);
+            if (c === 0) return [day ? '☀️' : '🌙', 'Céu limpo'];
+            if (c <= 2) return [day ? '🌤️' : '☁️', 'Pouco nublado'];
+            if (c === 3) return ['☁️', 'Nublado'];
+            if (c <= 48) return ['🌫️', 'Nevoeiro'];
+            if (c <= 57) return ['🌦️', 'Chuvisco'];
+            if (c <= 67) return ['🌧️', 'Chuva'];
+            if (c <= 77) return ['❄️', 'Neve'];
+            if (c <= 82) return ['🌦️', 'Aguaceiros'];
+            if (c <= 86) return ['🌨️', 'Neve'];
+            return ['⛈️', 'Trovoada'];
+        };
+        const cur = data.current || {};
+        const d = data.daily || {};
+        const [ico, desc] = W(cur.weather_code, cur.is_day);
+        const temp = Math.round(cur.temperature_2m);
+        this.$('w-weather-icon').textContent = ico;
+        this.$('w-weather-temp').textContent = `${temp}°`;
+        this.$('w-weather-desc').textContent = desc;
+        if (d.temperature_2m_max) {
+            this.$('w-weather-hl').textContent = `↑${Math.round(d.temperature_2m_max[0])}° ↓${Math.round(d.temperature_2m_min[0])}°`;
+        }
+        const fmt = new Intl.DateTimeFormat('pt-PT', { weekday: 'short', timeZone: 'Europe/Lisbon' });
+        this.$('w-weather-days').innerHTML = (d.time || []).slice(1, 5).map((t, k) => {
+            const i = k + 1;
+            const [di, dd] = W(d.weather_code[i]);
+            const nome = fmt.format(new Date(t + 'T12:00:00')).replace('.', '').slice(0, 3);
+            return `<li title="${dd}"><span>${nome}</span><i aria-hidden="true">${di}</i><b>${Math.round(d.temperature_2m_max[i])}°</b></li>`;
+        }).join('');
+        // o "22°C · Lisboa" do topo passa a mostrar a temperatura real
+        const heroStat = [...document.querySelectorAll('.ms-stat')].find(s => /lisboa/i.test(s.textContent));
+        if (heroStat && Number.isFinite(temp)) heroStat.querySelector('b').textContent = `${temp}°C`;
     }
 
     /* ---------- Dicas ---------- */
@@ -139,7 +178,8 @@ class HomeWidgets {
         const sc = this._scroller();
         if (!sc || !el) return;
         const top = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 24;
-        sc.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        if (window.psScrollTo) window.psScrollTo(Math.max(0, top));
+        else sc.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
     }
 
     _bindDock() {
@@ -147,7 +187,12 @@ class HomeWidgets {
             const el = e.target.closest('[data-dock]');
             if (!el || !document.getElementById('home-view')?.contains(el)) return;
             const act = el.dataset.dock;
-            if (act === 'top') { this._scroller()?.scrollTo({ top: 0, behavior: 'smooth' }); }
+            if (act === 'top') {
+                e.preventDefault();
+                const sc = this._scroller();
+                if (window.psScrollTo) window.psScrollTo(0);
+                else if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' });
+            }
             else if (act === 'new') { this.app.ui.openNewProjectModal(this.app.ui.sizePresets()); }
             else if (act === 'open') { this.app._showOpenModal(); }
             else if (act === 'profile') {

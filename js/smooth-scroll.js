@@ -96,6 +96,9 @@
         irPara(topo);
     });
 
+    // Para outros scripts (ex.: botão "Início" da doca) usarem o mesmo deslize
+    window.psScrollTo = (v) => irPara(v);
+
     window.addEventListener('resize', () => {
         alvo = limitar(alvo);
     }, { passive: true });
