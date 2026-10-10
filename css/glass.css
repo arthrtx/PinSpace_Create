@@ -1016,3 +1016,5 @@ body:has(#editor-view.active) .ms-grain { animation-play-state: paused; }
 .gw-side { position: static; top: auto; }
 /* Entrada da coluna de widgets: só aparece (fade), sem subir */
 html.js .gw-side[data-reveal] { transform: none; }
+
+html[lang="en"] .ps-local-grid .project-card-info::before { content: 'On this device'; }

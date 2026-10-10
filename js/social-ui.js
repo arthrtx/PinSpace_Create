@@ -913,108 +913,44 @@ class SocialUI {
             return;
         }
         const modal = document.getElementById('modal-auth');
-        this._setAuthMode(mode);
+        modal.querySelector('#auth-title').textContent = 'Entrar no PinSpace';
         const hintEl = modal.querySelector('#auth-hint');
         hintEl.textContent = hint || '';
         hintEl.hidden = !hint;
-        modal.querySelectorAll('.auth-error, .auth-info').forEach(el => { el.hidden = true; el.textContent = ''; });
+        const errEl = modal.querySelector('.auth-error');
+        errEl.hidden = true;
+        errEl.textContent = '';
+        const btn = modal.querySelector('#btn-google-login');
+        btn.disabled = false;
+        btn.querySelector('span').textContent = 'Continuar com Google';
         if (!modal.open) modal.showModal();
-        setTimeout(() => modal.querySelector(`#form-${mode} input`)?.focus(), 30);
-    }
-
-    _setAuthMode(mode) {
-        const modal = document.getElementById('modal-auth');
-        modal.querySelector('#auth-title').textContent = mode === 'register' ? 'Criar conta' : 'Entrar no PinSpace';
-        modal.querySelectorAll('.auth-tab').forEach(t => {
-            const on = t.dataset.mode === mode;
-            t.classList.toggle('active', on);
-            t.setAttribute('aria-selected', String(on));
-        });
-        modal.querySelector('#form-login').hidden = mode !== 'login';
-        modal.querySelector('#form-register').hidden = mode !== 'register';
+        setTimeout(() => btn.focus(), 30);
     }
 
     _bindAuthModal() {
         const modal = document.getElementById('modal-auth');
         if (!modal) return;
-        modal.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => this._setAuthMode(t.dataset.mode)));
-        modal.querySelectorAll('[data-switch-mode]').forEach(a => a.addEventListener('click', (e) => {
-            e.preventDefault();
-            this._setAuthMode(a.dataset.switchMode);
-        }));
+        const btn = modal.querySelector('#btn-google-login');
+        const errEl = modal.querySelector('.auth-error');
+        const label = btn.querySelector('span');
 
-        const showErr = (form, msg) => {
-            const el = form.querySelector('.auth-error');
-            el.textContent = msg || '';
-            el.hidden = !msg;
-        };
-        const busy = (form, on, label) => {
-            const btn = form.querySelector('button[type="submit"]');
-            btn.disabled = on;
-            btn.textContent = label;
-        };
-
-        const login = modal.querySelector('#form-login');
-        login.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            showErr(login, '');
-            busy(login, true, 'A entrar…');
+        btn.addEventListener('click', async () => {
+            errEl.hidden = true;
+            btn.disabled = true;
+            label.textContent = 'A abrir o Google…';
+            // Guarda o quadro aberto antes de sair da página.
             try {
-                const { error } = await signIn(login.email.value, login.password.value);
-                if (error) return showErr(login, error.message);
-                login.reset();
-                modal.close();
-                await this.app.onSignedIn();
-            } catch (err) {
-                showErr(login, _socialErrMsg(err));
-            } finally {
-                busy(login, false, 'Entrar');
-            }
-        });
-
-        const reg = modal.querySelector('#form-register');
-        const userInput = reg.querySelector('[name="username"]');
-        const userHint = reg.querySelector('#register-username-hint');
-        let checkTimer = null;
-        userInput.addEventListener('input', () => {
-            clearTimeout(checkTimer);
-            const check = validateUsername(userInput.value);
-            if (!userInput.value) { userHint.textContent = 'Letras, números, "_" ou "-" (3–30).'; userHint.className = 'auth-field-hint'; return; }
-            if (!check.ok) { userHint.textContent = check.error; userHint.className = 'auth-field-hint bad'; return; }
-            userHint.textContent = 'A verificar…';
-            userHint.className = 'auth-field-hint';
-            checkTimer = setTimeout(async () => {
-                const free = await isUsernameAvailable(check.value);
-                if (userInput.value.trim() !== check.value) return;
-                userHint.textContent = free ? `@${check.value} está disponível.` : `@${check.value} já está ocupado.`;
-                userHint.className = 'auth-field-hint ' + (free ? 'good' : 'bad');
-            }, 350);
-        });
-
-        reg.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            showErr(reg, '');
-            const info = reg.querySelector('.auth-info');
-            info.hidden = true;
-            if (reg.password.value.length < 6) return showErr(reg, 'A palavra-passe tem de ter pelo menos 6 caracteres.');
-            if (reg.password.value !== reg.password2.value) return showErr(reg, 'As palavras-passe não coincidem.');
-            busy(reg, true, 'A criar conta…');
+                if (this.app.project && this.app.ui.editorView.classList.contains('active')) this.app._saveLocalNow();
+            } catch {}
             try {
-                const res = await signUp(reg.email.value, reg.password.value, reg.username.value);
-                if (res.error) return showErr(reg, res.error.message);
-                if (res.needsConfirmation) {
-                    info.textContent = `Conta criada! Enviámos um email para ${reg.email.value.trim()}. Abre o link para confirmar e depois entra.`;
-                    info.hidden = false;
-                    reg.reset();
-                    return;
-                }
-                reg.reset();
-                modal.close();
-                await this.app.onSignedIn(true);
+                const { error } = await signInWithGoogle();
+                if (error) throw new Error(error.message);
+                // Sem erro, o browser segue para o Google; o regresso é tratado em app.js.
             } catch (err) {
-                showErr(reg, _socialErrMsg(err));
-            } finally {
-                busy(reg, false, 'Criar conta');
+                errEl.textContent = _socialErrMsg(err);
+                errEl.hidden = false;
+                btn.disabled = false;
+                label.textContent = 'Continuar com Google';
             }
         });
     }

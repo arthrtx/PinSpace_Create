@@ -9,7 +9,7 @@
         <link rel="preconnect" href="https://i.pinimg.com">
         <link rel="dns-prefetch" href="https://i.pinimg.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;600;700&family=Open+Sans&family=Roboto&family=Lato&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Lora&family=Merriweather&family=Oswald:wght@400;500;600&family=Bebas+Neue&family=Archivo+Black&family=Abril+Fatface&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;600;700&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Advent+Pro:wght@400;600&family=Courier+Prime&family=Goudy+Bookletter+1911&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=3.2">
+    <link rel="stylesheet" href="css/style.css?v=3.3">
     <link rel="stylesheet" href="css/editor-improvements.css?v=2.4">
     <link rel="stylesheet" href="css/responsive.css?v=2.4">
     <link rel="stylesheet" href="css/social.css?v=2.2">
@@ -29,7 +29,7 @@
         <div class="ms-intro-word">
             <span class="mi-i" style="--i:0">p</span><span class="mi-i" style="--i:1">i</span><span class="mi-i" style="--i:2">n</span><span class="mi-i" style="--i:3">&nbsp;&nbsp;space</span><span class="mi-i mi-dot" style="--i:4">.</span>
         </div>
-        <span class="ms-intro-sub" style="--i:5">start creating</span>
+        <span class="ms-intro-sub" style="--i:5">começa a criar</span>
     </div>
 
     <div class="ms-coords" aria-hidden="true">0000 X · 0000 Y</div>
@@ -55,7 +55,7 @@
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                         </button>
                         <button type="button" id="btn-novo-projeto" class="ms-nav-cta">
-                            <span>Start a collage</span>
+                            <span>Criar colagem</span>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                         </button>
                         <div id="landing-auth" class="ms-nav-auth"></div>
@@ -98,9 +98,9 @@
                 <div class="glass-window">
                 <div class="gh-header">
                     <div class="gh-line" data-reveal-mask data-reveal-delay="1">
-                        <h3 class="gh-title">Public Gallery</h3>
+                        <h3 class="gh-title">Galeria pública</h3>
                     </div>
-                    <p class="gh-sub" data-scroll-text data-reveal-delay="3">public boards — open one, copy it, make it yours</p>
+                    <p class="gh-sub" data-scroll-text data-reveal-delay="3">quadros públicos — abre um, copia-o e faz teu</p>
                 </div>
 
                 <!-- Barra superior da janela: pesquisa + chips -->
@@ -188,11 +188,11 @@
 
                         <section class="home-public" id="quadros-publicos" data-reveal data-reveal-delay="2">
                             <div class="section-header">
-                                <h4>Public boards</h4>
+                                <h4>Quadros públicos</h4>
                                 <a href="#explore" class="section-subtitle ps-landing-more">ver tudo na comunidade →</a>
                             </div>
                             <div id="lista-publicos" class="projects-grid">
-                                <p class="empty-state" id="empty-publicos">Loading public boards…</p>
+                                <p class="empty-state" id="empty-publicos">A carregar quadros públicos…</p>
                             </div>
                         </section>
 
@@ -781,50 +781,15 @@
                 </button>
             </div>
             <p class="modal-desc" id="auth-hint" hidden></p>
-            <div class="auth-tabs" role="tablist">
-                <button type="button" class="auth-tab active" data-mode="login" role="tab" aria-selected="true">Entrar</button>
-                <button type="button" class="auth-tab" data-mode="register" role="tab" aria-selected="false">Criar conta</button>
+            <div class="auth-google">
+                <p class="auth-google-lead">Entra ou cria a tua conta com um clique. Sem palavra-passe nem código de verificação.</p>
+                <button type="button" class="auth-google-btn" id="btn-google-login">
+                    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                    <span>Continuar com Google</span>
+                </button>
+                <p class="auth-error" role="alert" hidden></p>
+                <p class="auth-google-note">Na primeira vez, a conta é criada automaticamente com o teu nome e foto do Google. Podes mudar o username depois em Editar perfil.</p>
             </div>
-
-            <form id="form-login" class="auth-form" novalidate>
-                <div class="form-group">
-                    <label for="login-email">Email</label>
-                    <input type="email" id="login-email" name="email" autocomplete="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="login-password">Palavra-passe</label>
-                    <input type="password" id="login-password" name="password" autocomplete="current-password" required>
-                </div>
-                <p class="auth-error" role="alert" hidden></p>
-                <button type="submit" class="btn btn-primary auth-submit">Entrar</button>
-                <p class="auth-switch">Ainda não tens conta? <a href="#" data-switch-mode="register">Cria uma</a></p>
-            </form>
-
-            <form id="form-register" class="auth-form" novalidate hidden>
-                <div class="form-group">
-                    <label for="register-username">Username</label>
-                    <input type="text" id="register-username" name="username" autocomplete="username" maxlength="30" required spellcheck="false">
-                    <p class="auth-field-hint" id="register-username-hint">Letras, números, "_" ou "-" (3–30).</p>
-                </div>
-                <div class="form-group">
-                    <label for="register-email">Email</label>
-                    <input type="email" id="register-email" name="email" autocomplete="email" required>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="register-password">Palavra-passe</label>
-                        <input type="password" id="register-password" name="password" autocomplete="new-password" minlength="6" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="register-password2">Repetir</label>
-                        <input type="password" id="register-password2" name="password2" autocomplete="new-password" minlength="6" required>
-                    </div>
-                </div>
-                <p class="auth-error" role="alert" hidden></p>
-                <p class="auth-info" role="status" hidden></p>
-                <button type="submit" class="btn btn-primary auth-submit">Criar conta</button>
-                <p class="auth-switch">Já tens conta? <a href="#" data-switch-mode="login">Entra</a></p>
-            </form>
         </div>
     </dialog>
 
@@ -920,12 +885,12 @@
 
     <div id="toast" class="toast hidden"></div>
 
-    <script src="js/i18n.js?v=1.0"></script>
+    <script src="js/i18n.js?v=1.2"></script>
     <script src="js/core.js?v=2.8"></script>
     <script src="js/reveal.js?v=2.5"></script>
     <script src="js/smooth-scroll.js?v=1.2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="js/data.js?v=3.3"></script>
+    <script src="js/data.js?v=3.4"></script>
     <script src="js/color-palettes.js?v=2.4"></script>
     <script src="js/editor.js?v=3.0"></script>
     <script src="js/elements.js?v=1.2"></script>
@@ -933,10 +898,10 @@
     <script src="js/board.js?v=3.1"></script>
     <script src="js/ui.js?v=3.2"></script>
     <script src="js/editor-layout.js?v=1.2"></script>
-    <script src="js/social-ui.js?v=2.7"></script>
+    <script src="js/social-ui.js?v=2.8"></script>
     <script src="js/home-widgets.js?v=1.33"></script>
     <script src="js/music.js?v=1.4"></script>
-    <script src="js/app.js?v=4.0"></script>
+    <script src="js/app.js?v=4.1"></script>
     <script src="js/crop-inline.js?v=1.0"></script>
     <script src="js/bg-manual.js?v=1.0"></script>
 </body>

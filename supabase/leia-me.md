@@ -8,10 +8,17 @@
    - `likes`, `retweets`, `follows`, `notifications` (criadas automaticamente por triggers).
    Storage: pastas públicas `quadros` (imagens dos quadros públicos) e `avatars` (fotos de perfil); cada utilizador só escreve na sua pasta.
    Os contadores são mantidos pela base de dados — o site não os consegue alterar.
-2. **Auth** — Supabase → Authentication → URL Configuration:
-   - *Site URL*: o endereço onde o site está publicado (ex.: `https://pinspace.exemplo.pt`).
-   - *Redirect URLs*: o mesmo endereço (o link de confirmação volta para `…/#feed`).
-   - Se quiseres testar sem email, desliga *Confirm email* em Authentication → Providers → Email.
+2. **Auth — login com Google** (único método de entrada; sem palavra-passe nem código por email):
+   1. Google Cloud Console → *APIs & Services* → *OAuth consent screen*: configura (tipo *External*) e publica.
+   2. *Credentials* → *Create credentials* → *OAuth client ID* → *Web application*:
+      - *Authorized JavaScript origins*: o endereço do site (ex.: `https://pinspace.exemplo.pt`).
+      - *Authorized redirect URIs*: `https://<o-teu-projeto>.supabase.co/auth/v1/callback` (aparece no Supabase, no passo seguinte).
+   3. Supabase → Authentication → Providers → **Google** → ativar, colar *Client ID* e *Client Secret* → Save.
+   4. Supabase → Authentication → URL Configuration:
+      - *Site URL*: o endereço onde o site está publicado.
+      - *Redirect URLs*: o mesmo endereço (o Google volta para `…/?code=…` e o site trata do resto).
+   5. Volta a correr `supabase/social.sql` para o perfil novo ficar com o nome e a foto do Google.
+   Na primeira entrada a conta e o perfil são criados automaticamente; o username vem do email e pode ser mudado em *Editar perfil*.
 3. Publicar os ficheiros como sempre. O cliente `supabase-js` é carregado do CDN jsDelivr no `index.html`.
 
 ## Rotas (hash)

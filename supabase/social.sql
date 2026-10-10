@@ -169,8 +169,17 @@ begin
     final_name := base_name || '_' || substr(md5(random()::text), 1, 4);
   end loop;
 
-  insert into public.profiles (id, username, display_name)
-  values (new.id, final_name, nullif(new.raw_user_meta_data ->> 'display_name', ''))
+  -- Login com Google: aproveita o nome e a foto da conta Google.
+  insert into public.profiles (id, username, display_name, image)
+  values (
+    new.id,
+    final_name,
+    left(coalesce(nullif(new.raw_user_meta_data ->> 'display_name', ''),
+                  nullif(new.raw_user_meta_data ->> 'full_name', ''),
+                  nullif(new.raw_user_meta_data ->> 'name', '')), 60),
+    coalesce(nullif(new.raw_user_meta_data ->> 'avatar_url', ''),
+             nullif(new.raw_user_meta_data ->> 'picture', ''))
+  )
   on conflict (id) do nothing;
 
   insert into public.profile_private (id, email, language, terms_accepted_at)
