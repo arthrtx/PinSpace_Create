@@ -552,7 +552,7 @@ class SocialUI {
 
     _fillLocal(projects) {
         if (!projects || !projects.length) return;
-        this.app.ui.renderProjectsList(projects, 'lista-projetos');
+        this.app.ui.renderProjectsList(projects, 'lista-projetos', { publish: !!this.user });
     }
 
     /* ---------------- Notificações ---------------- */

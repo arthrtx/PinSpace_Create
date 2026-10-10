@@ -65,9 +65,12 @@ class PinSpaceApp {
         if (this.project && this.ui.editorView.classList.contains('active') && this.ui.currentTool === 'settings') this._refreshPanel();
         // Quadros públicos sem imagem no Supabase → gera-a em segundo plano.
         const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
-        idle(() => backfillMyBoardImages().then((n) => {
-            if (n > 0) { this.homeWidgets?.loadFeatured?.(); this._loadPublicGallery?.(); }
-        }).catch((err) => console.warn('Imagens dos quadros:', err)), { timeout: 4000 });
+        idle(() => backfillMyBoardImages()
+            .then((n) => {
+                if (n > 0) { this.homeWidgets?.loadFeatured?.(); this._loadPublicGallery?.(); }
+                return cleanupMyBoardImages();
+            })
+            .catch((err) => console.warn('Imagens dos quadros:', err)), { timeout: 4000 });
     }
 
     showLoggedOutUI() {
@@ -301,6 +304,35 @@ class PinSpaceApp {
         }
     }
 
+    // Publicar um rascunho diretamente do perfil (sem abrir o editor).
+    async publishDraft(id) {
+        if (!this.currentUser) {
+            this.showLoginModal('login', 'Entra para publicar os teus rascunhos.');
+            return;
+        }
+        const stored = getAllProjects().find(p => p.id === id);
+        if (!stored) return;
+        const name = this.currentUser.username;
+        if (!confirm(`Publicar «${stored.titulo || 'Sem título'}» como @${name}?\n\nConfirmas que tens direitos sobre as imagens deste quadro.`)) return;
+        const project = (this.project && this.project.id === id) ? this.project : deepClone(stored);
+        project.perfilPublico = true;
+        project.autor = name;
+        this.ui.showToast('A publicar…', 20000);
+        try {
+            if (!project.thumbnail) project.thumbnail = await generateThumbnailDataURL(project);
+        } catch { /* miniatura opcional */ }
+        saveProject(project);
+        const ok = await this._syncToCloud(project);
+        if (ok) {
+            saveProject(project);
+            this.ui.showToast(`Publicado como @${name}!`);
+            if (this.ui.isSocialActive && this.ui.isSocialActive()) {
+                const r = this._parseRoute();
+                if (r) this.social.render(r);
+            }
+        }
+    }
+
     async _saveAccountSettings({ descricao, perfilPublico }) {
         if (!this.project) return;
         if (!this.currentUser) {
@@ -418,9 +450,20 @@ class PinSpaceApp {
         // A galeria publica chama este callback. Sem ele, o botao "Abrir
         // copia" nao fazia nada e nao dava erro nenhum.
         this.ui.on('onOpenPublic', (id) => this._openPublic(id));
+        this.ui.on('onPublishDraft', (id) => this.publishDraft(id));
 
         this.history.onChange(({ canUndo, canRedo }) => {
             this.ui.updateHistoryButtons(canUndo, canRedo);
+        });
+
+        const flush = () => { if (this.project && this.ui.editorView.classList.contains('active')) this._saveLocalNow(); };
+        window.addEventListener('pagehide', flush);
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+        window.addEventListener('pinspace:save-error', (e) => {
+            const err = e.detail;
+            this.ui.showToast(/quota/i.test(String(err && (err.name || err.message)))
+                ? 'Sem espaço neste navegador para guardar o quadro. Apaga quadros antigos ou guarda na conta.'
+                : 'Não foi possível guardar o quadro neste navegador.', 6000);
         });
 
         let resizeRaf = 0;
@@ -840,10 +883,11 @@ class PinSpaceApp {
     }
 
     _backToHome() {
-        if (this.isDirty) {
-            if (confirm('Guardar alterações antes de sair?')) {
-                this.saveCurrentProject();
-            }
+        // Sai sempre com tudo guardado neste navegador (sem perguntar).
+        const leaving = this.project;
+        if (leaving) {
+            this._saveLocalNow();
+            if (this.isDirty) this.saveCurrentProject(true).catch(() => {});
         }
         this.project = null;
         // Se viemos do perfil/explorar, voltamos para lá.
@@ -1941,6 +1985,31 @@ class PinSpaceApp {
     _commitHistory() {
         this.history.push(captureState(this.project));
         this._scheduleRight();
+        this._scheduleLocalSave();
+    }
+
+    // Grava no navegador pouco depois de cada alteração (não espera 30 s nem
+    // pelo botão Guardar) — ao voltar ao quadro está tudo como ficou.
+    _scheduleLocalSave() {
+        if (!this.project) return;
+        clearTimeout(this._localSaveTimer);
+        this._localSaveTimer = setTimeout(() => this._saveLocalNow(), 1200);
+    }
+
+    _saveLocalNow() {
+        clearTimeout(this._localSaveTimer);
+        const project = this.project;
+        if (!project || !this.ui.editorView.classList.contains('active')) return;
+        if (this.board && (this.board.isDragging || this.board.isResizing || this.board.isRotating)) {
+            this._scheduleLocalSave();
+            return;
+        }
+        try {
+            this._syncAllFromDOM();
+            saveProject(project);
+        } catch (err) {
+            console.warn('Gravação automática falhou:', err);
+        }
     }
 
     undo() {
@@ -2135,7 +2204,9 @@ async function fileFromUrl(url) {
     return file;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Os quadros deste navegador vêm do IndexedDB — carregam antes do resto.
+    try { await initProjectStore(); } catch (err) { console.warn('Armazenamento local:', err); }
     const app = new PinSpaceApp();
     app.init();
     window.pinspaceApp = app;

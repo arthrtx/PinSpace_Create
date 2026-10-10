@@ -138,7 +138,7 @@ class UIManager {
         if (el) el.textContent = title;
     }
 
-    renderProjectsList(projects, containerId = 'lista-projetos') {
+    renderProjectsList(projects, containerId = 'lista-projetos', opts = {}) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
@@ -160,6 +160,7 @@ class UIManager {
                 </div>
                 <div class="project-card-actions">
                     <button data-action="open">Abrir</button>
+                    ${opts.publish ? '<button data-action="publish" class="publish">Publicar</button>' : ''}
                     <button data-action="delete" class="delete">Apagar</button>
                 </div>
             </div>
@@ -167,12 +168,16 @@ class UIManager {
 
         container.querySelectorAll('.project-card').forEach(card => {
             card.addEventListener('click', (e) => {
-                if (e.target.closest('[data-action="delete"]')) return;
+                if (e.target.closest('[data-action="delete"], [data-action="publish"]')) return;
                 this.callbacks.onOpenProject?.(card.dataset.id);
             });
             card.querySelector('[data-action="open"]')?.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.callbacks.onOpenProject?.(card.dataset.id);
+            });
+            card.querySelector('[data-action="publish"]')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.callbacks.onPublishDraft?.(card.dataset.id);
             });
             card.querySelector('[data-action="delete"]')?.addEventListener('click', (e) => {
                 e.stopPropagation();
