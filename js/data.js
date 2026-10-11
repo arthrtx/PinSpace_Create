@@ -476,7 +476,17 @@ async function signOut() {
     const sb = getSupabase();
     localStorage.removeItem(USER_KEY);
     if (!sb) return { error: null };
-    const { error } = await sb.auth.signOut();
+    // Termina a sessão só neste navegador e não fica à espera da rede para sempre.
+    let error = null;
+    try {
+        const res = await Promise.race([
+            sb.auth.signOut({ scope: 'local' }),
+            new Promise(resolve => setTimeout(() => resolve({ error: new Error('timeout') }), 2500))
+        ]);
+        error = res && res.error ? res.error : null;
+    } catch (err) { error = err; }
+    // Garante que a sessão guardada desaparece mesmo que o pedido falhe.
+    try { localStorage.removeItem('pinspace_auth'); localStorage.removeItem('pinspace_auth-code-verifier'); } catch { /* ok */ }
     return { error };
 }
 
@@ -521,7 +531,7 @@ async function getCurrentUser() {
 
 /* ---------- Perfis ---------- */
 
-const PROFILE_COLS = 'id,username,display_name,bio,image,created_at,boards_count,public_boards_count,followers_count,following_count,likes_received,last_active_at';
+const PROFILE_COLS = 'id,username,display_name,bio,image,cover_image,created_at,boards_count,public_boards_count,followers_count,following_count,likes_received,last_active_at';
 
 async function getProfileById(id) {
     const { data, error } = await _requireSb().from('profiles').select(PROFILE_COLS).eq('id', id).maybeSingle();
@@ -562,6 +572,13 @@ async function updateMyProfile(patch) {
             try { clean.image = await uploadAvatar(clean.image); } catch (err) { console.warn('Avatar no Storage falhou, fica na tabela:', err); }
         }
     }
+    if (patch.cover_image !== undefined) {
+        clean.cover_image = patch.cover_image || null;
+        // Banner novo (data:…) → Storage, na mesma pasta do avatar.
+        if (clean.cover_image && clean.cover_image.startsWith('data:')) {
+            try { clean.cover_image = await uploadCover(clean.cover_image); } catch (err) { console.warn('Banner no Storage falhou, fica na tabela:', err); }
+        }
+    }
     if (patch.display_name !== undefined) clean.display_name = String(patch.display_name || '').trim().slice(0, 60) || null;
     if (patch.username !== undefined) {
         const check = validateUsername(patch.username);
@@ -593,7 +610,7 @@ async function searchProfiles(query, limit = 12) {
 
 // Sem a coluna "projeto" (pesada) — só o necessário para os cartões.
 const BOARD_SELECT = 'id,title,description,image_url,image_full,author_id,is_public,created_at,updated_at,' +
-    'author:profiles!boards_author_id_fkey(id,username,image),likes(count),retweets(count)';
+    'author:profiles!boards_author_id_fkey(id,username,display_name,image),likes(count),retweets(count)';
 
 function _normalizeBoard(row) {
     if (!row) return null;
@@ -801,6 +818,12 @@ async function uploadAvatar(dataUrl) {
     return _uploadImage('avatars', `${user.id}/avatar.jpg`, blob);
 }
 
+async function uploadCover(dataUrl) {
+    const user = _requireUser();
+    const blob = await (await fetch(dataUrl)).blob();
+    return _uploadImage('avatars', `${user.id}/cover.jpg`, blob);
+}
+
 // Último acesso, idioma, fuso horário, tema e navegador (uma vez por visita).
 async function touchSession() {
     const sb = getSupabase();
@@ -869,7 +892,11 @@ async function getExploreBoards(query, limit = 60) {
         .order('updated_at', { ascending: false })
         .limit(limit);
     const term = String(query || '').trim();
-    if (term) q = q.ilike('title', '%' + _escapeLike(term) + '%');
+    if (term) {
+        // Procura no título e na descrição (onde ficam as #tags).
+        const t = _escapeLike(term.replace(/^#/, '')).replace(/[,()"]/g, ' ');
+        q = q.or(`title.ilike.%${t}%,description.ilike.%${t}%`);
+    }
     const { data, error } = await q;
     if (error) throw error;
     return (data || []).map(_normalizeBoard);
@@ -879,7 +906,7 @@ async function getExploreBoards(query, limit = 60) {
 async function getUserReposts(userId) {
     const { data, error } = await _requireSb()
         .from('retweets')
-        .select('id,comment,created_at,user:profiles!retweets_user_id_fkey(id,username,image),board:boards!retweets_board_id_fkey(' + BOARD_SELECT + ')')
+        .select('id,comment,created_at,user:profiles!retweets_user_id_fkey(id,username,display_name,image),board:boards!retweets_board_id_fkey(' + BOARD_SELECT + ')')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(60);
@@ -1100,7 +1127,7 @@ async function getNotifications(limit = 40, markRead = false) {
     const sb = _requireSb();
     // Base de dados nova: notificações guardadas (criadas pelos triggers).
     const saved = await sb.from('notifications')
-        .select('id,type,comment,created_at,read_at,user:profiles!notifications_actor_id_fkey(id,username,image),board:boards(id,title,author_id)')
+        .select('id,type,comment,created_at,read_at,user:profiles!notifications_actor_id_fkey(id,username,display_name,image),board:boards(id,title,author_id,image_url)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(limit);

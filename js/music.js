@@ -691,24 +691,27 @@ class MusicPlayer {
     }
 
     _syncMini() {
-        const bar = this.$('ed-music');
-        if (!bar) return;
+        // Barra do editor + widget do perfil ([data-music-mini]).
+        const bars = [this.$('ed-music'), ...document.querySelectorAll('[data-music-mini]')].filter(Boolean);
+        if (!bars.length) return;
         const t = this.tracks[this.current >= 0 ? this.current : this.focus];
         const title = t ? t.title : 'Música';
         const artist = t ? (this.current >= 0 ? t.artist : 'carrega em ▶ para ouvir') : 'carrega em ▶ para ouvir';
-        bar.querySelectorAll('[data-music-title]').forEach(el => { el.textContent = title; });
-        bar.querySelectorAll('[data-music-artist]').forEach(el => { el.textContent = artist; });
         const src = t && t.artwork && typeof safeImgSrc === 'function' ? safeImgSrc(t.artwork) : '';
-        if (bar.dataset.art !== src) {
-            bar.dataset.art = src;
-            bar.querySelectorAll('[data-music-art]').forEach(el => { el.innerHTML = src ? `<img src="${src}" alt="">` : ''; });
-        }
-        bar.classList.toggle('is-playing', this.playing);
-        bar.classList.toggle('has-track', !!t);
-        bar.querySelector('[data-music-act="toggle"]')?.setAttribute('aria-label', this.playing ? 'Pausa' : 'Tocar');
-        const mute = bar.querySelector('[data-music-act="mute"]');
-        mute?.classList.toggle('is-muted', this.muted);
-        mute?.setAttribute('aria-label', this.muted ? 'Ativar som' : 'Silenciar');
+        bars.forEach(bar => {
+            bar.querySelectorAll('[data-music-title]').forEach(el => { el.textContent = title; });
+            bar.querySelectorAll('[data-music-artist]').forEach(el => { el.textContent = artist; });
+            if (bar.dataset.art !== src) {
+                bar.dataset.art = src;
+                bar.querySelectorAll('[data-music-art]').forEach(el => { el.innerHTML = src ? `<img src="${src}" alt="">` : ''; });
+            }
+            bar.classList.toggle('is-playing', this.playing);
+            bar.classList.toggle('has-track', !!t);
+            bar.querySelectorAll('[data-music-act="toggle"]').forEach(b => b.setAttribute('aria-label', this.playing ? 'Pausa' : 'Tocar'));
+            const mute = bar.querySelector('[data-music-act="mute"]');
+            mute?.classList.toggle('is-muted', this.muted);
+            mute?.setAttribute('aria-label', this.muted ? 'Ativar som' : 'Silenciar');
+        });
     }
 
     _toggleLinkForm(force) {
