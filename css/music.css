@@ -8,13 +8,47 @@
     isolation: isolate;
     max-width: 1440px;
     margin: clamp(22px, 3vw, 36px) auto 0;
-    padding: clamp(22px, 3vw, 40px) clamp(16px, 3.4vw, 48px) clamp(20px, 2.6vw, 32px);
-    border-radius: var(--gw-radius, 32px);
-    background: rgba(18, 18, 20, 0.52);
-    border: 1px solid var(--gw-border, rgba(255, 255, 255, 0.14));
-    box-shadow: var(--gw-shadow, 0 40px 100px rgba(0, 0, 0, 0.55));
-    overflow: hidden;
+    /* Sem cartão de fundo: o conteúdo fica direto sobre a página */
+    padding: clamp(10px, 2vw, 24px) clamp(16px, 3.4vw, 48px) clamp(20px, 2.6vw, 32px);
+    background: none;
+    border: 0;
+    box-shadow: none;
     color: #FFF;
+}
+
+/* Título e subtítulo da secção */
+.music-head {
+    max-width: 640px;
+    margin: 0 auto clamp(20px, 2.6vw, 32px);
+    text-align: center;
+}
+.music-head-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #A9BCAE;
+}
+.music-head-kicker::before,
+.music-head-kicker::after { content: ''; width: 18px; height: 1px; background: currentColor; opacity: .6; }
+.music-head-title {
+    margin: 10px 0 0;
+    font-family: var(--pf-font, 'Montserrat', sans-serif);
+    font-size: clamp(26px, 3.2vw, 42px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: #FFF;
+}
+.music-head-sub {
+    margin: 12px auto 0;
+    max-width: 520px;
+    font-size: clamp(13.5px, 1.1vw, 15px);
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.68);
 }
 
 /* Brilho com a cor da capa (canvas minúsculo esticado = desfoque grátis) */
@@ -28,14 +62,10 @@
     transition: opacity 1.2s ease;
     pointer-events: none;
 }
-.music-ambient.ready { opacity: 0.55; }
-.music::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background: radial-gradient(ellipse 70% 60% at 50% 45%, transparent 0%, rgba(10, 10, 12, 0.55) 100%);
+.music-ambient.ready { opacity: 0.4; }
+.music-ambient {
+    -webkit-mask-image: radial-gradient(ellipse 50% 45% at 50% 55%, #000 0%, transparent 100%);
+    mask-image: radial-gradient(ellipse 50% 45% at 50% 55%, #000 0%, transparent 100%);
 }
 
 /* ---------------------------------------------------------------------
@@ -61,10 +91,10 @@
     flex: none;
     border-radius: 16px;
     color: #FFF;
-    background: linear-gradient(135deg, #FF7700 0%, #FF3300 100%);
-    box-shadow: 0 8px 22px rgba(255, 85, 0, 0.35);
+    background: linear-gradient(135deg, #8FA394 0%, #5F7466 100%);
+    box-shadow: 0 8px 22px rgba(95, 116, 102, 0.35);
 }
-.music-connect.is-connected .music-sc-logo { background: linear-gradient(135deg, #FF7700, #FF3300); }
+.music-connect.is-connected .music-sc-logo { background: linear-gradient(135deg, #8FA394, #5F7466); }
 .music-connect-title { margin-top: 2px; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
 .music-connect-sub { font-size: 13px; color: rgba(255, 255, 255, 0.66); }
 .music-connect-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -81,12 +111,12 @@
     font-size: 14px;
     font-weight: 700;
     color: #FFF;
-    background: linear-gradient(135deg, #FF7700 0%, #FF3300 100%);
-    box-shadow: 0 8px 22px rgba(255, 85, 0, 0.3);
+    background: linear-gradient(135deg, #8FA394 0%, #5F7466 100%);
+    box-shadow: 0 8px 22px rgba(95, 116, 102, 0.3);
     cursor: pointer;
     transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
-.music-btn-sc:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(255, 85, 0, 0.45); }
+.music-btn-sc:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(95, 116, 102, 0.45); }
 .music-connect.is-connected .music-btn-sc {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -106,15 +136,15 @@
     font-size: 14px;
 }
 .music-link-form input::placeholder { color: rgba(255, 255, 255, 0.45); }
-.music-link-form input:focus { outline: none; border-color: #FF7700; }
+.music-link-form input:focus { outline: none; border-color: #8FA394; }
 .music-connect-error {
     flex-basis: 100%;
     margin: 0;
     padding: 8px 12px;
     border-radius: 12px;
     font-size: 13px;
-    color: #FFD7CF;
-    background: rgba(255, 85, 0, 0.14);
+    color: #FFD9D5;
+    background: rgba(200, 80, 70, 0.16);
 }
 
 /* ---------------------------------------------------------------------
@@ -166,7 +196,7 @@
     will-change: transform, opacity;
 }
 .music-card.is-active { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.45); }
-.music-card:focus-visible { outline: 2px solid #FF7700; outline-offset: 3px; }
+.music-card:focus-visible { outline: 2px solid #8FA394; outline-offset: 3px; }
 
 .music-card-art {
     position: relative;
@@ -378,14 +408,14 @@
     cursor: pointer;
 }
 .music-queue li:hover { background: rgba(255, 255, 255, 0.08); }
-.music-queue li.is-current { background: rgba(255, 119, 0, 0.18); }
+.music-queue li.is-current { background: rgba(143, 163, 148, 0.2); }
 .music-q-num { width: 20px; font-size: 12px; color: rgba(255, 255, 255, 0.45); text-align: right; font-variant-numeric: tabular-nums; }
 .music-q-text { min-width: 0; display: flex; flex-direction: column; }
 .music-q-text strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .music-q-text small { font-size: 11px; color: rgba(255, 255, 255, 0.55); }
 
 .music-credit { margin-top: 14px; text-align: center; font-size: 12px; color: rgba(255, 255, 255, 0.45); }
-.music-credit a { color: #FF8A3D; text-decoration: none; }
+.music-credit a { color: #A9BCAE; text-decoration: none; }
 .music-credit a:hover { text-decoration: underline; }
 
 /* O iframe do SoundCloud fica fora de vista (só o usamos como motor de som) */
@@ -471,7 +501,7 @@
 .ed-music-btn:hover { background: rgba(255, 255, 255, 0.14); color: #FFF; }
 .ed-music-btn:active { transform: scale(0.9); }
 .ed-music-main { background: #FFF; color: #111; }
-.ed-music-main:hover { background: #FFF; color: #FF5500; }
+.ed-music-main:hover { background: #FFF; color: #5F7466; }
 .ed-music-main .i-pause { display: none; }
 .ed-music.is-playing .ed-music-main .i-play { display: none; }
 .ed-music.is-playing .ed-music-main .i-pause { display: block; }
@@ -495,7 +525,7 @@
     flex: none;
     overflow: hidden;
     border-radius: 8px;
-    background: linear-gradient(135deg, #FF7700, #FF3300);
+    background: linear-gradient(135deg, #8FA394, #5F7466);
 }
 .ed-music-art img, .ed-music-disc-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ed-music-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
@@ -569,3 +599,6 @@
    aparecem acima da barra de música. */
 body:has(#editor-view.active) .ms-coords { display: none !important; }
 body:has(#editor-view.active) .toast { bottom: 88px; }
+
+/* Etiqueta "SoundCloud" no tom verde acinzentado (sem laranja) */
+.music .gw-w-kicker { color: #A9BCAE; }

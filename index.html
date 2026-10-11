@@ -9,17 +9,17 @@
         <link rel="preconnect" href="https://i.pinimg.com">
         <link rel="dns-prefetch" href="https://i.pinimg.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;600;700&family=Open+Sans&family=Roboto&family=Lato&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Lora&family=Merriweather&family=Oswald:wght@400;500;600&family=Bebas+Neue&family=Archivo+Black&family=Abril+Fatface&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;600;700&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Advent+Pro:wght@400;600&family=Courier+Prime&family=Goudy+Bookletter+1911&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=3.3">
+    <link rel="stylesheet" href="css/style.css?v=3.4">
     <link rel="stylesheet" href="css/editor-improvements.css?v=2.4">
     <link rel="stylesheet" href="css/responsive.css?v=2.4">
     <link rel="stylesheet" href="css/social.css?v=2.2">
-    <link rel="stylesheet" href="css/glass.css?v=3.1">
-    <link rel="stylesheet" href="css/music.css?v=1.4">
+    <link rel="stylesheet" href="css/glass.css?v=3.7">
+    <link rel="stylesheet" href="css/music.css?v=1.6">
     <link rel="stylesheet" href="css/editor-theme.css?v=2.3">
     <link rel="preload" href="fonts/host-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/montserrat-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="css/fonts.css?v=1.6">
-    <link rel="stylesheet" href="css/social-v2.css?v=1.0">
+    <link rel="stylesheet" href="css/social-v2.css?v=1.7">
 </head>
 <body>
 
@@ -88,6 +88,15 @@
                 <!-- Palco da galeria: fundo próprio (foto desfocada) só nesta parte -->
                 <div class="gw-stage">
                 <div class="gw-stage-bg" aria-hidden="true"></div>
+
+                <!-- Título fora da janela, por cima -->
+                <header class="music-head gw-stage-head">
+                    <span class="music-head-kicker">Galeria</span>
+                    <h3 class="music-head-title">Galeria pública</h3>
+                    <p class="music-head-sub">Os teus atalhos, o quadro em destaque e um espreitar ao que a comunidade anda a criar. Abre um quadro público e edita-o à vontade.</p>
+                </header>
+                <!-- Doca + janela lado a lado -->
+                <div class="gw-stage-row">
                 <nav class="gw-dock" aria-label="Atalhos">
                     <button type="button" class="gw-dock-btn" data-dock="top" title="Início"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></button>
                     <a class="gw-dock-btn" href="#explore" title="Explorar a comunidade"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg></a>
@@ -95,20 +104,13 @@
                     <button type="button" class="gw-dock-btn" data-dock="open" title="Abrir quadro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></button>
                     <a class="gw-dock-btn" href="#profile" data-dock="profile" title="O meu perfil"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>
                 </nav>
-
                 <div class="glass-window">
-                <div class="gh-header">
-                    <div class="gh-line" data-reveal-mask data-reveal-delay="1">
-                        <h3 class="gh-title">Galeria pública</h3>
-                    </div>
-                    <p class="gh-sub" data-scroll-text data-reveal-delay="3">quadros públicos — abre um, copia-o e faz teu</p>
-                </div>
 
                 <!-- Barra superior da janela: pesquisa + chips -->
                 <div class="gw-toolbar" data-reveal data-reveal-delay="1">
                     <div class="home-search">
                         <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                        <input type="search" id="search-projetos" placeholder="Procurar quadros públicos…" autocomplete="off">
+                        <input type="search" id="search-projetos" placeholder="Procurar na comunidade…" autocomplete="off">
                     </div>
                     <div class="gw-chips" role="tablist" aria-label="Secções">
                         <button type="button" class="gw-chip active" data-chip="all">Tudo</button>
@@ -139,7 +141,7 @@
                             <ul class="gw-list" id="w-continue"></ul>
                         </div>
 
-                        <div class="gw-widget gw-weather" id="w-weather" aria-label="Previsão do tempo em Lisboa">
+                        <div class="gw-widget gw-weather" id="w-weather" aria-label="Previsão do tempo em Lisboa" hidden>
                             <div class="gw-w-head"><h5>Tempo · Lisboa</h5><span class="gw-mini-note" id="w-weather-hl"></span></div>
                             <div class="gw-weather-body">
                                 <div class="gw-weather-now">
@@ -169,7 +171,7 @@
                                 <div class="gw-featured-actions">
                                     <button type="button" class="gw-btn-white" id="w-featured-open" disabled>
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
-                                        Abrir cópia
+                                        Abrir e editar
                                     </button>
                                     <a class="gw-btn-glass" href="#explore">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>
@@ -187,19 +189,23 @@
                             </div>
                         </article>
 
-                        <section class="home-public" id="quadros-publicos" data-reveal data-reveal-delay="2">
-                            <div class="section-header">
-                                <h4>Quadros públicos</h4>
-                                <a href="#explore" class="section-subtitle ps-landing-more">ver tudo na comunidade →</a>
-                            </div>
-                            <div id="lista-publicos" class="projects-grid">
-                                <p class="empty-state" id="empty-publicos">A carregar quadros públicos…</p>
-                            </div>
-                        </section>
+                        <!-- Vista pequena da comunidade: clicar leva a Explorar -->
+                        <a href="#explore" class="gw-community" id="quadros-publicos" data-reveal data-reveal-delay="2">
+                            <span class="gw-community-text">
+                                <span class="gw-w-kicker">Comunidade</span>
+                                <strong>Vê o que a comunidade está a criar</strong>
+                                <small>Quadros públicos, reposts e novos perfis</small>
+                            </span>
+                            <span class="gw-community-thumbs" id="gw-community-thumbs" aria-hidden="true"></span>
+                            <span class="gw-community-go" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+                        </a>
+                        <!-- Lista escondida: continua a alimentar as miniaturas -->
+                        <div id="lista-publicos" hidden></div>
 
                     </div>
                 </div>
                 </div>
+                </div><!-- /gw-stage-row -->
                 </div><!-- /gw-stage -->
 
                 <!-- =====================================================
@@ -209,13 +215,19 @@
                 <section class="music" id="musica" aria-label="Música enquanto crias">
                     <canvas class="music-ambient" id="music-ambient" aria-hidden="true"></canvas>
 
+                    <header class="music-head">
+                        <span class="music-head-kicker">Música</span>
+                        <h3 class="music-head-title">Música enquanto crias</h3>
+                        <p class="music-head-sub">Ouve os lançamentos da semana ou liga o teu SoundCloud para ouvires o teu próprio feed. A música continua a tocar enquanto editas os teus quadros.</p>
+                    </header>
+
                     <div class="music-connect" id="music-connect">
                         <div class="music-connect-info">
                             <span class="music-sc-logo" aria-hidden="true">
                                 <svg viewBox="0 0 32 14" width="34" height="15" fill="currentColor"><path d="M0 10.9c0 .9.3 1.6 1 2.1l.2-2.1-.2-2.2c-.7.5-1 1.3-1 2.2zm2.1-3.4L1.8 10.9l.3 3.1h.5l.3-3.1-.3-3.4zm1.6-.6-.3 4 .3 3.1h.5l.3-3.1-.3-4zm1.6-.3-.3 4.3.3 3.1h.5l.3-3.1-.3-4.3zm1.6-.2-.3 4.5.3 3.1h.5l.3-3.1-.3-4.5zm1.6-.6-.2 5.1.2 3.1h.6l.2-3.1-.2-5.1zm1.7-1-.2 6.1.2 3.1h.6l.2-3.1-.2-6.1zm1.7-.6-.2 6.7.2 3.1h.6l.2-3.1-.2-6.7zm1.8-.4c-.1 0-.2 0-.3.1v10.1h.1l.3-3.1-.1-7.1zm.7-.8V14h12.3c2.2 0 4-1.8 4-4s-1.8-4-4-4c-.5 0-1 .1-1.5.3C24.4 3 21.8.6 18.6.6c-.8 0-1.6.2-2.3.5-.3.1-.4.2-.4.4z"/></svg>
                             </span>
                             <div>
-                                <span class="gw-w-kicker">Música enquanto crias</span>
+                                <span class="gw-w-kicker">SoundCloud</span>
                                 <h4 class="music-connect-title" id="music-connect-title">Liga o teu SoundCloud</h4>
                                 <p class="music-connect-sub" id="music-connect-sub">Até lá, ouve as novidades da semana. Depois de ligares, segue o teu feed.</p>
                             </div>
@@ -368,7 +380,7 @@
                         <span class="logo-mark" aria-hidden="true">
                             <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
                                 <circle cx="16" cy="16" r="15" fill="currentColor"/>
-                                <path d="M16 9c-2 0-3.6 1.6-3.6 3.6 0 2.4 3.6 8.1 3.6 8.1s3.6-5.7 3.6-8.1C19.6 10.6 18 9 16 9z" fill="#0A0A0A"/>
+                                <path d="M16 9c-2 0-3.6 1.6-3.6 3.6 0 2.4 3.6 8.1 3.6 8.1s3.6-5.7 3.6-8.1C19.6 10.6 18 9 16 9z" fill="#fff"/>
                             </svg>
                         </span>
                         <span>pin space.</span>
@@ -402,7 +414,8 @@
 
             <main class="ps-main" id="ps-main" tabindex="-1"></main>
 
-            <footer class="ms-footer ps-footer">
+            <!-- Rodapé creme só aparece na página inicial -->
+            <footer class="ms-footer ps-footer" hidden>
                 <div class="ms-footer-top">
                     <div>
                         <span class="ms-kicker">Mais projetos em</span>
@@ -789,7 +802,11 @@
                     <span>Continuar com Google</span>
                 </button>
                 <p class="auth-error" role="alert" hidden></p>
-                <p class="auth-google-note">Na primeira vez, a conta é criada automaticamente com o teu nome e foto do Google. Podes mudar o username depois em Editar perfil.</p>
+                <label class="auth-terms">
+                    <input type="checkbox" id="auth-terms">
+                    <span>Aceito os <button type="button" class="auth-terms-link" id="auth-terms-toggle">termos de uso</button></span>
+                </label>
+                <ul class="auth-terms-detail" id="auth-terms-detail" hidden></ul>
             </div>
         </div>
     </dialog>
@@ -894,23 +911,23 @@
 
     <div id="toast" class="toast hidden"></div>
 
-    <script src="js/i18n.js?v=1.3"></script>
+    <script src="js/i18n.js?v=1.9"></script>
     <script src="js/core.js?v=2.8"></script>
     <script src="js/reveal.js?v=2.5"></script>
-    <script src="js/smooth-scroll.js?v=1.2"></script>
+    <script src="js/smooth-scroll.js?v=1.4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="js/data.js?v=3.5"></script>
+    <script src="js/data.js?v=3.5.1.2"></script>
     <script src="js/color-palettes.js?v=2.4"></script>
     <script src="js/editor.js?v=3.0"></script>
     <script src="js/elements.js?v=1.2"></script>
     <script src="js/tools.js?v=2.8"></script>
     <script src="js/board.js?v=3.1"></script>
-    <script src="js/ui.js?v=3.2"></script>
+    <script src="js/ui.js?v=3.2.1.c"></script>
     <script src="js/editor-layout.js?v=1.2"></script>
-    <script src="js/social-ui.js?v=3.0"></script>
-    <script src="js/home-widgets.js?v=1.33"></script>
+    <script src="js/social-ui.js?v=3.7"></script>
+    <script src="js/home-widgets.js?v=1.34"></script>
     <script src="js/music.js?v=1.5"></script>
-    <script src="js/app.js?v=4.2"></script>
+    <script src="js/app.js?v=4.2.1.c"></script>
     <script src="js/crop-inline.js?v=1.0"></script>
     <script src="js/bg-manual.js?v=1.0"></script>
 </body>

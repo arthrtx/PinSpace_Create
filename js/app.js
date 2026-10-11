@@ -284,7 +284,7 @@ class PinSpaceApp {
             this._loadProjectIntoEditor();
             this.ui.showToast(isMine
                 ? 'Quadro aberto. Guardar atualiza-o na tua conta.'
-                : `Cópia do quadro de @${(row.author && row.author.username) || 'alguém'} — edita à vontade!`);
+                : `Quadro de @${(row.author && row.author.username) || 'alguém'} aberto — edita à vontade!`);
         } catch (err) {
             console.error('Abrir quadro da conta falhou:', err);
             this.ui.showToast(_socialErrMsg(err));
@@ -775,7 +775,7 @@ class PinSpaceApp {
         const local = getAllProjects().find(p => p.publicKey === id);
         if (local) {
             this.openProject(local.id);
-            this.ui.showToast('Abriu uma cópia sua que está publicada.');
+            this.ui.showToast('Abriu o seu quadro publicado.');
             return;
         }
 
@@ -807,7 +807,7 @@ class PinSpaceApp {
             this.history.clear();
             this.isDirty = true;
             this._loadProjectIntoEditor();
-            this.ui.showToast('Quadro público copiado para os seus projetos — edite à vontade!');
+            this.ui.showToast('Quadro público aberto — edite à vontade!');
         } catch (err) {
             console.error('Abrir quadro público falhou:', err);
             this.ui.showToast(err.message || 'Não foi possível abrir o quadro público.');
@@ -1023,6 +1023,12 @@ class PinSpaceApp {
             ? all.filter(c => (c.titulo || '').toLowerCase().includes(q) || (c.autor || '').toLowerCase().includes(q))
             : all;
         this.ui.renderPublicList(list.slice(0, 3));
+        // Miniaturas da vista pequena da comunidade (página inicial).
+        const thumbs = document.getElementById('gw-community-thumbs');
+        if (thumbs) {
+            thumbs.innerHTML = all.filter(c => c.thumb).slice(0, 4)
+                .map(c => `<img src="${c.thumb}" alt="" loading="lazy" decoding="async">`).join('');
+        }
         if (q && !list.length) {
             const box = document.getElementById('lista-publicos');
             if (box) box.innerHTML = `<p class="empty-state">Nenhum quadro público com “${escapeHTML(query)}”. <a href="#explore?q=${encodeURIComponent(query)}" class="ps-landing-more">procurar na comunidade →</a></p>`;

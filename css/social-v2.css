@@ -14,6 +14,9 @@
     --pf-card: #383130;
     --pf-card-2: #302a29;
     --pf-pill: #201c1b;
+    --pf-inner: #262120;
+    /* Altura do painel: cabe inteiro no ecrã (menos barra de topo e margens) */
+    --pf-h: clamp(500px, calc(100vh - 190px), 860px);
     --pf-line: rgba(255, 255, 255, 0.07);
     --pf-red: #C8372D;
     --pf-red-hover: #DA4337;
@@ -47,14 +50,15 @@
 /* =====================================================================
    PERFIL
    ===================================================================== */
+/* Sem moldura: o perfil fica direto sobre o fundo da página */
 .ps-main.is-profile {
-    background: var(--pf-frame);
-    border-color: rgba(255, 255, 255, 0.06);
+    background: none;
+    border: 0;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
-    padding: clamp(12px, 1.4vw, 20px);
-    border-radius: clamp(28px, 3vw, 44px);
-    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.55);
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .pf { font-family: var(--pf-font); color: #F6F5F1; }
@@ -70,6 +74,7 @@
 }
 
 .pf-frame {
+    --pf-h: clamp(500px, calc(100svh - 190px), 860px);
     display: grid;
     grid-template-columns: clamp(118px, 10.5vw, 150px) minmax(0, 1fr);
     gap: clamp(10px, 1.1vw, 16px);
@@ -78,8 +83,25 @@
 /* ---------- Coluna da esquerda ---------- */
 .pf-rail {
     display: grid;
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto 1fr;
     gap: clamp(10px, 1.1vw, 16px);
+}
+/* Fundo claro que liga os dois primeiros cartões; os de dentro são mais escuros */
+.pf-rail-group {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 0.8vw, 10px);
+    padding: clamp(8px, 0.8vw, 10px);
+    background: var(--pf-card);
+    border: 1px solid var(--pf-line);
+    border-radius: clamp(28px, 2.8vw, 40px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.pf-rail-group > .pf-card {
+    background: var(--pf-inner);
+    border-color: rgba(255, 255, 255, 0.04);
+    border-radius: clamp(22px, 2.2vw, 32px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 .pf-card {
     background: var(--pf-card);
@@ -92,11 +114,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
-    padding: 24px 10px 22px;
+    gap: 10px;
+    padding: 18px 10px;
 }
-.pf-logo { color: #F6F5F1; display: grid; place-items: center; margin-bottom: 6px; transition: transform .2s ease; }
-.pf-logo:hover { transform: rotate(-12deg); }
 .pf-nav-ic {
     display: grid;
     place-items: center;
@@ -107,13 +127,14 @@
     transition: background .15s, color .15s;
 }
 .pf-nav-ic:hover { background: rgba(255, 255, 255, 0.1); color: #FFF !important; }
+.pf-nav-ic.on { background: rgba(255, 255, 255, 0.12); color: #FFF !important; }
 
 .pf-me {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    padding: 22px 10px 20px;
+    padding: 20px 10px 18px;
 }
 .pf-me-avatar {
     width: clamp(64px, 6vw, 82px);
@@ -180,18 +201,28 @@
 .pf-hero {
     position: relative;
     overflow: hidden;
-    min-height: clamp(600px, 50vw, 780px);
-    /* A informação fica no fluxo: se o nome/bio forem longos o banner cresce
-       em vez de ficar por baixo do recorte "Destaque". */
-    padding: clamp(70px, 6.6vw, 96px) 0 calc(clamp(70px, 6.4vw, 92px) + clamp(48px, 4.2vw, 58px) + 112px) clamp(22px, 2.8vw, 42px);
+    /* Cabe inteiro no ecrã. A informação fica no fluxo: se o nome/bio forem
+       longos o banner cresce em vez de ficar por baixo do recorte "Destaque". */
+    min-height: var(--pf-h);
+    padding: clamp(64px, 5.4vw, 84px) 0 clamp(170px, 12.6vw, 190px) clamp(22px, 2.8vw, 42px);
     border-radius: clamp(26px, 2.8vw, 40px);
+    isolation: isolate;
+}
+.pf-cover {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
     background:
         radial-gradient(ellipse 60% 70% at 70% 35%, rgba(200, 55, 45, 0.55), transparent 70%),
         radial-gradient(ellipse 50% 60% at 20% 80%, rgba(93, 130, 150, 0.35), transparent 70%),
         linear-gradient(135deg, #4a3532 0%, #241e1d 100%);
-    isolation: isolate;
 }
-.pf-cover { position: absolute; inset: 0; z-index: -2; }
+/* Recortes reais na imagem (máscara feita em js: _shapeHero) */
+.pf-hero.is-shaped .pf-cover,
+.pf-hero.is-shaped::before {
+    -webkit-mask: var(--pf-mask) 0 0 / 100% 100% no-repeat;
+    mask: var(--pf-mask) 0 0 / 100% 100% no-repeat;
+}
 .pf-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pf-hero::before {
     content: '';
@@ -215,7 +246,7 @@
     overflow: hidden;
     font-family: var(--pf-font);
     font-weight: 800;
-    font-size: clamp(72px, 11vw, 200px);
+    font-size: clamp(72px, 10vw, 180px);
     line-height: 1;
     letter-spacing: -0.02em;
     color: rgba(255, 255, 255, 0.07);
@@ -225,6 +256,7 @@
 .pf-hero.has-cover .pf-bigword { color: rgba(25, 18, 17, 0.42); mix-blend-mode: multiply; }
 
 /* Entalhe de cima com os separadores (como "ANIME · MANGA · CHAT") */
+/* Separadores: dentro do entalhe recortado no topo da imagem */
 .pf-notch {
     position: absolute;
     top: 0;
@@ -232,22 +264,9 @@
     transform: translateX(-50%);
     z-index: 4;
     display: flex;
-    gap: clamp(18px, 2.4vw, 34px);
-    padding: 14px clamp(22px, 2.6vw, 36px) 15px;
-    background: var(--pf-frame);
-    border-radius: 0 0 24px 24px;
+    gap: clamp(18px, 2.4vw, 30px);
+    padding: 6px clamp(8px, 1vw, 14px) 4px;
 }
-.pf-notch::before,
-.pf-notch::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    width: 24px;
-    height: 24px;
-    pointer-events: none;
-}
-.pf-notch::before { right: 100%; background: radial-gradient(circle at 0 100%, transparent 23.5px, var(--pf-frame) 24px); }
-.pf-notch::after { left: 100%; background: radial-gradient(circle at 100% 100%, transparent 23.5px, var(--pf-frame) 24px); }
 .pf-tab {
     position: relative;
     font-family: var(--pf-font);
@@ -265,7 +284,7 @@
     content: '';
     position: absolute;
     left: 50%;
-    bottom: -8px;
+    bottom: -7px;
     width: 5px;
     height: 5px;
     margin-left: -2.5px;
@@ -427,35 +446,20 @@
 }
 .pf-down:hover { transform: translate(-50%, 3px); }
 
-/* Recortes no banner (cantos côncavos como na referência) */
+/* "Destaque" no canto recortado em baixo à esquerda */
 .pf-cut {
     position: absolute;
     z-index: 3;
     bottom: 0;
-    background: var(--pf-frame);
 }
-.pf-cut::before,
-.pf-cut::after {
-    content: '';
+.pf-cut-left { left: 0; }
+/* Leitor de música por cima do banner (como o widget de data) */
+.pf-music-float {
     position: absolute;
-    width: 30px;
-    height: 30px;
-    pointer-events: none;
+    z-index: 3;
+    right: clamp(14px, 1.4vw, 20px);
+    bottom: clamp(14px, 1.4vw, 20px);
 }
-.pf-cut-left {
-    left: 0;
-    padding: clamp(10px, 1.1vw, 16px) clamp(10px, 1.1vw, 16px) 0 0;
-    border-top-right-radius: clamp(28px, 2.8vw, 40px);
-}
-.pf-cut-left::before { left: 0; bottom: 100%; background: radial-gradient(circle at 100% 0, transparent 29.5px, var(--pf-frame) 30px); }
-.pf-cut-left::after { left: 100%; bottom: 0; background: radial-gradient(circle at 100% 0, transparent 29.5px, var(--pf-frame) 30px); }
-.pf-cut-right {
-    right: 0;
-    padding: clamp(10px, 1.1vw, 16px) 0 0 clamp(10px, 1.1vw, 16px);
-    border-top-left-radius: clamp(28px, 2.8vw, 40px);
-}
-.pf-cut-right::before { right: 0; bottom: 100%; background: radial-gradient(circle at 0 0, transparent 29.5px, var(--pf-frame) 30px); }
-.pf-cut-right::after { right: 100%; bottom: 0; background: radial-gradient(circle at 0 0, transparent 29.5px, var(--pf-frame) 30px); }
 
 /* Cartão "Destaque" (como "MERCH") */
 .pf-feat {
@@ -463,8 +467,8 @@
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    width: clamp(108px, 9.6vw, 140px);
-    padding: 18px 10px 14px;
+    width: clamp(108px, 9.6vw, 136px);
+    padding: 18px 10px 20px;
 }
 .pf-feat-thumb {
     display: grid;
@@ -479,6 +483,7 @@
     transition: transform .2s;
 }
 a.pf-feat-thumb:hover { transform: scale(1.04); }
+a.pf-feat-empty:hover { color: #FFF; }
 .pf-feat-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Leitor de música (como "CONTINUE" + vídeo) */
@@ -486,19 +491,22 @@ a.pf-feat-thumb:hover { transform: scale(1.04); }
     display: flex;
     align-items: center;
     gap: clamp(8px, 0.9vw, 12px);
-    padding: clamp(10px, 1vw, 14px);
-    background: var(--pf-card);
-    border: 1px solid var(--pf-line);
+    padding: clamp(8px, 0.8vw, 12px);
+    background: rgba(34, 28, 27, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: clamp(24px, 2.4vw, 34px);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    backdrop-filter: blur(18px) saturate(1.3);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3);
 }
 .pf-music-pill {
     display: grid;
     place-items: center;
-    width: clamp(78px, 7vw, 96px);
+    width: clamp(72px, 6.4vw, 88px);
     aspect-ratio: 1;
     border: 1px solid var(--pf-line);
     border-radius: 50%;
-    background: var(--pf-pill);
+    background: rgba(26, 21, 20, 0.75);
     color: #FFF;
     font-family: var(--pf-font);
     font-size: 10.5px;
@@ -515,8 +523,8 @@ a.pf-feat-thumb:hover { transform: scale(1.04); }
 
 .pf-music-card {
     position: relative;
-    width: clamp(170px, 15vw, 220px);
-    height: clamp(104px, 9vw, 128px);
+    width: clamp(160px, 14vw, 210px);
+    height: clamp(96px, 8.4vw, 118px);
     border-radius: clamp(18px, 1.8vw, 24px);
     overflow: hidden;
     background:
@@ -598,6 +606,26 @@ a.pf-feat-thumb:hover { transform: scale(1.04); }
 .ps-main.is-profile .ps-section-head h4,
 .ps-main.is-profile .ps-tab { font-family: var(--pf-font); }
 
+/* ---------- Perfil: ecrãs baixos (portáteis) ---------- */
+@media (min-width: 901px) and (max-height: 820px) {
+    .pf-frame { --pf-h: clamp(460px, calc(100svh - 170px), 860px); }
+    .pf-hero { padding-top: 58px; padding-bottom: 150px; }
+    .pf-name { font-size: clamp(26px, 2.8vw, 40px); margin-top: 8px; }
+    .pf-bio { margin-top: 10px; -webkit-line-clamp: 2; }
+    .pf-stats, .pf-actions { margin-top: 12px; }
+    .pf-stats a { padding: 7px 12px 8px; }
+    .pf .pf-btn, .pf .ps-follow.pf-btn { height: 38px; padding: 0 16px; }
+    .pf-date { padding: 14px 18px 16px; }
+    .pf-date strong { font-size: clamp(26px, 2.6vw, 38px); }
+    .pf-feat { padding: 14px 8px 16px; gap: 10px; }
+    .pf-feat-thumb { width: clamp(60px, 5.4vw, 76px); border-radius: 18px; }
+    .pf-music-pill { width: 68px; }
+    .pf-music-card { height: 92px; }
+    .pf-nav { padding: 14px 8px; gap: 6px; }
+    .pf-me { padding: 14px 8px; gap: 8px; }
+    .pf-me-avatar { width: clamp(56px, 5vw, 70px); }
+}
+
 /* ---------- Perfil: ecrãs médios ---------- */
 @media (max-width: 1180px) {
     .pf-info { width: min(54%, 440px); }
@@ -609,12 +637,12 @@ a.pf-feat-thumb:hover { transform: scale(1.04); }
     .pf-frame { grid-template-columns: 1fr; }
     .pf-rail {
         order: 2;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: 2fr 1fr;
         grid-template-rows: auto;
     }
+    .pf-rail-group { flex-direction: row; }
+    .pf-rail-group > .pf-card { flex: 1; }
     .pf-nav { flex-direction: row; justify-content: center; flex-wrap: wrap; padding: 16px 10px; gap: 8px; }
-    .pf-logo { margin: 0 4px 0 0; }
-    .pf-logo svg { width: 26px; height: 26px; }
     .pf-me { padding: 14px 10px; gap: 8px; }
     .pf-me-avatar { width: 58px; }
     .pf-opts { padding: 12px 8px; }
@@ -626,7 +654,7 @@ a.pf-feat-thumb:hover { transform: scale(1.04); }
         flex-direction: column;
         justify-content: flex-end;
         gap: 18px;
-        min-height: 560px;
+        min-height: min(560px, calc(100svh - 140px));
         padding: 86px 18px 18px;
     }
     .pf-info { width: 100%; }
@@ -636,22 +664,14 @@ a.pf-feat-thumb:hover { transform: scale(1.04); }
     .pf-cover-btn { top: 62px; left: 14px; }
     .pf-bigword { top: 26%; font-size: clamp(56px, 16vw, 110px); }
     .pf-down, .pf-cut-left { display: none; }
-    .pf-cut-right {
-        position: relative;
-        right: auto;
-        bottom: auto;
-        padding: 0;
-        background: none;
-        border-radius: 0;
-    }
-    .pf-cut-right::before, .pf-cut-right::after { display: none; }
-    .pf-music { background: rgba(34, 28, 27, 0.72); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+    .pf-music-float { position: relative; right: auto; bottom: auto; }
+    .pf-music { background: rgba(34, 28, 27, 0.72); }
     .pf-music-card { flex: 1; width: auto; }
-    .pf-notch { padding: 12px 22px 13px; }
+    .pf-notch { padding: 4px 8px 2px; }
 }
 @media (max-width: 520px) {
-    .pf-rail { grid-template-columns: 1fr 1fr; }
-    .pf-nav { grid-column: 1 / -1; }
+    .pf-rail { grid-template-columns: 1fr; }
+    .pf-nav { padding: 12px 8px; }
     .pf-name { font-size: 30px; }
     .pf-stats a { min-width: 0; flex: 1; }
     .pf-date { position: relative; top: auto; right: auto; align-self: flex-start; display: flex; align-items: baseline; gap: 8px; order: -1; }
@@ -661,6 +681,191 @@ a.pf-feat-thumb:hover { transform: scale(1.04); }
     .pf-cover-btn { top: 14px; left: auto; right: 14px; width: 32px; padding: 0; justify-content: center; }
     .pf-cover-btn span { display: none; }
     .pf-music-pill { width: 64px; font-size: 9px; }
+}
+
+/* ---------- Perfil: quadros como posts pequenos ---------- */
+.pf-posts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    align-items: start;
+    margin-bottom: 26px;
+    font-family: var(--font-family);
+}
+.pf-posts .fd-post { padding: 12px 12px 6px; border-radius: 18px; }
+.pf-posts .fd-repost { margin: -2px 0 8px; font-size: 11px; }
+.pf-posts .fd-post-head { gap: 9px; }
+.pf-posts .fd-post-avatar { width: 30px; height: 30px; }
+.pf-posts .fd-post-name { font-size: 12.5px; }
+.pf-posts .fd-post-sub { font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-posts .fd-post-name { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+/* O botão "Seguir" já está no topo do perfil: não se repete em cada post */
+.pf-posts .fd-post-side .ps-follow { display: none; }
+.pf-posts .fd-icon-btn { width: 28px; height: 28px; }
+.pf-posts .fd-post-text { margin: 10px 0 8px; }
+.pf-posts .fd-post-title { font-size: 13.5px; }
+.pf-posts .fd-post-text p {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.pf-posts .fd-quote { font-size: 12px; padding: 6px 10px; }
+.pf-posts .fd-post-media { border-radius: 12px; }
+.pf-posts .fd-post-media img { aspect-ratio: 4 / 3; max-height: none; }
+.pf-posts .fd-media-empty { height: auto; aspect-ratio: 4 / 3; font-size: 30px; }
+.pf-posts .fd-post-actions { margin-top: 4px; gap: 2px; }
+.pf-posts .fd-act { height: 30px; padding: 0 8px; gap: 5px; font-size: 12px; }
+.pf-posts .fd-act svg { width: 15px; height: 15px; }
+.pf-posts .fd-act-spacer + .fd-act span { display: none; }
+@media (max-width: 520px) {
+    .pf-posts { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .pf-posts .fd-post { padding: 10px 10px 4px; }
+    .pf-posts .fd-post-side { display: none; }
+}
+
+/* ---------- Login: aceitar termos (linha pequena) ---------- */
+.auth-terms {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin: -4px 0 0;
+    font-size: 12px;
+    color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
+    cursor: pointer;
+    user-select: none;
+}
+.auth-terms input { width: 14px; height: 14px; margin: 0; accent-color: var(--pf-red, #C8372D); cursor: pointer; }
+.auth-terms-link {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+.auth-terms.need { color: #ff8e88; animation: authNudge .35s ease; }
+@keyframes authNudge {
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+.auth-terms-detail {
+    margin: -6px 0 0;
+    padding: 10px 12px 10px 26px;
+    border-radius: 12px;
+    background: rgba(127, 127, 127, 0.08);
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+.auth-google-btn.is-locked { opacity: .55; cursor: not-allowed; }
+.auth-google-btn.is-locked:hover { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .auth-terms.need { animation: none; } }
+
+/* ---------- Notificações: pop-up pequeno ---------- */
+.ps-notif-pop {
+    position: fixed;
+    z-index: 200;
+    width: min(360px, calc(100vw - 24px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 22px;
+    background: rgba(30, 25, 24, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    -webkit-backdrop-filter: blur(22px) saturate(1.3);
+    backdrop-filter: blur(22px) saturate(1.3);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    color: #F6F5F1;
+    font-family: var(--pf-font);
+    animation: psPopIn .16s ease-out;
+}
+.ps-notif-pop[hidden] { display: none; }
+@keyframes psPopIn { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+.ps-notif-pop-head {
+    padding: 14px 18px 10px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.ps-notif-pop-head strong { font-weight: 600; }
+.ps-notif-pop-body { overflow-y: auto; overscroll-behavior: contain; max-height: min(420px, 70vh); }
+.ps-notif-pop .ps-notif-list { list-style: none; margin: 0; padding: 6px; }
+.ps-notif-pop .ps-notif {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    padding: 9px 10px;
+    border-radius: 14px;
+}
+.ps-notif-pop .ps-notif + .ps-notif { border-top: 0; }
+.ps-notif-pop .ps-notif:hover { background: rgba(255, 255, 255, 0.06); }
+.ps-notif-pop .ps-avatar-sm { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; }
+.ps-notif-pop .ps-notif-icon {
+    position: absolute;
+    left: 32px;
+    top: 30px;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 2px solid #1e1918;
+    color: #FFF;
+    z-index: 1;
+}
+.ps-notif-pop .ps-notif-follow .ps-notif-icon { background: #5d8296; }
+.ps-notif-pop .ps-notif-body p { margin: 0; font-size: 12.5px; line-height: 1.4; }
+.ps-notif-pop .ps-notif-body time { font-size: 10px; }
+.ps-notif-pop .ps-quote { display: block; margin-top: 2px; font-size: 11.5px; color: rgba(255, 255, 255, 0.6); }
+.ps-notif-pop .ps-btn-sm { padding: 6px 10px; font-size: 9.5px; flex: none; }
+.ps-notif-pop-empty { margin: 0; padding: 26px 18px; text-align: center; font-size: 13px; color: rgba(255, 255, 255, 0.6); }
+.ps-notif-pop-login {
+    display: block;
+    margin: -10px auto 18px;
+    height: 36px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--pf-red, #C8372D);
+    color: #FFF;
+    font: 600 13px var(--pf-font);
+    cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) { .ps-notif-pop { animation: none; } }
+
+/* ---------- Seguidores / a seguir: cartões pequenos ---------- */
+.ps-main.is-profile .ps-people {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+}
+.ps-main.is-profile .ps-person {
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 16px;
+}
+.ps-main.is-profile .ps-person-avatar img { width: 36px; height: 36px; border-width: 1.5px; }
+.ps-main.is-profile .ps-person-name { font-size: 13px; }
+.ps-main.is-profile .ps-person-body p { font-size: 11.5px; }
+.ps-main.is-profile .ps-person .ps-btn-sm { padding: 6px 10px; font-size: 9.5px; }
+@media (max-width: 520px) {
+    .ps-main.is-profile .ps-people { grid-template-columns: 1fr 1fr; }
+    .ps-main.is-profile .ps-person { flex-wrap: wrap; justify-content: center; text-align: center; }
+    .ps-main.is-profile .ps-person-body { flex-basis: 100%; }
 }
 
 /* =====================================================================
@@ -970,7 +1175,8 @@ a.fd-post-name:hover { text-decoration: underline; text-decoration-color: var(--
 .fd-empty { text-align: center; color: rgba(255, 255, 255, 0.6); padding: 40px 18px; }
 
 /* Botão seguir no feed: texto, como na referência */
-.fd .ps-follow.fd-follow {
+.fd .ps-follow.fd-follow,
+.pf-posts .ps-follow.fd-follow {
     height: 32px;
     padding: 0 14px;
     border-radius: 999px;
@@ -984,8 +1190,10 @@ a.fd-post-name:hover { text-decoration: underline; text-decoration-color: var(--
     text-transform: none;
     box-shadow: none;
 }
-.fd .ps-follow.fd-follow:hover { background: rgba(255, 255, 255, 0.14); }
-.fd .ps-follow.fd-follow.is-following { background: transparent; color: rgba(255, 255, 255, 0.55); border-color: transparent; }
+.fd .ps-follow.fd-follow:hover,
+.pf-posts .ps-follow.fd-follow:hover { background: rgba(255, 255, 255, 0.14); }
+.fd .ps-follow.fd-follow.is-following,
+.pf-posts .ps-follow.fd-follow.is-following { background: transparent; color: rgba(255, 255, 255, 0.55); border-color: transparent; }
 .fd .ps-follow.fd-follow-sm { border: 0; background: transparent; padding: 0 4px; color: #F4465C; }
 .fd .ps-follow.fd-follow-sm:hover { background: transparent; text-decoration: underline; }
 .fd .ps-follow.fd-follow-sm.is-following { color: rgba(255, 255, 255, 0.5); }
@@ -1041,3 +1249,58 @@ a.fd-post-name:hover { text-decoration: underline; text-decoration-color: var(--
 }
 .perfil-cover-preview.has-img span { display: none; }
 .perfil-cover-btns { display: flex; gap: 8px; margin-top: 10px; }
+
+/* =====================================================================
+   Menu de cima da comunidade/perfil = mesmo visual do menu da página
+   inicial (fundo escuro translúcido, borda clara, logo em Archivo Black).
+   ===================================================================== */
+.ps-app .ps-nav {
+    background: var(--glass-dark, rgba(10, 10, 10, 0.3));
+    border: 1px solid var(--glass-border-dark, rgba(255, 255, 255, 0.2));
+    box-shadow: none;
+    -webkit-backdrop-filter: var(--glass-blur, blur(16px) saturate(1.4));
+    backdrop-filter: var(--glass-blur, blur(16px) saturate(1.4));
+}
+/* Ao fazer scroll fica só mais escuro, para o conteúdo por baixo não atrapalhar */
+.ps-app.is-scrolled .ps-nav {
+    background: rgba(10, 10, 10, 0.72);
+    box-shadow: none;
+}
+.ps-app .ps-nav .ms-nav-brand,
+.ps-app .ps-nav .ms-nav-brand span {
+    font-family: 'Archivo Black', 'Inter', sans-serif !important;
+    font-weight: 400;
+}
+@media (max-width: 720px) {
+    .ps-app .ps-nav { background: rgba(10, 10, 10, 0.55); }
+    .ps-app .ps-nav-links { background: rgba(10, 10, 10, 0.5); }
+}
+
+/* Pop-up "ainda não tens conta" */
+.ps-acc-pop { padding: 16px 18px 18px; text-align: center; }
+.ps-acc-pop-title { margin: 0; font-size: 15px; font-weight: 700; color: #FFF; }
+.ps-acc-pop-text { margin: 6px 0 14px; font-size: 12.5px; line-height: 1.45; color: rgba(255, 255, 255, 0.65); }
+.ps-acc-pop-actions { display: flex; justify-content: center; gap: 8px; }
+.ps-acc-pop .ps-notif-pop-login { margin: 0; }
+.ps-acc-pop-ghost {
+    height: 36px;
+    padding: 0 18px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #FFF;
+    font: 600 13px var(--pf-font);
+    cursor: pointer;
+}
+.ps-acc-pop-ghost:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* Nota pequena no fundo do pop-up de notificações */
+.ps-notif-pop-note {
+    margin: 0;
+    padding: 9px 16px 11px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 10.5px;
+    line-height: 1.4;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.45);
+}

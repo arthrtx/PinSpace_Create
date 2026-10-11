@@ -242,7 +242,7 @@ class UIManager {
                     <time>Por ${escapeHTML(c.autor || 'Anónimo')} · ${formatDate(c.atualizado)}</time>
                 </div>
                 <div class="project-card-actions">
-                    <button type="button" data-action="open">Abrir cópia</button>
+                    <button type="button" data-action="open">Abrir e editar</button>
                 </div>
             </div>
         `).join('');
@@ -666,7 +666,7 @@ class UIManager {
             <div class="panel-section">
                 <div class="pub-status-row">
                     <span class="pub-badge ${info.publico ? 'pub' : 'priv'}">${info.publico ? uiIcon('globe', 13) + ' Público' : uiIcon('lock', 13) + ' Privado'}</span>
-                    ${info.publico ? `<span class="pub-note">Qualquer pessoa pode ver este quadro no início do site e fazer uma cópia.</span>` : `<span class="pub-note">Só você vê este quadro. Pode publicá-lo para toda a gente.</span>`}
+                    ${info.publico ? `<span class="pub-note">Qualquer pessoa pode ver este quadro no início do site e abri-lo para editar.</span>` : `<span class="pub-note">Só você vê este quadro. Pode publicá-lo para toda a gente.</span>`}
                 </div>
                 <div class="form-group">
                     <label>O seu nome (autor)</label>
@@ -812,7 +812,7 @@ class UIManager {
         const pub = !!info.perfilPublico;
         const synced = info.syncedAt ? 'guardado ' + formatDate(info.syncedAt) : 'ainda não guardado na conta';
         const foreign = info.foreign
-            ? '<p class="panel-hint">Este quadro é uma cópia do quadro de outra pessoa. Ao guardar, passa a ser um quadro novo teu.</p>'
+            ? '<p class="panel-hint">Abriste o quadro público de outra pessoa. Ao guardar, as tuas alterações ficam num quadro novo na tua conta.</p>'
             : '';
         container.innerHTML = `
             <div class="pub-author">
@@ -979,6 +979,12 @@ class UIManager {
             searchInput.addEventListener('input', debounce((e) => {
                 this.callbacks.onSearchProjects?.(e.target.value);
             }, 200));
+            // Enter procura em Explorar (a lista da galeria já não está na página inicial).
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter') return;
+                const q = searchInput.value.trim();
+                window.location.hash = '#explore' + (q ? '?q=' + encodeURIComponent(q) : '');
+            });
         }
     }
 
