@@ -77,7 +77,7 @@
     .music.mu-in .music-card, .music.mu-in .music-card.is-active .music-card-art::before, .music.is-playing .music-bar { animation: none; }
 }
 
-/* telemóvel: sem animações contínuas */
+/* telemóvel: sem animações contínuas (experimentar com ?on=anim) */
 @media (max-width: 900px), (pointer: coarse) and (max-width: 1180px) {
-    .music.mu-in .music-card, .music.mu-in .music-card.is-active .music-card-art::before, .music.is-playing .music-bar { animation: none; }
+    html:not(.on-anim) .music.mu-in .music-card, html:not(.on-anim) .music.mu-in .music-card.is-active .music-card-art::before, html:not(.on-anim) .music.is-playing .music-bar { animation: none; }
 }

@@ -420,7 +420,9 @@
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const deepLink = location.hash && location.hash !== '#' && location.hash !== '#musica';
     // telemóvel: vai direto ao final e fica parado (o Safari do iPhone fechava a página com a animação)
-    if (reduce || deepLink || SMALL) { finish({ still: reduce || SMALL }); return; }
+    // ?on=anim no telemóvel: os ecrãs passam devagar atrás do título (versão leve, para experimentar)
+    const phoneAnim = SMALL && html.classList.contains('on-anim');
+    if (reduce || deepLink || SMALL) { finish({ still: reduce || (SMALL && !phoneAnim) }); return; }
 
     lock(true);
     const list = [...urls];

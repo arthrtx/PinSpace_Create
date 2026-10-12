@@ -311,6 +311,8 @@ html.ps-intro-lock .hv-glow { -webkit-mask-image: none; mask-image: none; }
 /* telemóvel: versão leve do topo (sem camadas pesadas) */
 @media (max-width: 900px), (pointer: coarse) and (max-width: 1180px) {
     .hv-back { bottom: -30vh; }
+    /* o fundo preto da secção da música começa onde a parede de ecrãs acaba (sem faixa clara) */
+    .ms-hero-intro ~ .ms-glass-zone { background: linear-gradient(180deg, transparent 0, transparent 30vh, #000 30vh) !important; }
     .hv-back::after { height: 45vh; }
     .hv-glow { -webkit-mask-image: none; mask-image: none; }
     .hv-skip, .hv-replay { display: none !important; }
@@ -323,3 +325,6 @@ html.off-music #musica { display: none !important; }
 html.off-grain .ms-grain { display: none !important; }
 html.off-glass .glass-bg-canvas { display: none !important; }
 html.off-anim *, html.off-anim *::before, html.off-anim *::after { animation: none !important; transition: none !important; }
+
+/* por baixo de tudo, a página inicial é preta (nunca aparece o fundo claro) */
+#home-view .home-container { background-color: #000; }
