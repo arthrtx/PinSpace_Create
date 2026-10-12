@@ -199,7 +199,7 @@ class UIManager {
 
         container.innerHTML = projects.map(p => `
             <div class="modal-project-item" data-id="${p.id}">
-                <span style="font-size:24px">${p.thumbnail ? `<img src="${p.thumbnail}" style="width:40px;height:28px;object-fit:cover;border-radius:4px">` : '📌'}</span>
+                <span style="font-size:24px">${p.thumbnail ? `<img src="${escapeHTML(safeImgSrc(p.thumbnail))}" style="width:40px;height:28px;object-fit:cover;border-radius:4px">` : '📌'}</span>
                 <div>
                     <strong>${escapeHTML(p.titulo)}</strong>
                     <div style="font-size:12px;color:var(--text-muted)">${formatDate(p.ultimaEdicao)}</div>
@@ -215,52 +215,10 @@ class UIManager {
         });
     }
 
-    renderPublicList(collages, erro) {
-        const container = document.getElementById('lista-publicos');
-        if (!container) return;
-
-        if (!collages) {
-            const detalhe = erro ? ` ${escapeHTML(erro)}` : '';
-            container.innerHTML = `<p class="empty-state" id="empty-publicos"><span>Servidor público indisponível — publica quadros para que todos os possam ver.</span>${detalhe}</p>`;
-            return;
-        }
-
-        if (collages.length === 0) {
-            container.innerHTML = '<p class="empty-state" id="empty-publicos">Ainda não há quadros públicos. No editor, abre Definições → Partilha e publica o teu.</p>';
-            return;
-        }
-
-        container.innerHTML = collages.map(c => `
-            <div class="project-card public-card" data-id="${escapeHTML(c.id)}">
-                <div class="project-card-thumb">
-                    ${c.thumb
-                        ? `<img src="${c.thumb}" alt="${escapeHTML(c.titulo)}" loading="lazy" decoding="async">`
-                        : '<span class="placeholder">📌</span>'}
-                </div>
-                <div class="project-card-info">
-                    <h3>${escapeHTML(c.titulo)}</h3>
-                    <time>Por ${escapeHTML(c.autor || 'Anónimo')} · ${formatDate(c.atualizado)}</time>
-                </div>
-                <div class="project-card-actions">
-                    <button type="button" data-action="open">Abrir e editar</button>
-                </div>
-            </div>
-        `).join('');
-
-        container.querySelectorAll('.project-card').forEach(card => {
-            const abrir = () => this.callbacks.onOpenPublic?.(card.dataset.id);
-            card.addEventListener('click', abrir);
-            card.querySelector('[data-action="open"]')?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                abrir();
-            });
-        });
-    }
-
     setActiveTool(tool) {
         this.currentTool = tool;
         // Formas vive dentro de Ferramentas: o botão aceso é o de Ferramentas.
-        const lit = tool === 'shapes' ? 'brush' : tool;
+        const lit = (tool === 'shapes' || tool === 'frames') ? 'brush' : tool;
         document.querySelectorAll('.tool-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tool === lit);
         });
@@ -274,7 +232,8 @@ class UIManager {
             text: 'Texto',
             shapes: 'Formas',
             brush: 'Ferramentas',
-            design: 'Elementos',
+            design: 'Studio e galeria de stickers',
+            frames: 'Ferramentas',
             background: 'Fundo',
             layers: 'Camadas',
             settings: 'Configurações'
@@ -288,41 +247,25 @@ class UIManager {
                 if (!selectedElement) {
                     this.panelContent.innerHTML = `
                         <div class="panel-section">
-                            <h4>Adicionar Imagem</h4>
-                            <p class="panel-hint">Arraste uma imagem para o quadro ou clique no botão abaixo.</p>
-                            <button class="btn btn-primary" id="btn-import-image" style="width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Importar Imagem</button>
-                        </div>
-                        <div class="panel-section">
-                            <h4>Colar link da imagem</h4>
-                            <div class="img-url-row">
-                                <input type="url" id="img-url" placeholder="https://… (link da imagem)" autocomplete="off" spellcheck="false">
-                                <button type="button" class="btn btn-primary" id="img-url-add" aria-label="Adicionar imagem do link">${uiIcon('plus', 16)}</button>
+                            <button type="button" class="img-dropzone" id="btn-import-image">
+                                <span class="img-dropzone-art" aria-hidden="true">
+                                    <span class="img-dz-card img-dz-card-1"></span>
+                                    <span class="img-dz-card img-dz-card-2"></span>
+                                    <span class="img-dz-arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6 10l6 6 6-6"/><path d="M4 20h16"/></svg></span>
+                                </span>
+                                <strong>Arrasta imagens para o quadro</strong>
+                                <span>Do teu computador, do Pinterest ou de qualquer site — também podes arrastar um link de imagem.</span>
+                                <em>ou clica para escolher do computador</em>
+                            </button>
+                            <div class="img-dz-tips">
+                                <span><kbd>Ctrl</kbd>+<kbd>V</kbd> cola uma imagem ou um link</span>
+                                <span>Seleciona uma imagem para sombra, filtros e cortes</span>
                             </div>
-                            <p class="panel-hint">Ao colar o link, a imagem entra logo no quadro. Também podes colar (Ctrl+V) um link ou uma imagem diretamente no quadro.</p>
-                        </div>
-                        <div class="panel-section">
-                            <h4>Dicas</h4>
-                            <ul class="tips-list">
-                                <li>Arraste imagens diretamente do seu computador ou de outro site</li>
-                                <li>Use Ctrl+V para colar imagens ou links de imagem</li>
-                                <li>Selecione a imagem para editar filtros e ajustes</li>
-                            </ul>
                         </div>
                     `;
                     this.panelContent.querySelector('#btn-import-image')?.addEventListener('click', () => {
                         projectCallbacks.onImportImage?.();
                     });
-                    const urlInput = this.panelContent.querySelector('#img-url');
-                    const addUrl = () => {
-                        const v = urlInput.value.trim();
-                        if (!v) { urlInput.focus(); return; }
-                        projectCallbacks.onAddImageUrl?.(v);
-                        urlInput.value = '';
-                    };
-                    this.panelContent.querySelector('#img-url-add')?.addEventListener('click', addUrl);
-                    urlInput?.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') addUrl(); });
-                    // Colar um link já adiciona a imagem, sem precisar de clicar.
-                    urlInput?.addEventListener('paste', () => setTimeout(() => { if (/^(https?:|data:image)/i.test(urlInput.value.trim())) addUrl(); }, 0));
                 }
                 break;
 
@@ -345,6 +288,12 @@ class UIManager {
 
             case 'design':
                 this._renderDesignPanel(projectCallbacks);
+                break;
+
+            case 'frames':
+                this.panelContent.innerHTML = this._toolsTabs('frames') + getMoldurasPanelHTML();
+                bindMoldurasPanelEvents(this.panelContent, projectCallbacks);
+                this._bindToolsTabs();
                 break;
 
             case 'background':
@@ -438,37 +387,38 @@ class UIManager {
     _renderBackgroundPanel(callbacks) {
         const bg = callbacks.getBackground?.() || { tipo: 'cor', valor: '#e8e8e8' };
         const grade = callbacks.getGrid?.() || null;
-
+        const BG_COLORS = ['#FFFFFF', '#F6F5F1', '#EDEBE6', '#E8E8E8', '#F1E4D8', '#E6EDE7', '#A9BCAE', '#5F7466', '#1E2A42', '#111111', '#E60023', '#F4C9D0'];
+        const GRADS = [
+            { cor1: '#F6F5F1', cor2: '#E6EDE7', angulo: 135 }, { cor1: '#A9BCAE', cor2: '#5F7466', angulo: 135 },
+            { cor1: '#F4C9D0', cor2: '#E60023', angulo: 135 }, { cor1: '#1E2A42', cor2: '#111111', angulo: 160 },
+            { cor1: '#F1E4D8', cor2: '#D8A33B', angulo: 135 }, { cor1: '#E6EDE7', cor2: '#5D8296', angulo: 180 }
+        ];
+        const typeTile = (v, label, demo) => `<button type="button" class="fx-tile ${bg.tipo === v ? 'on' : ''}" data-bg-type="${v}"><span class="fx-bg-demo" style="background:${demo}"></span><span>${label}</span></button>`;
         this.panelContent.innerHTML = `
-            <div class="panel-section">
-                <h4>Tipo de fundo</h4>
-                <div class="toggle-group" style="margin-bottom:16px">
-                    <button class="toggle-btn ${bg.tipo === 'cor' ? 'active' : ''}" data-bg-type="cor">Cor</button>
-                    <button class="toggle-btn ${bg.tipo === 'gradiente' ? 'active' : ''}" data-bg-type="gradiente">Gradiente</button>
-                    <button class="toggle-btn ${bg.tipo === 'imagem' ? 'active' : ''}" data-bg-type="imagem">Imagem</button>
+            ${fxSectionHTML('bg-type', 'Fundo', `
+                <div class="fx-grid fx-grid-3">
+                    ${typeTile('cor', 'Cor', '#F1E4D8')}
+                    ${typeTile('gradiente', 'Gradiente', 'linear-gradient(135deg,#A9BCAE,#5F7466)')}
+                    ${typeTile('imagem', 'Imagem', 'repeating-linear-gradient(45deg,#E8E8E8 0 6px,#F6F5F1 6px 12px)')}
                 </div>
-                <div id="bg-options"></div>
-            </div>
-            <div class="panel-section">
-                <h4>Padrão do fundo</h4>
+                <div id="bg-options"></div>`, { icon: FX_ICON.palette, open: true })}
+            ${fxSectionHTML('bg-pattern', 'Padrão do fundo', `
                 <p class="panel-hint">Faz parte do fundo: aparece ao exportar, na miniatura e ao publicar.</p>
-                <div class="pattern-grid" id="pattern-grid"></div>
-                <div id="pattern-opts"></div>
-            </div>
-            <div class="panel-section">
-                <h4>Grelha guia</h4>
+                <div class="fx-grid fx-grid-3 pattern-grid" id="pattern-grid"></div>
+                <div id="pattern-opts"></div>`, { icon: FX_ICON.sliders, open: true })}
+            ${fxSectionHTML('bg-grid', 'Grelha guia', `
                 <p class="panel-hint">Só aparece aqui no editor, para alinhar. Não sai na exportação.</p>
-                <div class="toggle-group">
-                    <button class="toggle-btn ${grade === null || grade === 'none' ? 'active' : ''}" data-grid-mode="none">Sem</button>
-                    <button class="toggle-btn ${grade === 'pontos' ? 'active' : ''}" data-grid-mode="pontos">Pontos</button>
-                    <button class="toggle-btn ${grade === 'linhas' ? 'active' : ''}" data-grid-mode="linhas">Linhas</button>
-                </div>
-            </div>
+                <div class="fx-chips">
+                    <button type="button" class="fx-chip ${grade === null || grade === 'none' ? 'on' : ''}" data-grid-mode="none">Sem</button>
+                    <button type="button" class="fx-chip ${grade === 'pontos' ? 'on' : ''}" data-grid-mode="pontos">Pontos</button>
+                    <button type="button" class="fx-chip ${grade === 'linhas' ? 'on' : ''}" data-grid-mode="linhas">Linhas</button>
+                </div>`, { icon: FX_ICON.corner })}
         `;
+        fxBindSections(this.panelContent);
 
         this.panelContent.querySelectorAll('[data-grid-mode]').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.panelContent.querySelectorAll('[data-grid-mode]').forEach(b => b.classList.toggle('active', b === btn));
+                this.panelContent.querySelectorAll('[data-grid-mode]').forEach(b => b.classList.toggle('on', b === btn));
                 callbacks.onGridChange?.(btn.dataset.gridMode === 'none' ? null : btn.dataset.gridMode);
             });
         });
@@ -484,20 +434,20 @@ class UIManager {
         const opts = this.panelContent.querySelector('#pattern-opts');
         const sw = (tipo) => {
             const css = tipo === 'nenhum' ? '' : bgPatternCSS({ tipo, cor: pd.cor, opacidade: Math.max(0.35, pd.opacidade), espaco: 10 });
-            return `<span class="pattern-swatch" style="background:${css ? css + ', ' : ''}var(--ed-swatch-bg, #f4f4f1)"></span>`;
+            return `<span class="fx-bg-demo" style="background:${css ? css + ', ' : ''}var(--ed-swatch-bg, #f4f4f1)"></span>`;
         };
         const drawPatternUI = () => {
             grid.innerHTML = BG_PATTERNS.map(([id, label]) => `
-                <button type="button" class="pattern-option ${pd.tipo === id ? 'active' : ''}" data-pattern="${id}">${sw(id)}<span>${label}</span></button>`).join('');
-            opts.innerHTML = pd.tipo === 'nenhum' ? '' : `
-                <div class="form-row">
-                    <div class="form-group"><label>Cor</label><input type="color" id="pat-cor" value="${pd.cor}"></div>
-                    <div class="form-group"><label>Intensidade</label><input type="range" id="pat-op" min="4" max="80" value="${Math.round(pd.opacidade * 100)}"></div>
-                </div>
-                <div class="form-group"><label>Espaçamento</label><input type="range" id="pat-esp" min="12" max="200" value="${pd.espaco}"></div>`;
-            opts.querySelector('#pat-cor')?.addEventListener('input', (e) => setPattern({ cor: e.target.value }));
-            opts.querySelector('#pat-op')?.addEventListener('input', (e) => setPattern({ opacidade: +e.target.value / 100 }));
-            opts.querySelector('#pat-esp')?.addEventListener('input', (e) => setPattern({ espaco: +e.target.value }));
+                <button type="button" class="fx-tile ${pd.tipo === id ? 'on' : ''}" data-pattern="${id}">${sw(id)}<span>${label}</span></button>`).join('');
+            opts.innerHTML = pd.tipo === 'nenhum' ? '' : `<div class="fx-sub">
+                <div class="fx-label">Cor do padrão</div>
+                ${fxSwatchesHTML('pat-cor', pd.cor, { colors: ['#1d1d1f', '#FFFFFF', '#E60023', '#5F7466', '#A9BCAE', '#1E2A42', '#D8A33B', '#8B8780'] })}
+                ${fxSliderHTML('pat-op', 'Intensidade', 4, 80, 1, Math.round(pd.opacidade * 100), '%')}
+                ${fxSliderHTML('pat-esp', 'Espaçamento', 12, 200, 1, pd.espaco, ' px')}
+            </div>`;
+            fxBindSwatches(opts, 'pat-cor', (c) => { setPattern({ cor: c || '#1d1d1f' }); grid.querySelectorAll('[data-pattern]').forEach(b => { b.querySelector('.fx-bg-demo').outerHTML = sw(b.dataset.pattern); }); });
+            fxBindSlider(opts, 'pat-op', '%', (v) => setPattern({ opacidade: v / 100 }));
+            fxBindSlider(opts, 'pat-esp', ' px', (v) => setPattern({ espaco: v }));
         };
         grid.addEventListener('click', (e) => {
             const b = e.target.closest('[data-pattern]');
@@ -507,60 +457,50 @@ class UIManager {
         });
         drawPatternUI();
 
+        let sentGrad = bg.tipo === 'gradiente';
         const renderBgOptions = (tipo) => {
             const container = this.panelContent.querySelector('#bg-options');
             switch (tipo) {
-                case 'cor':
-                    container.innerHTML = `
-                        <div class="form-group">
-                            <label>Cor de fundo</label>
-                            <input type="color" id="bg-cor" value="${typeof bg.valor === 'string' ? bg.valor : '#ffffff'}">
-                        </div>
-                    `;
-                    container.querySelector('#bg-cor').addEventListener('input', (e) => {
-                        callbacks.onBackgroundChange?.({ tipo: 'cor', valor: e.target.value });
-                    });
+                case 'cor': {
+                    const cur = bg.tipo === 'cor' && typeof bg.valor === 'string' ? bg.valor : '#ffffff';
+                    container.innerHTML = `<div class="fx-sub"><div class="fx-label">Cor de fundo</div>${fxSwatchesHTML('bg-cor', cur, { colors: BG_COLORS })}</div>`;
+                    fxBindSwatches(container, 'bg-cor', (c) => callbacks.onBackgroundChange?.({ tipo: 'cor', valor: c || '#ffffff' }));
                     break;
-                case 'gradiente':
-                    const grad = bg.tipo === 'gradiente' && bg.valor ? bg.valor : { cor1: '#6366f1', cor2: '#ec4899', angulo: 135 };
-                    container.innerHTML = `
-                        <div class="form-row">
-                            <div class="form-group"><label>Cor 1</label><input type="color" id="bg-grad1" value="${grad.cor1}"></div>
-                            <div class="form-group"><label>Cor 2</label><input type="color" id="bg-grad2" value="${grad.cor2}"></div>
-                        </div>
-                        <div class="form-group"><label>Ângulo</label><input type="number" id="bg-angulo" value="${grad.angulo}" min="0" max="360"></div>
-                    `;
-                    const updateGrad = () => {
-                        callbacks.onBackgroundChange?.({
-                            tipo: 'gradiente',
-                            valor: {
-                                cor1: container.querySelector('#bg-grad1').value,
-                                cor2: container.querySelector('#bg-grad2').value,
-                                angulo: parseInt(container.querySelector('#bg-angulo').value) || 135
-                            }
-                        });
-                    };
-                    container.querySelector('#bg-grad1').addEventListener('input', updateGrad);
-                    container.querySelector('#bg-grad2').addEventListener('input', updateGrad);
-                    container.querySelector('#bg-angulo').addEventListener('change', updateGrad);
+                }
+                case 'gradiente': {
+                    const grad = bg.tipo === 'gradiente' && bg.valor ? { ...bg.valor } : { ...GRADS[1] };
+                    const send = () => callbacks.onBackgroundChange?.({ tipo: 'gradiente', valor: { ...grad } });
+                    container.innerHTML = `<div class="fx-sub">
+                        <div class="fx-label">Prontos</div>
+                        <div class="fx-grid fx-grid-3">${GRADS.map((g, i) => `<button type="button" class="fx-tile" data-grad="${i}"><span class="fx-bg-demo" style="background:linear-gradient(${g.angulo}deg,${g.cor1},${g.cor2})"></span></button>`).join('')}</div>
+                        <div class="fx-label">Cor 1</div>${fxSwatchesHTML('bg-g1', grad.cor1, { colors: BG_COLORS })}
+                        <div class="fx-label">Cor 2</div>${fxSwatchesHTML('bg-g2', grad.cor2, { colors: BG_COLORS })}
+                        ${fxSliderHTML('bg-ang', 'Ângulo', 0, 360, 5, grad.angulo || 135, '°')}
+                    </div>`;
+                    container.querySelectorAll('[data-grad]').forEach(b => b.addEventListener('click', () => {
+                        Object.assign(grad, GRADS[+b.dataset.grad]);
+                        send();
+                        renderBgOptions('gradiente');
+                    }));
+                    fxBindSwatches(container, 'bg-g1', (c) => { grad.cor1 = c || '#ffffff'; send(); });
+                    fxBindSwatches(container, 'bg-g2', (c) => { grad.cor2 = c || '#ffffff'; send(); });
+                    fxBindSlider(container, 'bg-ang', '°', (v) => { grad.angulo = v; send(); });
+                    if (!sentGrad) { sentGrad = true; send(); }
                     break;
+                }
                 case 'imagem':
-                    container.innerHTML = `
+                    container.innerHTML = `<div class="fx-sub">
                         <button class="btn btn-primary" id="bg-import-img" style="width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Importar imagem de fundo</button>
-                    `;
-                    container.querySelector('#bg-import-img').addEventListener('click', () => {
-                        callbacks.onImportBgImage?.();
-                    });
+                    </div>`;
+                    container.querySelector('#bg-import-img').addEventListener('click', () => callbacks.onImportBgImage?.());
                     break;
             }
         };
-
         renderBgOptions(bg.tipo);
 
         this.panelContent.querySelectorAll('[data-bg-type]').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.panelContent.querySelectorAll('[data-bg-type]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                this.panelContent.querySelectorAll('[data-bg-type]').forEach(b => b.classList.toggle('on', b === btn));
                 renderBgOptions(btn.dataset.bgType);
             });
         });
@@ -604,6 +544,7 @@ class UIManager {
         return `<div class="design-tabs tools-tabs">
             <button type="button" class="design-tab ${active === 'brush' ? 'active' : ''}" data-tools-tab="brush">${uiIcon('brush', 14)} Pincel</button>
             <button type="button" class="design-tab ${active === 'shapes' ? 'active' : ''}" data-tools-tab="shapes"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><circle cx="17" cy="17" r="4"/><path d="M17 3l4 7h-8z"/></svg> Formas</button>
+            <button type="button" class="design-tab ${active === 'frames' ? 'active' : ''}" data-tools-tab="frames"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg> Molduras</button>
         </div>`;
     }
 
@@ -628,35 +569,14 @@ class UIManager {
         });
     }
 
+    // Studio e galeria de stickers — por agora vazio (a galeria nova vem a seguir).
     _renderDesignPanel(callbacks) {
         this.panelContent.innerHTML = `
-            <div class="design-tabs">
-                <button class="design-tab ${this._designTab === 'stickers' ? 'active' : ''}" data-design-tab="stickers"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M12 3c.8 4.6 3.4 7.2 8 8-4.6.8-7.2 3.4-8 8-.8-4.6-3.4-7.2-8-8 4.6-.8 7.2-3.4 8-8z"/></svg> Elementos</button>
-                <button class="design-tab ${this._designTab === 'molduras' ? 'active' : ''}" data-design-tab="molduras"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 4-6 5 7"/></svg> Molduras</button>
-            </div>
-            <div id="design-content"></div>
-        `;
-
-        const renderTab = (tab) => {
-            const container = this.panelContent.querySelector('#design-content');
-            if (tab === 'molduras') {
-                container.innerHTML = getMoldurasPanelHTML();
-                bindMoldurasPanelEvents(container, callbacks);
-            } else {
-                container.innerHTML = getStickersPanelHTML();
-                bindStickersPanelEvents(container, callbacks);
-            }
-        };
-
-        renderTab(this._designTab);
-
-        this.panelContent.querySelectorAll('.design-tab').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._designTab = btn.dataset.designTab;
-                this.panelContent.querySelectorAll('.design-tab').forEach(b => b.classList.toggle('active', b === btn));
-                renderTab(this._designTab);
-            });
-        });
+            <div class="fx-soon">
+                <span class="fx-soon-ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3c.8 4.6 3.4 7.2 8 8-4.6.8-7.2 3.4-8 8-.8-4.6-3.4-7.2-8-8 4.6-.8 7.2-3.4 8-8z"/></svg></span>
+                <strong>Em breve</strong>
+                <p>O studio e a galeria de stickers estão a ser preparados.</p>
+            </div>`;
     }
 
     renderPartilhaPanel(container, callbacks) {
@@ -974,18 +894,6 @@ class UIManager {
             this.callbacks.onShowOpenModal?.();
         });
 
-        const searchInput = document.getElementById('search-projetos');
-        if (searchInput) {
-            searchInput.addEventListener('input', debounce((e) => {
-                this.callbacks.onSearchProjects?.(e.target.value);
-            }, 200));
-            // Enter procura em Explorar (a lista da galeria já não está na página inicial).
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key !== 'Enter') return;
-                const q = searchInput.value.trim();
-                window.location.hash = '#explore' + (q ? '?q=' + encodeURIComponent(q) : '');
-            });
-        }
     }
 
     bindEditorEvents() {
@@ -1031,7 +939,7 @@ class UIManager {
             this.callbacks.onZoomFit?.();
         });
 
-        document.querySelectorAll('.tool-btn').forEach(btn => {
+        document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.callbacks.onToolChange?.(btn.dataset.tool);
             });
@@ -1099,8 +1007,7 @@ class UIManager {
     }
 }
 
+// Escapa também aspas: o resultado é seguro dentro de atributos (title="…", alt="…").
 function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return String(str ?? '').replace(/[&<>"'`]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
 }

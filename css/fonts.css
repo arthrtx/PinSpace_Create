@@ -97,8 +97,7 @@
 
 /* Primeira parte do site: fica exatamente como estava */
 .ms-hero,
-.ms-coords,
-.ms-intro {
+.ms-coords {
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-display: 'Archivo Black', 'Inter', sans-serif;
     --font-accent: 'Playfair Display', Georgia, serif;
@@ -137,22 +136,9 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 /* ---- Faixa rolante acima do final: mais baixa e com outra fonte ---- */
-.ms-marquee {
-    padding: clamp(10px, 1.4vw, 16px) 0;
-    contain-intrinsic-size: auto 90px;
-}
-.ms-marquee-word {
-    font-family: 'PS Bebas', 'Bebas Neue', 'Oswald', sans-serif;
-    font-weight: 400;
-    font-size: clamp(1.9rem, 4.6vw, 3.9rem);
-    letter-spacing: 0.04em;
-    line-height: 1.05;
-}
-.ms-glass-zone .ms-marquee-word { -webkit-text-stroke: 1.1px rgba(255, 255, 255, 0.75); }
-.ms-marquee-dot { font-size: clamp(1rem, 2vw, 1.6rem); padding: 0 clamp(16px, 2.6vw, 36px); }
 
 /* Sem contorno pontilhado ao passar o rato (logo, links, cartões, pesquisa) */
 @media (hover: hover) {
-    .project-card:hover, .home-search:hover, .ms-tag:hover, .ms-footer-link:hover,
+    .project-card:hover, .ms-tag:hover, .ms-footer-link:hover,
     .ms-nav-brand:hover, .ms-nav-link:hover { outline-color: transparent; }
 }

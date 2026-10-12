@@ -93,12 +93,23 @@ function createSVGElement(tag, attrs = {}) {
 }
 
 function loadImage(src) {
-    return new Promise((resolve, reject) => {
+    // Links https (ex.: imagens partilhadas na edição em grupo) carregam com
+    // CORS para a exportação não "sujar" o canvas; se o site não deixar,
+    // tenta outra vez da forma antiga.
+    const plain = () => new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.onerror = reject;
         img.src = src;
     });
+    if (!/^https:/i.test(String(src || ''))) return plain();
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    }).then(img => img || plain());
 }
 
 function readFileAsDataURL(file) {
@@ -305,6 +316,23 @@ function moderationStripDigits(text) {
         .trim();
 }
 
+// Comentários: só palavras inteiras e sem as palavras com sentido normal
+// em português ("pinto", "rola", "puto", "pau"…). O filtro dos nomes continua rígido.
+const MODERATION_COMMENT_ALLOW = new Set(['abo', 'pau', 'pinto', 'rola', 'grelo', 'idiota', 'imbecil', 'peido', 'tarado',
+    'troxa', 'bicha', 'corno', 'cornudo', 'pentelho', 'puto', 'bastard', 'douche', 'cock', 'dick', 'retard', 'nazi', 'hitler']);
+function findBadWordsInComment(text) {
+    const clean = String(text || '').replace(/[!?.,;:()"“”«»…]+/g, ' ');
+    const { tokens } = moderationTokenize(moderationNormalize(clean));
+    const set = new Set(tokens);
+    const found = [];
+    for (const raw of MODERATION_BAD_WORDS) {
+        const plain = moderationNormalize(raw).replace(/\s+/g, '');
+        if (!plain || MODERATION_COMMENT_ALLOW.has(plain)) continue;
+        if (raw.includes(' ') ? moderationNormalize(clean).includes(moderationNormalize(raw)) : set.has(moderationCollapse(plain))) found.push(raw);
+    }
+    return found;
+}
+
 function findBadWords(text) {
     const variants = [moderationTokenize(moderationNormalize(text))];
     const stripped = moderationStripDigits(text);
@@ -387,4 +415,135 @@ const UI_ICONS = {
 };
 function uiIcon(name, size = 15) {
     return `<svg class="ui-ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI_ICONS[name] || ''}</svg>`;
+}
+
+/* ---------------------------------------------------------------------
+   Segurança: limpar quadros vindos de fora (quadros públicos, templates,
+   cópias, ficheiros antigos). Um quadro é JSON escrito por outra pessoa —
+   cores, fontes e links entram em HTML/CSS, por isso só passam valores
+   com o formato certo. Evita XSS e injeção de CSS.
+   --------------------------------------------------------------------- */
+const PS_COLOR_RE = /^(#[0-9a-f]{3,8}|rgba?\(\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*(,\s*[\d.]+\s*)?\)|transparent)$/i;
+
+function psSafeColor(c, def = '#000000') {
+    return typeof c === 'string' && PS_COLOR_RE.test(c.trim()) ? c.trim() : def;
+}
+
+function psSafeFont(f) {
+    const s = String(f || '').trim();
+    return /^[A-Za-z0-9 _-]{1,60}$/.test(s) ? s : 'Segoe UI';
+}
+
+function psSafeNum(v, def = 0, min = -1e6, max = 1e6) {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
+}
+
+// Link de imagem que pode ir para um atributo ou para url(...) em CSS.
+function psSafeImageUrl(u) {
+    const s = String(u || '').trim();
+    if (/^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(s)) return s;
+    if (/^data:image\/svg\+xml[;,]/i.test(s) && !/["<>`\\\s]/.test(s)) return s;
+    if (/^https:\/\/[^\s"'<>`\\()]+$/i.test(s)) return s;
+    return '';
+}
+
+function psSanitizeElement(el) {
+    if (!el || typeof el !== 'object') return null;
+    if (!['imagem', 'texto', 'forma'].includes(el.tipo)) return null;
+    if (typeof el.id !== 'string' || !/^[\w-]{1,64}$/.test(el.id)) el.id = generateId();
+    el.x = psSafeNum(el.x, 0, -50000, 50000);
+    el.y = psSafeNum(el.y, 0, -50000, 50000);
+    el.width = psSafeNum(el.width, 100, 1, 20000);
+    el.height = psSafeNum(el.height, 100, 1, 20000);
+    el.rotation = psSafeNum(el.rotation, 0, -3600, 3600);
+    el.opacidade = psSafeNum(el.opacidade ?? 1, 1, 0, 1);
+    el.layer = Math.round(psSafeNum(el.layer, 0, -1e6, 1e6));
+    el.nome = String(el.nome || '').slice(0, 80);
+    el.visivel = el.visivel !== false;
+    el.bloqueada = !!el.bloqueada;
+
+    if (el.tipo === 'imagem') {
+        const src = String(el.src || '');
+        // A imagem vai para img.src (propriedade DOM): basta ser data:image ou https.
+        if (!/^(data:image\/|https:\/\/)/i.test(src) || src.length > 15000000) return null;
+        // links https: codifica aspas/espaços/parênteses (continua a funcionar, mas nunca quebra HTML/CSS)
+        if (/^https:\/\//i.test(src)) el.src = src.replace(/["'<>`\\\s()]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
+        else if (/^data:image\/svg/i.test(src)) { try { if (/["'<>`]/.test(src.replace(/^data:image\/svg\+xml[^,]*,/i, ''))) el.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(decodeURIComponent(src.replace(/^data:image\/svg\+xml[^,]*,/i, ''))); } catch { return null; } }
+        if (el.filtro && typeof FILTROS !== 'undefined' && !FILTROS[el.filtro]) el.filtro = 'none';
+        ['brilho', 'contraste', 'saturacao'].forEach(k => { el[k] = psSafeNum(el[k] ?? 1, 1, 0, 5); });
+        el.raio = psSafeNum(el.raio ?? 8, 8, 0, 20000);
+        el.flipX = !!el.flipX;
+        el.flipY = !!el.flipY;
+        if (el.sombra && typeof el.sombra === 'object') {
+            const s = el.sombra;
+            el.sombra = {
+                preset: String(s.preset || '').replace(/[^a-z]/g, '').slice(0, 20) || 'nenhuma',
+                blur: psSafeNum(s.blur, 20, 0, 400), dist: psSafeNum(s.dist, 10, 0, 400),
+                ang: psSafeNum(s.ang, 90, -360, 360), cor: psSafeColor(s.cor, '#000000'), op: psSafeNum(s.op, 0.35, 0, 1)
+            };
+        } else el.sombra = null;
+    } else if (el.tipo === 'texto') {
+        el.conteudo = String(el.conteudo ?? '').slice(0, 5000);
+        el.fonte = psSafeFont(el.fonte);
+        el.tamanho = psSafeNum(el.tamanho, 24, 1, 2000);
+        el.cor = psSafeColor(el.cor, '#111111');
+        el.bgColor = el.bgColor ? psSafeColor(el.bgColor, null) : null;
+        el.textShadowColor = psSafeColor(el.textShadowColor, '#000000');
+        el.textShadowBlur = psSafeNum(el.textShadowBlur, 0, 0, 200);
+        el.lineHeight = psSafeNum(el.lineHeight ?? 1.2, 1.2, 0.5, 5);
+        el.letterSpacing = psSafeNum(el.letterSpacing, 0, -50, 200);
+        if (!['left', 'center', 'right'].includes(el.alinhamento)) el.alinhamento = 'left';
+        if (!['none', 'uppercase', 'lowercase', 'capitalize'].includes(el.textTransform)) el.textTransform = 'none';
+        if (el.efeito && typeof el.efeito === 'object') {
+            const f = el.efeito;
+            const tipos = typeof TEXT_EFFECTS !== 'undefined' ? Object.keys(TEXT_EFFECTS) : [];
+            el.efeito = {
+                tipo: tipos.includes(f.tipo) ? f.tipo : 'nenhum',
+                cor: psSafeColor(f.cor, '#000000'),
+                int: psSafeNum(f.int, 50, 0, 100), dist: psSafeNum(f.dist, 8, 0, 100),
+                ang: psSafeNum(f.ang, 45, -360, 360), esp: psSafeNum(f.esp, 4, 0, 100)
+            };
+        } else delete el.efeito;
+    } else if (el.tipo === 'forma') {
+        if (typeof SHAPE_TYPES !== 'undefined' && !SHAPE_TYPES.includes(el.forma)) el.forma = 'retangulo';
+        el.cor = psSafeColor(el.cor, '#E60023');
+        el.corContorno = psSafeColor(el.corContorno, '#111111');
+        el.espessura = psSafeNum(el.espessura, 0, 0, 400);
+        el.preenchimento = el.preenchimento !== false;
+    }
+    return el;
+}
+
+function psSanitizeBackground(bg) {
+    if (!bg || typeof bg !== 'object') return { tipo: 'cor', valor: '#e8e8e8' };
+    let out;
+    if (bg.tipo === 'gradiente' && bg.valor && typeof bg.valor === 'object') {
+        out = { tipo: 'gradiente', valor: { cor1: psSafeColor(bg.valor.cor1, '#ffffff'), cor2: psSafeColor(bg.valor.cor2, '#e8e8e8'), angulo: psSafeNum(bg.valor.angulo, 135, 0, 360) } };
+    } else if (bg.tipo === 'imagem') {
+        const v = psSafeImageUrl(bg.valor);
+        out = v ? { tipo: 'imagem', valor: v } : { tipo: 'cor', valor: '#e8e8e8' };
+    } else {
+        out = { tipo: 'cor', valor: psSafeColor(bg.valor, '#e8e8e8') };
+    }
+    if (bg.padrao && typeof bg.padrao === 'object') {
+        out.padrao = {
+            tipo: String(bg.padrao.tipo || 'nenhum').replace(/[^a-z]/g, '').slice(0, 20),
+            cor: psSafeColor(bg.padrao.cor, '#1d1d1f'),
+            opacidade: psSafeNum(bg.padrao.opacidade, 0.18, 0, 1),
+            espaco: psSafeNum(bg.padrao.espaco, 48, 4, 1000)
+        };
+    }
+    return out;
+}
+
+function psSanitizeProject(p) {
+    if (!p || typeof p !== 'object') return p;
+    p.elementos = (Array.isArray(p.elementos) ? p.elementos : []).map(psSanitizeElement).filter(Boolean);
+    p.background = psSanitizeBackground(p.background);
+    p.boardWidth = Math.round(psSafeNum(p.boardWidth, 3000, 50, 12000));
+    p.boardHeight = Math.round(psSafeNum(p.boardHeight, 3000, 50, 12000));
+    p.numPaginas = Math.round(psSafeNum(p.numPaginas, 1, 1, 30));
+    p.titulo = String(p.titulo || 'Sem título').slice(0, 120);
+    return p;
 }

@@ -1304,3 +1304,151 @@ a.fd-post-name:hover { text-decoration: underline; text-decoration-color: var(--
     text-align: center;
     color: rgba(255, 255, 255, 0.45);
 }
+
+/* Botões do banner (ver em grande / mudar) */
+.pf-cover-tools { position: absolute; z-index: 3; top: 18px; left: 18px; display: flex; gap: 8px; }
+.pf-cover-tools .pf-cover-btn { position: static; }
+.pf-cover-view { padding: 0; width: 32px; justify-content: center; }
+.pf-me-avatar[data-pf="view-avatar"] { cursor: zoom-in; }
+
+/* Ajustar foto / banner */
+#modal-crop.modal { max-width: min(600px, 94vw); width: min(600px, 94vw); }
+#modal-crop .modal-content { width: 100%; box-sizing: border-box; }
+.crop-stage {
+    position: relative; width: 100%; overflow: hidden; border-radius: 16px;
+    background: #111 repeating-conic-gradient(#1b1b1b 0 25%, #151515 0 50%) 0 0 / 22px 22px;
+    cursor: grab; touch-action: none; user-select: none; margin: 4px 0 14px;
+}
+.crop-stage.dragging { cursor: grabbing; }
+.crop-stage img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; pointer-events: none; }
+.crop-stage::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 2px rgba(255,255,255,.75); border-radius: inherit; }
+.crop-stage.is-round { max-width: 340px; margin-left: auto; margin-right: auto; }
+.crop-stage.is-round::after { border-radius: 50%; box-shadow: 0 0 0 999px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,255,255,.85); }
+.crop-zoom { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; opacity: .85; }
+.crop-zoom input { flex: 1; accent-color: #E60023; }
+.crop-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.crop-actions .btn { min-width: 110px; }
+.perfil-gif-hint { margin: 6px 0 0; }
+
+/* Ver imagem em grande */
+.ps-lightbox {
+    border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh;
+    display: none; place-items: center; overflow: hidden;
+}
+.ps-lightbox[open] { display: grid; animation: psLbIn .18s ease-out; }
+.ps-lightbox::backdrop { background: rgba(8, 8, 8, .82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ps-lightbox img { max-width: min(92vw, 1600px); max-height: 84vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.5); object-fit: contain; }
+.ps-lightbox img.is-round { border-radius: 50%; width: min(70vw, 70vh, 560px); height: min(70vw, 70vh, 560px); object-fit: cover; }
+.ps-lightbox-close {
+    position: fixed; top: 18px; right: 18px; width: 42px; height: 42px; border-radius: 50%; border: 0;
+    background: rgba(255,255,255,.14); color: #fff; display: grid; place-items: center; cursor: pointer;
+}
+.ps-lightbox-close:hover { background: rgba(255,255,255,.26); }
+.ps-lightbox-edit {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+    border: 0; border-radius: 999px; padding: 11px 22px; background: #E60023; color: #fff; font: 600 14px/1 inherit; cursor: pointer;
+}
+.ps-lightbox-edit[hidden] { display: none; }
+@keyframes psLbIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+
+/* Comentários nas publicações */
+.comment-btn[aria-expanded="true"] { color: #F6F5F1; background: rgba(255, 255, 255, .08); }
+.fd-comments { margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .08); animation: psCIn .18s ease-out; }
+.fd-comments[hidden] { display: none; }
+@keyframes psCIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.fd-c-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; max-height: 360px; overflow-y: auto; scrollbar-width: thin; }
+.fd-c-list:empty { display: none; }
+.fd-c { display: flex; gap: 10px; align-items: flex-start; }
+.fd-c-avatar img, .fd-c-me { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; display: block; flex: none; }
+.fd-c-main { flex: 1; min-width: 0; background: rgba(255, 255, 255, .05); border-radius: 4px 14px 14px 14px; padding: 8px 12px 9px; }
+.fd-c-head { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.fd-c-name { color: #F6F5F1; font-weight: 700; text-decoration: none; }
+.fd-c-name:hover { text-decoration: underline; }
+.fd-c-time { color: rgba(246, 245, 241, .45); }
+.fd-c-tools { margin-left: auto; display: flex; gap: 2px; opacity: 0; transition: opacity .15s; }
+.fd-c:hover .fd-c-tools, .fd-c:focus-within .fd-c-tools { opacity: 1; }
+.fd-c-tools button { border: 0; background: transparent; color: rgba(246, 245, 241, .55); width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; cursor: pointer; }
+.fd-c-tools button:hover { color: #E60023; background: rgba(230, 0, 35, .1); }
+.fd-c-body { margin: 3px 0 0; font-size: 14px; line-height: 1.45; color: rgba(246, 245, 241, .92); white-space: pre-wrap; overflow-wrap: anywhere; }
+.fd-c-empty { margin: 2px 0 10px; font-size: 13px; color: rgba(246, 245, 241, .5); }
+.fd-c-form { display: flex; align-items: flex-end; gap: 10px; margin-top: 12px; }
+.fd-c-form textarea {
+    flex: 1; resize: none; min-height: 46px; max-height: 160px; padding: 11px 16px; border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .06); color: #F6F5F1;
+    font: 14px/1.4 inherit; outline: none;
+}
+.fd-c-form textarea:focus { border-color: rgba(230, 0, 35, .6); background: rgba(255, 255, 255, .08); }
+.fd-c-send { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 0; background: #E60023; color: #fff; display: grid; place-items: center; cursor: pointer; }
+.fd-c-send:disabled { opacity: .5; }
+.fd-c-login { margin-top: 6px; border: 1px solid rgba(255, 255, 255, .14); background: transparent; color: #F6F5F1; border-radius: 999px; padding: 8px 16px; font: 600 13px/1 inherit; cursor: pointer; }
+@media (hover: none) { .fd-c-tools { opacity: 1; } }
+
+/* Troca de separador no perfil: o conteúdo esbate em vez de piscar */
+#pf-content { transition: opacity .2s ease; }
+#pf-content.is-loading { opacity: .45; pointer-events: none; }
+.fd-badge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,.06); color: rgba(246,245,241,.7); font-size: 12px; font-weight: 600; }
+.fd-badge svg { opacity: .8; }
+.pf-posts .fd-badge span { display: none; }
+@media (min-width: 900px) { .pf-posts .fd-badge span { display: inline; } }
+
+/* Cor do meu perfil */
+.pf-opts { position: relative; }
+.pf-accent-pop {
+    position: absolute; z-index: 30; left: calc(100% + 10px); top: 0; width: 224px;
+    padding: 14px; border-radius: 18px; background: var(--pf-pill, #201c1b); border: 1px solid var(--pf-line);
+    box-shadow: 0 18px 40px rgba(0,0,0,.45); color: #F6F5F1; font-size: 12px; animation: psCIn .16s ease-out;
+}
+.pf-accent-pop b { font-size: 13px; }
+.pf-accent-pop p { margin: 2px 0 10px; opacity: .6; }
+.pf-accent-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.pf-accent-grid button { aspect-ratio: 1; border-radius: 50%; border: 2px solid transparent; background: var(--c); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); transition: transform .12s; }
+.pf-accent-grid button:hover { transform: scale(1.1); }
+.pf-accent-grid button.on { border-color: #fff; }
+.pf-accent-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.pf-accent-custom { flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.pf-accent-custom input { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.pf-accent-row button { border: 1px solid var(--pf-line); background: transparent; color: inherit; border-radius: 999px; padding: 6px 10px; font: 600 11px/1 inherit; cursor: pointer; }
+.pf.has-accent .pf-cover {
+    background:
+        radial-gradient(ellipse 60% 70% at 70% 35%, color-mix(in srgb, var(--pf-red) 60%, transparent), transparent 70%),
+        radial-gradient(ellipse 50% 60% at 20% 80%, color-mix(in srgb, var(--pf-red) 25%, transparent), transparent 70%),
+        linear-gradient(135deg, color-mix(in srgb, var(--pf-red) 22%, #2a2524) 0%, #1c1817 100%);
+}
+@media (max-width: 760px) { .pf-accent-pop { left: auto; right: 0; top: calc(100% + 8px); } }
+
+/* Cor do meu perfil: todos os widgets da primeira parte ganham a cor.
+   Os sólidos ficam com um tom escuro da cor; os transparentes continuam
+   transparentes, só com um véu leve da cor. */
+.pf.has-accent {
+    --pf-card: color-mix(in srgb, var(--pf-red) 18%, #2a2423);
+    --pf-card-2: color-mix(in srgb, var(--pf-red) 14%, #252020);
+    --pf-inner: color-mix(in srgb, var(--pf-red) 12%, #211c1b);
+    --pf-pill: color-mix(in srgb, var(--pf-red) 10%, #1b1817);
+    --pf-veil: color-mix(in srgb, var(--pf-red) 16%, transparent);
+    --pf-veil-strong: color-mix(in srgb, var(--pf-red) 26%, transparent);
+}
+.pf.has-accent .pf-stats a,
+.pf.has-accent .pf-btn:not(.pf-btn-red):not(.is-following),
+.pf.has-accent .pf-date,
+.pf.has-accent .pf-cover-btn,
+.pf.has-accent .pf-music,
+.pf.has-accent .pf-music-pill {
+    background: linear-gradient(var(--pf-veil), var(--pf-veil)), rgba(26, 21, 20, 0.5);
+    border-color: color-mix(in srgb, var(--pf-red) 30%, rgba(255, 255, 255, 0.12));
+}
+.pf.has-accent .pf-stats a:hover,
+.pf.has-accent .pf-btn:not(.pf-btn-red):not(.is-following):hover,
+.pf.has-accent .pf-cover-btn:hover,
+.pf.has-accent .pf-music-pill:hover {
+    background: linear-gradient(var(--pf-veil-strong), var(--pf-veil-strong)), rgba(26, 21, 20, 0.7);
+}
+.pf.has-accent .pf-round:hover { background: color-mix(in srgb, var(--pf-red) 28%, #2c2726); }
+.pf.has-accent .pf-nav-ic:hover,
+.pf.has-accent .pf-nav-ic.on { background: var(--pf-veil-strong); }
+.pf.has-accent .pf-music-card {
+    background:
+        radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--pf-red) 60%, transparent), transparent 60%),
+        linear-gradient(135deg, color-mix(in srgb, var(--pf-red) 20%, #3d302e), #151211);
+}
+.pf.has-accent .pf-red-btn { box-shadow: 0 10px 26px color-mix(in srgb, var(--pf-red) 35%, transparent); }
+.pf.has-accent .pf-me-avatar { box-shadow: 0 0 0 3px var(--pf-card-2), 0 10px 24px rgba(0, 0, 0, 0.35); }

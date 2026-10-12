@@ -1,4 +1,3 @@
-const BACKGROUND_REMOVAL_CDN = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.7/+esm';
 const CLIP_MARKER = 'pinspace:elemento';
 
 class PinSpaceApp {
@@ -19,7 +18,6 @@ class PinSpaceApp {
         this.authState = 'loading';   // 'loading' | 'loggedIn' | 'loggedOut'
         this.authReady = Promise.resolve();
         this.social = new SocialUI(this);
-        this.homeWidgets = new HomeWidgets(this);
         this.music = new MusicPlayer(this);
     }
 
@@ -28,7 +26,6 @@ class PinSpaceApp {
         this._bindUI();
         this._applySettings();
         this.social.init();
-        this.homeWidgets.init();
         this.music.init();
         this.authReady = this.checkAuth();
         this.authReady.then(u => this._finishGoogleReturn(u)).catch(() => {});
@@ -74,7 +71,6 @@ class PinSpaceApp {
         const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
         idle(() => backfillMyBoardImages()
             .then((n) => {
-                if (n > 0) { this.homeWidgets?.loadFeatured?.(); this._loadPublicGallery?.(); }
                 return cleanupMyBoardImages();
             })
             .catch((err) => console.warn('Imagens dos quadros:', err)), { timeout: 4000 });
@@ -243,7 +239,8 @@ class PinSpaceApp {
                 boardWidth: base.boardWidth || 3000,
                 boardHeight: base.boardHeight || 3000,
                 background: base.background || { tipo: 'cor', valor: '#e8e8e8' },
-                grade: base.grade == null ? 'pontos' : base.grade
+                grade: base.grade == null ? 'pontos' : base.grade,
+                numPaginas: Math.max(1, base.numPaginas || 1)
             };
             let project;
             if (isMine) {
@@ -288,8 +285,6 @@ class PinSpaceApp {
         } catch (err) {
             console.error('Abrir quadro da conta falhou:', err);
             this.ui.showToast(_socialErrMsg(err));
-            this.homeWidgets?.loadFeatured?.();
-            this._loadPublicGallery?.();
         }
     }
 
@@ -458,7 +453,6 @@ class PinSpaceApp {
         this.ui.on('onNewProject', (size) => this.createNewProject(size));
         this.ui.on('onOpenProject', (id) => this.openProject(id));
         this.ui.on('onDeleteProject', (id) => this._deleteProject(id));
-        this.ui.on('onSearchProjects', (q) => this._searchProjects(q));
         this.ui.on('onShowOpenModal', () => this._showOpenModal());
         this.ui.on('onBackHome', () => this._backToHome());
         this.ui.on('onSave', () => this.saveCurrentProject());
@@ -753,21 +747,6 @@ class PinSpaceApp {
     _showHome() {
         this.ui.showHome();
         this.ui.renderProjectsList(getAllProjects());
-        this._loadPublicGallery();
-        this.homeWidgets.refresh();
-    }
-
-    // A landing mostra só 3 quadros públicos (cabem certinhos no widget).
-    // O resto está em Explorar.
-    async _loadPublicGallery() {
-        try {
-            const data = await getPublicCollages();
-            this._publicCollages = data.collages || [];
-            this._renderPublicPreview(document.getElementById('search-projetos')?.value || '');
-        } catch (err) {
-            console.error('Falha ao carregar os quadros públicos:', err);
-            this.ui.renderPublicList(null, err && err.message);
-        }
     }
 
     async _openPublic(id) {
@@ -794,6 +773,7 @@ class PinSpaceApp {
                 boardHeight: base.boardHeight || 3000,
                 background: base.background || { tipo: 'cor', valor: '#e8e8e8' },
                 grade: base.grade == null ? 'pontos' : base.grade,
+                numPaginas: Math.max(1, base.numPaginas || 1),
                 elementos: base.elementos.map(el => {
                     const nel = JSON.parse(JSON.stringify(el));
                     nel.id = generateId();
@@ -811,8 +791,6 @@ class PinSpaceApp {
         } catch (err) {
             console.error('Abrir quadro público falhou:', err);
             this.ui.showToast(err.message || 'Não foi possível abrir o quadro público.');
-            this.homeWidgets?.loadFeatured?.();   // tira dos destaques o que já não existe
-            this._loadPublicGallery?.();
         }
     }
 
@@ -1009,36 +987,10 @@ class PinSpaceApp {
         const p = getAllProjects().find(x => x.id === id);
         deleteProject(id);
         this.ui.renderProjectsList(getAllProjects());
-        this.homeWidgets.refreshLocal();
         if (this.ui.isSocialActive() && this.social.route) this.social.render(this.social.route);
         this.ui.showToast(p && p.remoteId
             ? 'Removido deste dispositivo. Continua na tua conta (apaga-o no teu perfil se quiseres).'
             : 'Projeto eliminado.');
-    }
-
-    _renderPublicPreview(query = '') {
-        const q = String(query || '').toLowerCase().trim();
-        const all = this._publicCollages || [];
-        const list = q
-            ? all.filter(c => (c.titulo || '').toLowerCase().includes(q) || (c.autor || '').toLowerCase().includes(q))
-            : all;
-        this.ui.renderPublicList(list.slice(0, 3));
-        // Miniaturas da vista pequena da comunidade (página inicial).
-        const thumbs = document.getElementById('gw-community-thumbs');
-        if (thumbs) {
-            thumbs.innerHTML = all.filter(c => c.thumb).slice(0, 4)
-                .map(c => `<img src="${c.thumb}" alt="" loading="lazy" decoding="async">`).join('');
-        }
-        if (q && !list.length) {
-            const box = document.getElementById('lista-publicos');
-            if (box) box.innerHTML = `<p class="empty-state">Nenhum quadro público com “${escapeHTML(query)}”. <a href="#explore?q=${encodeURIComponent(query)}" class="ps-landing-more">procurar na comunidade →</a></p>`;
-        }
-    }
-
-    // A pesquisa da landing procura nos quadros públicos (os quadros
-    // deste dispositivo estão agora no perfil).
-    _searchProjects(query) {
-        this._renderPublicPreview(query);
     }
 
     _showOpenModal() {
@@ -1502,8 +1454,48 @@ class PinSpaceApp {
     }
 
     // Carrega a biblioteca (uma vez) e escolhe GPU quando o browser tem WebGPU.
+    // A biblioteca corre num iframe escondido (bg-remove.html) com regras de
+    // segurança próprias; aqui fica só um "atalho" com a mesma forma da API.
     async _bgLib() {
-        if (!this._bgModule) this._bgModule = await import(BACKGROUND_REMOVAL_CDN);
+        if (this._bgModule) return this._bgModule;
+        this._bgModule = new Promise((resolve, reject) => {
+            const frame = document.createElement('iframe');
+            frame.src = 'bg-remove.html';
+            frame.title = 'remover fundo';
+            frame.setAttribute('aria-hidden', 'true');
+            frame.tabIndex = -1;
+            frame.style.cssText = 'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;opacity:0;pointer-events:none';
+            const pending = new Map();
+            let seq = 0;
+            const timer = setTimeout(() => reject(new Error('A ferramenta de remover fundo não abriu.')), 20000);
+            window.addEventListener('message', (e) => {
+                if (e.origin !== location.origin || e.source !== frame.contentWindow) return;
+                const d = e.data || {};
+                if (d.bgReady) {
+                    clearTimeout(timer);
+                    const call = (op, blob, config) => new Promise((res, rej) => {
+                        const id = ++seq;
+                        const progress = config && typeof config.progress === 'function' ? config.progress : null;
+                        pending.set(id, { res, rej, progress });
+                        const safe = config ? { device: config.device, model: config.model } : {};
+                        frame.contentWindow.postMessage({ id, op, blob, config: safe }, location.origin);
+                    });
+                    resolve({
+                        removeBackground: (blob, config) => call('remove', blob, config),
+                        preload: (config) => call('preload', null, config)
+                    });
+                    return;
+                }
+                const p = pending.get(d.id);
+                if (!p) return;
+                if (d.progress) { try { p.progress && p.progress(...d.progress); } catch { /* ok */ } return; }
+                pending.delete(d.id);
+                if (d.error) p.rej(new Error(d.error));
+                else p.res(d.blob);
+            });
+            document.body.appendChild(frame);
+        });
+        this._bgModule.catch(() => { this._bgModule = null; });
         return this._bgModule;
     }
 
@@ -1786,6 +1778,7 @@ class PinSpaceApp {
             },
             onAlign: (align) => this._alignSelected(align),
             onOrder: (action) => this._orderSelected(action),
+            onMergeLayers: (ids) => this._mergeLayers(ids),
             onLayersReordered: () => {
                 this._rerenderAll();
                 this._commitHistory();
@@ -1894,8 +1887,73 @@ class PinSpaceApp {
             case 'delete':
                 this._deleteElement(id);
                 break;
+            case 'merge-down': {
+                // Junta com a camada imediatamente abaixo (visível).
+                const below = sortByLayer(this.project.elementos)
+                    .filter(e => e.layer < el.layer && e.visivel !== false)
+                    .pop();
+                if (!below) { this.ui.showToast('Não há nenhuma camada por baixo para juntar.'); return; }
+                this._mergeLayers([el.id, below.id]);
+                return;
+            }
         }
         this.isDirty = true;
+    }
+
+    // Junta várias camadas numa só imagem (na posição e ordem em que estão).
+    async _mergeLayers(ids) {
+        const els = sortByLayer(this.project.elementos.filter(e => ids.includes(e.id) && e.visivel !== false));
+        if (els.length < 2) { this.ui.showToast('Escolhe pelo menos 2 camadas visíveis.'); return false; }
+        if (els.some(e => e.bloqueada)) { this.ui.showToast('Desbloqueia as camadas antes de as juntar.'); return false; }
+
+        // Caixa que contém todas (tendo em conta a rotação).
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const e of els) {
+            const cx = e.x + e.width / 2, cy = e.y + e.height / 2;
+            const a = (e.rotation || 0) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+            for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+                const px = dx * e.width / 2, py = dy * e.height / 2;
+                const x = cx + px * c - py * s, y = cy + px * s + py * c;
+                minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+            }
+        }
+        const pad = 24;   // espaço para sombras e contornos
+        minX = Math.floor(minX - pad); minY = Math.floor(minY - pad);
+        maxX = Math.ceil(maxX + pad); maxY = Math.ceil(maxY + pad);
+        const w = Math.max(1, maxX - minX), h = Math.max(1, maxY - minY);
+        const k = Math.min(1, 4096 / Math.max(w, h));
+
+        let src;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(w * k));
+            canvas.height = Math.max(1, Math.round(h * k));
+            const ctx = canvas.getContext('2d');
+            ctx.scale(k, k);
+            ctx.translate(-minX, -minY);
+            for (const e of els) await drawElement(ctx, e);
+            src = await compactarImagem(canvas.toDataURL('image/png'));
+        } catch (err) {
+            console.warn('Juntar camadas falhou', err);
+            this.ui.showToast('Não foi possível juntar: uma das imagens vem de outro site e o browser não deixa copiá-la.');
+            return false;
+        }
+
+        const merged = createImageElement(src, minX, minY, Math.max(...els.map(e => e.layer)));
+        Object.assign(merged, { width: w, height: h, raio: 0, nome: 'Camadas juntas' });
+        const gone = new Set(els.map(e => e.id));
+        this.project.elementos = this.project.elementos.filter(e => !gone.has(e.id));
+        gone.forEach(id => this.board.removeElementDOM(id));
+        this.project.elementos.push(merged);
+        normalizeLayers(this.project.elementos);
+        this._rerenderAll();
+        this._selectElement(merged.id);
+        this._commitHistory();
+        this.isDirty = true;
+        this._refreshPanel();
+        this.ui.showToast(els.length + ' camadas juntas numa só.');
+        return true;
     }
 
     _duplicateElement(el) {

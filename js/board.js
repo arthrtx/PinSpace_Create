@@ -11,6 +11,9 @@ class BoardManager {
         this.zoom = 1;
         this.boardWidth = 3000;
         this.boardHeight = 3000;
+        this.pages = 1;          // páginas extra (botão + por baixo do quadro)
+        this.pageGap = 0;
+        this.onPageAction = null;
         this.selectedId = null;
         this.isPanning = false;
         this.panStart = { x: 0, y: 0, scrollX: 0, scrollY: 0 };
@@ -25,17 +28,170 @@ class BoardManager {
         this._bindEvents();
     }
 
-    setBoardSize(w, h) {
+    setBoardSize(w, h, pages = this.pages) {
         this.boardWidth = w;
         this.boardHeight = h;
-        this.canvas.style.width = w + 'px';
+        this.pages = Math.max(1, Math.min(30, pages | 0 || 1));
+        this.pageGap = typeof boardPageGap === 'function' ? boardPageGap(w) : Math.round(Math.max(60, w * 0.07));
+        this.canvas.style.width = this.totalWidth + 'px';
         this.canvas.style.height = h + 'px';
+        this._layoutPages();
+        this._applyZoomBox();
+    }
+
+    // As páginas ficam lado a lado (da esquerda para a direita).
+    get totalWidth() {
+        return this.pages * this.boardWidth + (this.pages - 1) * this.pageGap;
+    }
+
+    get totalHeight() {
+        return this.boardHeight;
+    }
+
+    pageLeft(k) {
+        return k * (this.boardWidth + this.pageGap);
+    }
+
+    // Página onde fica uma coordenada x do quadro (0 = primeira).
+    pageOf(x) {
+        const k = Math.floor((x + this.pageGap / 2) / (this.boardWidth + this.pageGap));
+        return Math.max(0, Math.min(this.pages - 1, k));
     }
 
     setZoom(level) {
         this.zoom = clamp(level, MIN_ZOOM, MAX_ZOOM);
         this.canvas.style.transform = `scale(${this.zoom})`;
+        this._applyZoomBox();
         return this.zoom;
+    }
+
+    // O transform não muda o tamanho do layout: as margens negativas fazem
+    // a área de scroll corresponder ao tamanho visível (com várias páginas).
+    _applyZoomBox() {
+        const z = this.zoom || 1;
+        this.canvas.style.marginRight = (-(this.totalWidth * (1 - z))) + 'px';
+        this.canvas.style.marginBottom = (-(this.boardHeight * (1 - z))) + 'px';
+        this.canvas.style.setProperty('--z', z);
+        this._layoutPageUI();
+    }
+
+    _layoutPages() {
+        const multi = this.pages > 1;
+        this.canvas.classList.toggle('multi-page', multi);
+        // Com uma só página o fundo volta para o próprio quadro (antes ficava
+        // transparente depois de apagar a 2.ª página e os elementos "flutuavam").
+        if (this._bgCSS) this.canvas.style.background = multi ? 'transparent' : this._bgCSS;
+        let sheets = this.canvas.querySelector('.board-pages');
+        if (!sheets) {
+            sheets = document.createElement('div');
+            sheets.className = 'board-pages';
+            this.canvas.insertBefore(sheets, this.canvas.firstChild);
+        }
+        sheets.innerHTML = '';
+        if (multi) {
+            for (let k = 0; k < this.pages; k++) {
+                const d = document.createElement('div');
+                d.className = 'board-page';
+                d.dataset.page = k;
+                d.style.left = this.pageLeft(k) + 'px';
+                d.style.width = this.boardWidth + 'px';
+                d.style.top = '0px';
+                d.style.height = this.boardHeight + 'px';
+                d.style.background = this._bgCSS || '';
+                sheets.appendChild(d);
+            }
+        }
+        this._layoutWatermarks();
+        // Os elementos (e a grelha) só aparecem dentro das páginas.
+        const clip = multi ? this._pagesClipPath() : '';
+        this.elementsContainer.style.clipPath = clip;
+        const grid = document.getElementById('board-grid');
+        if (grid) grid.style.clipPath = clip;
+        this._layoutPageUI();
+    }
+
+    // Marca d'água "pin space." pequena no canto de cada página (obrigatória:
+    // não é um elemento, não se seleciona nem se apaga).
+    _layoutWatermarks() {
+        let layer = this.canvas.querySelector('.board-watermarks');
+        if (!layer) {
+            layer = document.createElement('div');
+            layer.className = 'board-watermarks';
+            layer.setAttribute('aria-hidden', 'true');
+            this.canvas.appendChild(layer);
+        }
+        const size = typeof psWatermarkSize === 'function' ? psWatermarkSize(this.boardWidth, this.boardHeight) : Math.max(13, Math.round(Math.min(this.boardWidth, this.boardHeight) * 0.026));
+        const pad = Math.round(size * 1.1);
+        layer.style.setProperty('--wm-size', size + 'px');
+        layer.innerHTML = '';
+        for (let k = 0; k < this.pages; k++) {
+            const m = document.createElement('span');
+            m.className = 'board-watermark';
+            m.textContent = 'pin space.';
+            m.style.left = (this.pageLeft(k) + this.boardWidth - pad) + 'px';
+            m.style.top = (this.boardHeight - pad) + 'px';
+            layer.appendChild(m);
+        }
+    }
+
+    _pagesClipPath() {
+        const w = this.boardWidth, h = this.boardHeight, r = 18;
+        let d = '';
+        for (let k = 0; k < this.pages; k++) {
+            const l = this.pageLeft(k);
+            d += `M${l + r} 0H${l + w - r}A${r} ${r} 0 0 1 ${l + w} ${r}V${h - r}A${r} ${r} 0 0 1 ${l + w - r} ${h}H${l + r}A${r} ${r} 0 0 1 ${l} ${h - r}V${r}A${r} ${r} 0 0 1 ${l + r} 0Z`;
+        }
+        return `path('${d}')`;
+    }
+
+    // Etiquetas "Página N" e o botão + (em pixels do ecrã, fora do zoom).
+    _layoutPageUI() {
+        const desk = this.viewport.querySelector('.board-desk');
+        if (!desk) return;
+        let ui = desk.querySelector('.board-pages-ui');
+        if (!ui) {
+            ui = document.createElement('div');
+            ui.className = 'board-pages-ui';
+            desk.appendChild(ui);
+            ui.addEventListener('click', (e) => {
+                const b = e.target.closest('[data-page-act]');
+                if (!b) return;
+                e.stopPropagation();
+                this.onPageAction?.(b.dataset.pageAct, parseInt(b.dataset.page || '0', 10));
+            });
+            ui.addEventListener('mousedown', (e) => e.stopPropagation());
+        }
+        const z = this.zoom || 1;
+        const left = this.canvas.offsetLeft;
+        const top = this.canvas.offsetTop;
+        const w = this.boardWidth * z;
+        const icon = {
+            up: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg>',
+            down: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>',
+            dup: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>',
+            del: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 6V4a2 2 0 0 1 4 0v2"/></svg>'
+        };
+        let html = '';
+        if (this.pages > 1) {
+            for (let k = 0; k < this.pages; k++) {
+                const x = left + this.pageLeft(k) * z;
+                html += `<div class="board-page-label" style="left:${x}px;top:${top - 32}px;width:${w}px">
+                    <span>Página ${k + 1}</span>
+                    <span class="board-page-acts">
+                        ${k > 0 ? `<button type="button" data-page-act="up" data-page="${k}" title="Mover para a esquerda">${icon.up}</button>` : ''}
+                        ${k < this.pages - 1 ? `<button type="button" data-page-act="down" data-page="${k}" title="Mover para a direita">${icon.down}</button>` : ''}
+                        <button type="button" data-page-act="dup" data-page="${k}" title="Duplicar página">${icon.dup}</button>
+                        <button type="button" data-page-act="del" data-page="${k}" title="Apagar página">${icon.del}</button>
+                    </span>
+                </div>`;
+            }
+        }
+        const addLeft = left + this.totalWidth * z + 18;
+        html += `<button type="button" class="board-add-page" data-page-act="add" style="left:${addLeft}px;top:${top}px;height:${this.boardHeight * z}px" title="Adicionar página">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Adicionar página</span>
+        </button>`;
+        ui.innerHTML = html;
     }
 
     getZoom() {
@@ -52,7 +208,8 @@ class BoardManager {
 
     zoomFit() {
         const ins = this._insets();
-        const availW = this.viewport.clientWidth - 48;
+        // Deixa à vista o botão "+ Adicionar página" ao lado do quadro.
+        const availW = this.viewport.clientWidth - 48 - 90;
         const availH = this.viewport.clientHeight - ins.top - ins.bottom;
         const scale = Math.min(availW / this.boardWidth, availH / this.boardHeight, 1);
         this.setZoom(scale);
@@ -70,16 +227,18 @@ class BoardManager {
         if (!desk) return;
         const cw = this.viewport.clientWidth;
         const ch = this.viewport.clientHeight;
-        const visualW = this.boardWidth * this.zoom;
+        // Todas as páginas + o botão "+" ao lado (≈ 90 px).
+        const visualW = this.totalWidth * this.zoom + 90;
         const visualH = this.boardHeight * this.zoom;
         const padX = Math.max(24, Math.round((cw - visualW) / 2));
         // Deixa espaço livre em cima (zoom) e em baixo (leitor de música).
         const ins = this._insets();
         const padY = Math.max(0, Math.round((ch - ins.top - ins.bottom - visualH) / 2));
         desk.style.paddingLeft = padX + 'px';
-        desk.style.paddingRight = padX + 'px';
+        desk.style.paddingRight = (padX + 90) + 'px';
         desk.style.paddingTop = (ins.top + padY) + 'px';
         desk.style.paddingBottom = (ins.bottom + padY) + 'px';
+        this._layoutPageUI();
         if (visualW <= cw && visualH <= ch) {
             this.viewport.scrollLeft = 0;
             this.viewport.scrollTop = 0;
@@ -104,7 +263,9 @@ class BoardManager {
         }
         const pattern = typeof bgPatternCSS === 'function' ? bgPatternCSS(bg.padrao) : '';
         // Padrão por cima da base (cor/gradiente/imagem), tudo no mesmo fundo.
-        this.canvas.style.background = pattern ? `${pattern}, ${base}` : base;
+        this._bgCSS = pattern ? `${pattern}, ${base}` : base;
+        this.canvas.style.background = this.pages > 1 ? 'transparent' : this._bgCSS;
+        this.canvas.querySelectorAll('.board-page').forEach(p => { p.style.background = this._bgCSS; });
     }
 
     setGrid(mode) {
@@ -149,15 +310,20 @@ class BoardManager {
         const elRect = el.getBoundingClientRect();
         const vpRect = this.viewport.getBoundingClientRect();
 
-        const left = elRect.left - vpRect.left + this.viewport.scrollLeft;
-        const top = elRect.top - vpRect.top + this.viewport.scrollTop;
-
         const rotation = parseFloat(el.dataset.rotation || '0');
+        // Caixa com o tamanho real do elemento (sem rodar), centrada nele e
+        // depois rodada — antes usava o retângulo já rodado e ficava torta.
+        const w = (parseFloat(el.style.width) || el.offsetWidth) * this.zoom;
+        const h = (parseFloat(el.style.height) || el.offsetHeight) * this.zoom;
+        const cx = elRect.left + elRect.width / 2 - vpRect.left + this.viewport.scrollLeft;
+        const cy = elRect.top + elRect.height / 2 - vpRect.top + this.viewport.scrollTop;
+        const left = cx - w / 2;
+        const top = cy - h / 2;
 
         this.selectionBox.style.left = left + 'px';
         this.selectionBox.style.top = top + 'px';
-        this.selectionBox.style.width = elRect.width + 'px';
-        this.selectionBox.style.height = elRect.height + 'px';
+        this.selectionBox.style.width = w + 'px';
+        this.selectionBox.style.height = h + 'px';
         this.selectionBox.style.transformOrigin = 'center center';
         this.selectionBox.style.transform = rotation ? `rotate(${rotation}deg)` : '';
     }
@@ -272,7 +438,8 @@ class BoardManager {
         });
 
         this.viewport.addEventListener('mousedown', (e) => {
-            if (e.target === this.viewport || e.target === this.canvas || e.target === this.elementsContainer) {
+            if (e.target === this.viewport || e.target === this.canvas || e.target === this.elementsContainer
+                || (e.target.classList && (e.target.classList.contains('board-page') || e.target.classList.contains('board-desk')))) {
                 if (!this._spacePressed && e.button === 0) {
                     this.selectElement(null);
                 }
@@ -338,7 +505,7 @@ class BoardManager {
             let newX = this.dragStart.elX + dx;
             let newY = this.dragStart.elY + dy;
 
-            const bcX = this.boardWidth / 2;
+            const bcX = this.pageLeft(this.pageOf(newX + w / 2)) + this.boardWidth / 2;
             const bcY = this.boardHeight / 2;
             const SNAP = 8;
             let snapX = null, snapY = null;

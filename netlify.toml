@@ -1,2 +1,83 @@
 [build]
   functions = "functions"
+
+# ---------------------------------------------------------------
+# Cabeçalhos de segurança
+# ---------------------------------------------------------------
+
+# Todas as respostas
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+
+
+# Páginas do site: CSP rigorosa — o browser só corre scripts do próprio site e
+# das CDNs abaixo, por isso texto malicioso num quadro público não executa código.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://w.soundcloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: wss://*.supabase.co data: blob:; frame-src 'self' https://w.soundcloud.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    X-Frame-Options = "DENY"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://w.soundcloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: wss://*.supabase.co data: blob:; frame-src 'self' https://w.soundcloud.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    X-Frame-Options = "DENY"
+
+[[headers]]
+  for = "/privacidade.html"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://w.soundcloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: wss://*.supabase.co data: blob:; frame-src 'self' https://w.soundcloud.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    X-Frame-Options = "DENY"
+
+[[headers]]
+  for = "/privacidade"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://w.soundcloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: wss://*.supabase.co data: blob:; frame-src 'self' https://w.soundcloud.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    X-Frame-Options = "DENY"
+
+[[headers]]
+  for = "/termos.html"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://w.soundcloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: wss://*.supabase.co data: blob:; frame-src 'self' https://w.soundcloud.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    X-Frame-Options = "DENY"
+
+[[headers]]
+  for = "/termos"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://w.soundcloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: wss://*.supabase.co data: blob:; frame-src 'self' https://w.soundcloud.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    X-Frame-Options = "DENY"
+
+# Página escondida da remoção de fundo (iframe do editor). A biblioteca de IA
+# precisa de "eval", por isso só esta página o permite; não mostra conteúdo de
+# utilizadores e só pode ser aberta dentro do próprio site.
+[[headers]]
+  for = "/bg-remove.html"
+  [headers.values]
+    Content-Security-Policy = "default-src 'none'; script-src 'self' https://cdn.jsdelivr.net https://staticimgly.com 'unsafe-eval' 'wasm-unsafe-eval' blob:; worker-src 'self' blob: https://cdn.jsdelivr.net https://staticimgly.com; connect-src https: data: blob:; img-src data: blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
+    X-Frame-Options = "SAMEORIGIN"
+
+[[headers]]
+  for = "/bg-remove"
+  [headers.values]
+    Content-Security-Policy = "default-src 'none'; script-src 'self' https://cdn.jsdelivr.net https://staticimgly.com 'unsafe-eval' 'wasm-unsafe-eval' blob:; worker-src 'self' blob: https://cdn.jsdelivr.net https://staticimgly.com; connect-src https: data: blob:; img-src data: blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
+    X-Frame-Options = "SAMEORIGIN"
+
+# Ficheiros internos que não devem ser servidos publicamente.
+[[redirects]]
+  from = "/supabase/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/netlify.toml"
+  to = "/404.html"
+  status = 404
+  force = true

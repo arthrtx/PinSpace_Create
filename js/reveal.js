@@ -119,14 +119,6 @@
         splitText(el);
     });
 
-    // A galeria publica e preenchida depois deste script correr, por isso
-    // nao estava a ser observada e os quadros nunca apareciam. Vigiamo-la
-    // para a revelar assim que os cartoes existam.
-    const galeria = document.getElementById('lista-publicos');
-    if (galeria) {
-        new MutationObserver(() => { refreshTargets(); checkReveal(); }).observe(galeria, { childList: true });
-    }
-
     const pinTexts = [...document.querySelectorAll('[data-pin-text]')];
     if (pinTexts.length) {
         const vh = scroller ? scroller.clientHeight : window.innerHeight;
@@ -211,63 +203,6 @@
 })();
 
 (function () {
-    const wall = document.querySelector('.ms-pin-wall');
-    if (!wall) return;
-    const SLOTS = [
-        { l: -5,  t: -8,  w: 34, h: 26, r: -4 },
-        { l: 22,  t: -10, w: 26, h: 20, r: 2 },
-        { l: 48,  t: -4,  w: 30, h: 24, r: -2 },
-        { l: 74,  t: -9,  w: 28, h: 22, r: 3 },
-        { l: -6,  t: 30,  w: 30, h: 24, r: 2 },
-        { l: 30,  t: 26,  w: 34, h: 26, r: -3 },
-        { l: 64,  t: 28,  w: 28, h: 20, r: 2 },
-        { l: 88,  t: 30,  w: 20, h: 26, r: -2 },
-        { l: -4,  t: 66,  w: 32, h: 26, r: 3 },
-        { l: 24,  t: 62,  w: 26, h: 22, r: -2 },
-        { l: 55,  t: 66,  w: 34, h: 28, r: 2 },
-        { l: 86,  t: 60,  w: 24, h: 30, r: -3 },
-        { l: 12,  t: 84,  w: 36, h: 24, r: 2 },
-        { l: 62,  t: 88,  w: 30, h: 24, r: -2 }
-    ];
-    let raf = 0;
-    function build() {
-        const srcs = [];
-        document.querySelectorAll('#lista-publicos .project-card-thumb').forEach((c) => {
-            const img = c.querySelector('img');
-            if (img && img.src && !srcs.includes(img.src)) srcs.push(img.src);
-        });
-        wall.innerHTML = '';
-        if (!srcs.length) return;
-        const frag = document.createDocumentFragment();
-        srcs.slice(0, 14).forEach((src, i) => {
-            const slot = SLOTS[i % SLOTS.length];
-            const el = document.createElement('img');
-            el.src = src;
-            el.alt = '';
-            el.loading = 'lazy';
-            el.style.left = slot.l + '%';
-            el.style.top = slot.t + '%';
-            el.style.width = slot.w + 'vw';
-            el.style.height = slot.h + 'vh';
-            el.style.setProperty('--wall-rot', slot.r + 'deg');
-            el.style.animationDelay = (i % 5) * -2.4 + 's';
-            frag.appendChild(el);
-        });
-        wall.appendChild(frag);
-    }
-    build();
-    const list = document.getElementById('lista-publicos');
-    if (list) {
-        const mo = new MutationObserver(() => {
-            cancelAnimationFrame(raf);
-            raf = requestAnimationFrame(build);
-        });
-        mo.observe(list, { childList: true, subtree: true });
-    }
-    window.addEventListener('load', build);
-})();
-
-(function () {
     const vids = document.querySelectorAll('video.ms-vid');
     if (!vids.length) return;
     const play = (v) => { v.play().catch(() => { v.muted = true; v.play().catch(() => {}); }); };
@@ -280,17 +215,6 @@
 
 (() => {
     'use strict';
-
-    const intro = document.getElementById('ms-intro');
-    if (intro) {
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-            intro.remove();
-        } else {
-            requestAnimationFrame(() => requestAnimationFrame(() => intro.classList.add('is-in')));
-            setTimeout(() => intro.classList.add('done'), 1500);
-            setTimeout(() => intro.remove(), 1500 + 950);
-        }
-    }
 
     const coords = document.querySelector('.ms-coords');
     if (coords && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {

@@ -279,23 +279,6 @@ function _toLocalView(collages, remoto) {
     };
 }
 
-// Galeria do início: quadros públicos das contas (com autor) + a galeria
-// antiga, se ainda tiver alguma coisa. Os das contas abrem com "b:<id>".
-async function getPublicCollages() {
-    if (!supabaseConfigured() && !authAvailable()) return { remoto: false, collages: [] };
-    const { items } = await getExploreAll('', 30);
-    return {
-        remoto: true,
-        collages: items.map(b => ({
-            id: b.legacy ? b.id : 'b:' + b.id,
-            titulo: b.title || 'Sem título',
-            autor: (b.author && b.author.username) || 'Anónimo',
-            thumb: b.image_url || '',
-            atualizado: b.updated_at || b.created_at
-        }))
-    };
-}
-
 async function getPublicCollage(id) {
     if (supabaseConfigured()) {
         const row = await supabaseGetQuadro(id);
@@ -497,6 +480,91 @@ async function signOut() {
     return { error };
 }
 
+/* ---------------- Comentários ---------------- */
+const COMMENT_SELECT = 'id,board_id,body,created_at,user_id,author:profiles!comments_user_id_fkey(id,username,display_name,image)';
+
+async function getComments(boardId, limit = 100) {
+    const { data, error } = await _requireSb().from('comments').select(COMMENT_SELECT)
+        .eq('board_id', boardId).order('created_at', { ascending: true }).limit(limit);
+    if (error) throw error;
+    return data || [];
+}
+
+async function addComment(boardId, body) {
+    _requireUser();
+    const text = String(body || '').replace(/\s+\n/g, '\n').trim();
+    if (!text) throw new Error('Escreve alguma coisa.');
+    if (text.length > 500) throw new Error('O comentário tem ' + text.length + ' caracteres (máx. 500).');
+    const bad = typeof findBadWordsInComment === 'function' ? findBadWordsInComment(text) : [];
+    if (bad.length) throw new Error('O comentário tem linguagem ofensiva: ' + moderationFormatList(bad) + '.');
+    const { data, error } = await _requireSb().from('comments').insert({ board_id: boardId, body: text }).select(COMMENT_SELECT).single();
+    if (error) throw error;
+    return data;
+}
+
+async function deleteComment(id) {
+    _requireUser();
+    const { error } = await _requireSb().from('comments').delete().eq('id', id);
+    if (error) throw error;
+}
+
+// Nº de comentários de vários quadros de uma vez (vazio se a coluna ainda não existir).
+async function getCommentCounts(boardIds) {
+    const ids = (boardIds || []).filter(id => /^[0-9a-f-]{36}$/i.test(id));
+    if (!ids.length || !getSupabase()) return {};
+    try {
+        const { data, error } = await getSupabase().from('boards').select('id,comments_count').in('id', ids);
+        if (error) return {};
+        const out = {};
+        (data || []).forEach(r => { out[r.id] = r.comments_count || 0; });
+        return out;
+    } catch { return {}; }
+}
+
+// Denunciar um quadro ou um perfil (uma vez por pessoa).
+const REPORT_REASONS = ['sexual', 'odio', 'violencia', 'assedio', 'direitos', 'spam', 'outro'];
+async function reportContent({ boardId = null, profileId = null, commentId = null, reason, details = '' }) {
+    _requireUser();
+    if (!REPORT_REASONS.includes(reason)) throw new Error('Escolhe um motivo.');
+    if ([boardId, profileId, commentId].filter(Boolean).length !== 1) throw new Error('Nada para denunciar.');
+    const row = { reason, details: String(details || '').trim().slice(0, 500) || null };
+    if (boardId) row.board_id = boardId; else if (profileId) row.profile_id = profileId; else row.comment_id = Number(commentId);
+    const { error } = await _requireSb().from('reports').insert(row);
+    if (error) {
+        if (error.code === '23505') return { already: true };
+        throw error;
+    }
+    return { ok: true };
+}
+
+// Apaga a conta do utilizador com sessão: primeiro as imagens no Storage
+// (pastas quadros/<id> e avatars/<id>), depois a conta e tudo o que depende dela.
+async function deleteMyAccount() {
+    const sb = getSupabase();
+    if (!sb) throw new Error('Sem ligação ao servidor.');
+    const { data: { session } } = await sb.auth.getSession();
+    const uid = session && session.user && session.user.id;
+    if (!uid) throw new Error('Inicia sessão outra vez para apagar a conta.');
+    for (const bucket of ['quadros', 'avatars']) {
+        try {
+            for (let round = 0; round < 20; round++) {
+                const { data: files, error } = await sb.storage.from(bucket).list(uid, { limit: 100 });
+                if (error || !files || !files.length) break;
+                const paths = files.filter(f => f && f.name).map(f => `${uid}/${f.name}`);
+                if (!paths.length) break;
+                const { error: rmErr } = await sb.storage.from(bucket).remove(paths);
+                if (rmErr) break;
+            }
+        } catch (err) { console.warn('Imagens não apagadas em', bucket, err); }
+    }
+    const { error } = await sb.rpc('delete_my_account');
+    if (error) throw error;
+    await signOut();
+    try {
+        Object.keys(localStorage).filter(k => /^(pinspace|ps_)/i.test(k) && k !== 'ps_lang').forEach(k => localStorage.removeItem(k));
+    } catch { /* ok */ }
+}
+
 function _waitForSession(sb, ms) {
     return new Promise((resolve) => {
         const end = Date.now() + ms;
@@ -612,6 +680,20 @@ async function updateMyProfile(patch) {
         // Banner novo (data:…) → Storage, na mesma pasta do avatar.
         if (clean.cover_image && clean.cover_image.startsWith('data:')) {
             try { clean.cover_image = await uploadCover(clean.cover_image); } catch (err) { console.warn('Banner no Storage falhou, fica na tabela:', err); }
+        }
+    }
+    // Banner GIF animado: sobe tal como está (o canvas tirava a animação).
+    if (patch.cover_file) {
+        const f = patch.cover_file;
+        if (f.type !== 'image/gif') throw new Error('O banner animado tem de ser um GIF.');
+        if (f.size > 4 * 1024 * 1024) throw new Error('O GIF é grande demais (máx. 4 MB).');
+        try {
+            clean.cover_image = await _uploadImage('avatars', `${user.id}/cover.gif`, f);
+        } catch (err) {
+            if (/mime|type|size|too large|exceed/i.test(String(err && err.message))) {
+                throw new Error('O Storage ainda não aceita GIFs — corre outra vez o supabase/social.sql.');
+            }
+            throw err;
         }
     }
     if (patch.display_name !== undefined) clean.display_name = String(patch.display_name || '').trim().slice(0, 60) || null;

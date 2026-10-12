@@ -13,8 +13,8 @@
    ===================================================================== */
 
 const EL_PALETTES = {
-    studio:    { label: 'Studio',    ink: '#1d1d1f', paper: '#f4f4f1', soft: '#d4d4d0', mid: '#8e8e8a', accent: '#ff7a45' },
-    noite:     { label: 'Noite',     ink: '#f2f2f3', paper: '#1d1d20', soft: '#3a3a3f', mid: '#8a8a90', accent: '#ff5a2b' },
+    studio:    { label: 'Studio',    ink: '#1d1d1f', paper: '#f4f4f1', soft: '#d4d4d0', mid: '#8e8e8a', accent: '#e60023' },
+    noite:     { label: 'Noite',     ink: '#f2f2f3', paper: '#1d1d20', soft: '#3a3a3f', mid: '#8a8a90', accent: '#a9bcae' },
     creme:     { label: 'Creme',     ink: '#3b3029', paper: '#f3ece0', soft: '#e3d5c0', mid: '#a8957c', accent: '#c96f4a' },
     terracota: { label: 'Terracota', ink: '#0a0a0a', paper: '#f6f5f1', soft: '#edebe6', mid: '#8b8780', accent: '#e60023' },
     pastel:    { label: 'Pastel',    ink: '#4a4560', paper: '#fff7f2', soft: '#f6d6e0', mid: '#b7c7e8', accent: '#f4b8a0' },
@@ -26,12 +26,17 @@ const EL_PALETTE_KEY = 'pinspace_el_palette';
 function elPaletteId() {
     let id = 'auto';
     try { id = localStorage.getItem(EL_PALETTE_KEY) || 'auto'; } catch { /* ok */ }
-    if (id === 'auto') return document.documentElement.dataset.theme === 'dark' ? 'noite' : 'studio';
-    return EL_PALETTES[id] ? id : 'studio';
+    if (id === 'noite') return 'noite';
+    return document.documentElement.dataset.theme === 'dark' ? 'noite' : 'studio';
 }
 
 function elPalette() {
     return EL_PALETTES[elPaletteId()];
+}
+
+// Molduras seguem sempre o tema do editor (claro → Studio, escuro → Noite).
+function elThemePalette() {
+    return document.documentElement.dataset.theme === 'dark' ? EL_PALETTES.noite : EL_PALETTES.studio;
 }
 
 let _elUid = 0;
@@ -241,18 +246,25 @@ function createStickerElement(stickerId, elementos, boardW = 1080, boardH = 1080
 /* ---------------------------------------------------------------------
    Painel "Elementos"
    --------------------------------------------------------------------- */
+// Por agora: só 3 tipos com 3 elementos cada (a pasta de elementos
+// definitiva vai substituir esta lista).
+ELEMENT_PACKS.splice(3);
+ELEMENT_PACKS.forEach(pk => pk.items.splice(3));
+
 let _elActivePack = 'minimal';
 
 function _paletteChips() {
     let saved = 'auto';
     try { saved = localStorage.getItem(EL_PALETTE_KEY) || 'auto'; } catch { /* ok */ }
+    if (saved !== 'noite') saved = 'auto';
     const auto = document.documentElement.dataset.theme === 'dark' ? EL_PALETTES.noite : EL_PALETTES.studio;
     const chip = (id, label, p) => `
         <button type="button" class="el-palette ${saved === id ? 'active' : ''}" data-el-palette="${id}" title="${label}">
             <span class="el-palette-dots"><i style="background:${p.ink}"></i><i style="background:${p.accent}"></i><i style="background:${p.paper}"></i></span>
             <span>${label}</span>
         </button>`;
-    return chip('auto', 'Tema', auto) + Object.entries(EL_PALETTES).map(([id, p]) => chip(id, p.label, p)).join('');
+    // Só "Tema" (segue claro/escuro) e "Noite".
+    return chip('auto', 'Tema', auto) + chip('noite', EL_PALETTES.noite.label, EL_PALETTES.noite);
 }
 
 function _elementsGrid(packId, query) {
@@ -263,7 +275,7 @@ function _elementsGrid(packId, query) {
         : (ELEMENT_PACKS.find(pk => pk.id === packId) || ELEMENT_PACKS[0]).items;
     if (!items.length) return '<p class="panel-hint">Nenhum elemento com esse nome.</p>';
     return items.map(it => `
-        <button type="button" class="el-option" data-sticker-id="${it[0]}" title="${it[1]}" draggable="false">
+        <button type="button" class="el-option" data-sticker-id="${it[0]}" data-ps-drag="sticker:${it[0]}" title="${it[1]}" draggable="false">
             <span class="el-thumb">${_elementSVG(it, p)}</span>
             <span class="el-name">${it[1]}</span>
         </button>`).join('');
@@ -286,7 +298,7 @@ function getStickersPanelHTML() {
                 ${ELEMENT_PACKS.map(pk => `<button type="button" class="el-pack ${pk.id === _elActivePack ? 'active' : ''}" data-el-pack="${pk.id}">${pk.label}</button>`).join('')}
             </div>
             <div class="el-grid" id="el-grid">${_elementsGrid(_elActivePack)}</div>
-            <p class="panel-hint">Clica para adicionar. Cada elemento fica numa camada própria — podes mudar a cor escolhendo outra paleta antes.</p>
+            <p class="panel-hint">Clica ou arrasta para o quadro. Cada elemento fica numa camada própria — podes mudar a cor escolhendo outra paleta antes.</p>
         </div>`;
 }
 
@@ -453,7 +465,7 @@ function createFrameElement(frameId, boardW, boardH, elementos) {
     return {
         tipo: 'imagem',
         id: generateId(),
-        src: _svgDataURL(getMolduraSVG(frameId, boardW, boardH)),
+        src: _svgDataURL(getMolduraSVG(frameId, boardW, boardH, elThemePalette())),
         x: 0,
         y: 0,
         width: boardW,
@@ -471,36 +483,25 @@ function createFrameElement(frameId, boardW, boardH, elementos) {
 }
 
 function getMoldurasPanelHTML() {
-    const p = elPalette();
+    const p = elThemePalette();
     const W = 160, H = 200;
-    // Fundo de exemplo por trás de cada pré-visualização
     const sample = `linear-gradient(135deg, ${p.soft}, ${p.mid})`;
     return `
         <div class="panel-section el-section">
-            <div class="el-head"><h4>Molduras</h4><span class="el-count">${MOLDURAS.length}</span></div>
-            <div class="el-palettes" id="el-palettes">${_paletteChips()}</div>
-            <div class="frame-grid" id="frame-grid">
+            <p class="panel-hint fx-drag-hint">Clica ou arrasta para o quadro. A moldura fica por cima das fotos mas não as tapa nos cliques — para a mover ou apagar, escolhe-a nas Camadas.</p>
+            <div class="fx-grid fx-grid-3 frame-grid" id="frame-grid">
                 ${MOLDURAS.map(([id, label]) => `
-                    <button type="button" class="frame-option" data-moldura="${id}" title="${label}">
+                    <button type="button" class="fx-tile frame-option" data-moldura="${id}" data-ps-drag="frame:${id}" title="${label}" draggable="false">
                         <span class="frame-thumb" style="background:${sample}">${getMolduraSVG(id, W, H, p)}</span>
-                        <span class="el-name">${label}</span>
+                        <span>${label}</span>
                     </button>`).join('')}
             </div>
-            <p class="panel-hint">A moldura fica por cima das fotos mas não as tapa nos cliques. Para a mover ou apagar, escolhe-a nas Camadas.</p>
         </div>`;
 }
 
 function bindMoldurasPanelEvents(panel, callbacks) {
     panel.querySelector('#frame-grid')?.addEventListener('click', (e) => {
         const b = e.target.closest('[data-moldura]');
-        if (b) callbacks.onAddFrame?.(b.dataset.moldura);
-    });
-    panel.querySelector('#el-palettes')?.addEventListener('click', (e) => {
-        const b = e.target.closest('[data-el-palette]');
-        if (!b) return;
-        try { localStorage.setItem(EL_PALETTE_KEY, b.dataset.elPalette); } catch { /* ok */ }
-        const host = panel.closest('#design-content') || panel;
-        host.innerHTML = getMoldurasPanelHTML();
-        bindMoldurasPanelEvents(host, callbacks);
+        if (b && !b._psDragged) callbacks.onAddFrame?.(b.dataset.moldura);
     });
 }

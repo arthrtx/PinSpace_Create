@@ -542,3 +542,56 @@
         transition-duration: 0.01ms !important;
     }
 }
+
+/* =====================================================================
+   Telemóvel (revisão)
+   ===================================================================== */
+@media (max-width: 720px) {
+    /* Página inicial: barra numa só linha, sem os botões do editor
+       (o editor só existe no computador) */
+    .ms-nav {
+        flex-wrap: nowrap;
+        gap: 8px;
+        padding: 8px 8px 8px 16px;
+        border-radius: 999px;
+    }
+    .ms-nav-brand { font-size: 15px; gap: 8px; white-space: nowrap; min-width: 0; }
+    .ms-nav-right { flex-wrap: nowrap; gap: 6px; min-width: 0; }
+    #btn-abrir-projeto, #btn-novo-projeto { display: none !important; }
+    .ms-nav-auth { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
+    .ms-nav-auth .ms-nav-link, .ms-nav-auth a, .ms-nav-auth button { font-size: 13px; white-space: nowrap; padding: 6px 8px; }
+    .ms-nav-auth { gap: 0; }
+    .ms-nav { padding-right: 12px; }
+
+    /* Comunidade/perfil: a barra deixa de ter backdrop-filter (que prendia a
+       doca de ícones lá em cima, por cima do logo). O vidro passa para um
+       ::before, que não afeta a doca fixa em baixo. */
+    .ps-app .ps-nav,
+    .ps-app.is-scrolled .ps-nav {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+        background: rgba(10, 10, 10, 0.5);
+        position: relative;
+        isolation: isolate;
+    }
+    .ps-app .ps-nav::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        border-radius: inherit;
+        -webkit-backdrop-filter: blur(16px) saturate(1.4);
+        backdrop-filter: blur(16px) saturate(1.4);
+        pointer-events: none;
+    }
+    .ps-app .ps-nav-links { z-index: 80; }
+}
+
+/* Aviso "o editor é só para computador" */
+.ps-pc-only { text-align: center; }
+.ps-pc-only .ps-pc-ic { width: 64px; height: 64px; margin: 6px auto 14px; border-radius: 20px; display: grid; place-items: center; background: rgba(230, 0, 35, .14); color: #E60023; }
+.ps-pc-only h2 { margin: 0 0 8px; font-size: 20px; }
+.ps-pc-only p { margin: 0 0 18px; line-height: 1.5; opacity: .8; }
+.ps-pc-only ul { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 8px; text-align: left; }
+.ps-pc-only li { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: rgba(255,255,255,.06); font-size: 14px; }
+.ps-pc-only .btn { width: 100%; }

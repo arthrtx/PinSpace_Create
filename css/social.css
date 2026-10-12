@@ -949,7 +949,7 @@ a.ps-card-author:hover { color: #FFF; text-decoration: underline; text-decoratio
 
 /* Rascunhos no perfil: botão Publicar em destaque */
 .project-card-actions button.publish {
-    background: linear-gradient(180deg, #FF8A4C, #FF6B2C) !important;
+    background: linear-gradient(180deg, #F4465C, #E60023) !important;
     border-color: transparent !important;
     color: #FFF !important;
     font-weight: 700;
@@ -957,3 +957,28 @@ a.ps-card-author:hover { color: #FFF; text-decoration: underline; text-decoratio
 .project-card-actions button.publish:hover { filter: brightness(1.06); }
 
 html[lang="en"] .ps-follow.is-following:hover span::after { content: 'Unfollow'; }
+
+/* Apagar conta (zona de perigo no editor de perfil) */
+.perfil-danger { margin-top: 18px; border-top: 1px solid rgba(127,127,127,.25); padding-top: 12px; font-size: 13px; }
+.perfil-danger summary { cursor: pointer; color: #c62828; font-weight: 600; list-style: none; }
+.perfil-danger summary::-webkit-details-marker { display: none; }
+.perfil-danger p { margin: 8px 0; opacity: .8; line-height: 1.45; }
+.perfil-danger-confirm { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.perfil-danger-confirm input { padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(127,127,127,.35); background: transparent; color: inherit; font: inherit; }
+.perfil-danger-btn { width: 100%; background: #c62828; color: #fff; border: 0; }
+.perfil-danger-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Denúncias */
+.report-reasons { border: 0; padding: 0; margin: 0 0 14px; display: grid; gap: 6px; }
+.report-reasons legend { font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+.report-reasons label { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(127,127,127,.22); cursor: pointer; font-size: 14px; }
+.report-reasons label:has(input:checked) { border-color: #E60023; background: rgba(230,0,35,.07); }
+.report-reasons input { accent-color: #E60023; margin: 0; }
+.fd-act-report { opacity: .55; }
+.fd-act-report:hover { opacity: 1; color: #E60023; }
+.fd-legal { margin: 10px 4px 0; font-size: 12px; opacity: .6; }
+.fd-legal a, .ms-footer-bottom a { color: inherit; }
+#modal-report .modal-content { max-height: calc(100dvh - 32px); overflow-y: auto; }
+#modal-report .report-reasons label { padding: 7px 12px; }
+#fd-posts { transition: opacity .15s; }
+#fd-posts.is-searching { opacity: .55; }

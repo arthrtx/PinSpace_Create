@@ -9,39 +9,35 @@
         <link rel="preconnect" href="https://i.pinimg.com">
         <link rel="dns-prefetch" href="https://i.pinimg.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;600;700&family=Open+Sans&family=Roboto&family=Lato&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Lora&family=Merriweather&family=Oswald:wght@400;500;600&family=Bebas+Neue&family=Archivo+Black&family=Abril+Fatface&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;600;700&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Advent+Pro:wght@400;600&family=Courier+Prime&family=Goudy+Bookletter+1911&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=3.4">
+    <link rel="stylesheet" href="css/style.css?v=3.7">
     <link rel="stylesheet" href="css/editor-improvements.css?v=2.4">
-    <link rel="stylesheet" href="css/responsive.css?v=2.4">
-    <link rel="stylesheet" href="css/social.css?v=2.2">
-    <link rel="stylesheet" href="css/glass.css?v=3.7">
-    <link rel="stylesheet" href="css/music.css?v=1.6">
-    <link rel="stylesheet" href="css/editor-theme.css?v=2.3">
+    <link rel="stylesheet" href="css/responsive.css?v=f5">
+    <link rel="stylesheet" href="css/social.css?v=f1">
+    <link rel="stylesheet" href="css/glass.css?v=4.0">
+    <link rel="stylesheet" href="css/music.css?v=sec4">
+    <link rel="stylesheet" href="css/hero-intro.css?v=14">
+    <link rel="stylesheet" href="css/footer-glass.css?v=11">
+    <link rel="stylesheet" href="css/music-anim.css?v=1">
+    <link rel="stylesheet" href="css/editor-theme.css?v=2.4">
+    <link rel="stylesheet" href="css/editor-plus.css?v=f4">
     <link rel="preload" href="fonts/host-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/montserrat-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="css/fonts.css?v=1.6">
-    <link rel="stylesheet" href="css/social-v2.css?v=1.7">
+    <link rel="stylesheet" href="css/fonts.css?v=1.8">
+    <link rel="stylesheet" href="css/social-v2.css?v=f6">
 </head>
 <body>
 
     <div id="scroll-progress" aria-hidden="true"></div>
     <div class="ms-grain" aria-hidden="true"></div>
 
-    <div class="ms-intro" id="ms-intro" aria-hidden="true">
-        <div class="ms-intro-word">
-            <span class="mi-i" style="--i:0">p</span><span class="mi-i" style="--i:1">i</span><span class="mi-i" style="--i:2">n</span><span class="mi-i" style="--i:3">&nbsp;&nbsp;space</span><span class="mi-i mi-dot" style="--i:4">.</span>
-        </div>
-        <span class="ms-intro-sub" style="--i:5">começa a criar</span>
-    </div>
-
     <div class="ms-coords" aria-hidden="true">0000 X · 0000 Y</div>
 
     <div id="home-view" class="view active">
         <div class="home-container">
 
-            <header class="ms-hero">
-                <img class="ms-hero-bg" src="https://i.pinimg.com/originals/a8/be/00/a8be002065390491cd1c67a3902333d5.jpg" alt="" aria-hidden="true" loading="eager" fetchpriority="high">
+            <header class="ms-hero ms-hero-intro">
                 <nav class="ms-nav" data-reveal>
-                    <a href="#quadros-publicos" class="ms-nav-brand">
+                    <a href="#" class="ms-nav-brand">
                         <span class="logo-mark" aria-hidden="true">
                             <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
                                 <circle cx="16" cy="16" r="15" fill="currentColor"/>
@@ -63,150 +59,42 @@
                     </div>
                 </nav>
 
-                <div class="ms-hero-shade" aria-hidden="true"></div>
-
-                <div class="ms-hero-inner" data-parallax="0.12">
-                    <p class="ms-hero-topline" data-reveal data-reveal-delay="3">The studio for creative matters.</p>
-                    <h1 class="ms-hero-word">
-                        <span class="ms-word-line" data-scroll-text data-reveal-delay="6">CREATE</span>
-                        <span class="ms-word-sub" data-reveal-mask data-reveal-delay="4"><em>pin space</em></span>
-                    </h1>
-                    <div class="ms-hero-meta">
-                        <p class="ms-hero-pills" data-reveal data-reveal-delay="2"><span class="pdot" aria-hidden="true"></span>Vision boards<span class="pdot" aria-hidden="true"></span>Moodboards<span class="pdot" aria-hidden="true"></span>Collage</p>
-                        <div class="ms-stats">
-                            <div class="ms-stat" data-reveal data-reveal-delay="3"><b>∞</b><span>ideias guardadas</span></div>
-                            <div class="ms-stat" data-reveal data-reveal-delay="4"><b>22°C</b><span>Lisboa · Now</span></div>
-                            <div class="ms-stat" data-reveal data-reveal-delay="5"><b>0</b><span>limites</span></div>
-                        </div>
+                <!-- Introdução animada (HTML/CSS, js/hero-intro.js): o nome cobre o ecrã, a demo corre aqui e,
+                     quando acaba, fica o último plano animado com atalhos -->
+                <!-- fundo: brilho + parede de ecrãs; desce um pouco pela secção da música e desvanece -->
+                <div class="hv-back" id="hv-back" aria-hidden="true">
+                    <div class="hv-glow" id="hv-glow"></div>
+                    <div class="hv-bstage" id="hv-bstage">
+                        <div class="hv-wall" id="hv-wall"><div class="hv-cols" id="hv-cols"></div></div>
+                        <div class="hv-shade" id="hv-shade"></div>
                     </div>
+                </div>
+                <div class="hv" id="hero-intro">
+                    <div class="hv-stage" id="hv-stage">
+                        <div class="pi" id="pi"></div>
+                        <div class="hv-title"><div class="hv-inner">
+                                <p class="hv-top">The studio for creative matters.</p>
+                                <div class="hv-big"><span class="hv-big-txt">pin space</span><b>.</b></div>
+                                <div class="hv-tag"><span>cria</span><i></i><span>partilha</span><i></i><span>ouve</span></div>
+                                <a class="hv-music" href="#musica">
+                                    <span class="hv-music-ic" aria-hidden="true"><svg viewBox="0 0 32 14" width="30" height="13" fill="currentColor"><path d="M0 10.9c0 .9.3 1.6 1 2.1l.2-2.1-.2-2.2c-.7.5-1 1.3-1 2.2zm2.1-3.4L1.8 10.9l.3 3.1h.5l.3-3.1-.3-3.4zm1.6-.6-.3 4 .3 3.1h.5l.3-3.1-.3-4zm1.6-.3-.3 4.3.3 3.1h.5l.3-3.1-.3-4.3zm1.6-.2-.3 4.5.3 3.1h.5l.3-3.1-.3-4.5zm1.6-.6-.2 5.1.2 3.1h.6l.2-3.1-.2-5.1zm1.7-1-.2 6.1.2 3.1h.6l.2-3.1-.2-6.1zm1.7-.6-.2 6.7.2 3.1h.6l.2-3.1-.2-6.7zm1.8-.4c-.1 0-.2 0-.3.1v10.1h.1l.3-3.1-.1-7.1zm.7-.8V14h12.3c2.2 0 4-1.8 4-4s-1.8-4-4-4c-.5 0-1 .1-1.5.3C24.4 3 21.8.6 18.6.6c-.8 0-1.6.2-2.3.5-.3.1-.4.2-.4.4z"/></svg></span>
+                                    <span class="hv-music-txt"><b>Liga o teu SoundCloud</b><small>e ouve música enquanto crias</small></span>
+                                    <span class="hv-music-go" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span>
+                                </a>
+                            </div></div>
+                    </div>
+                    <div class="hv-load" id="hv-load" aria-hidden="true"><i></i></div>
+                    <button type="button" class="hv-skip" id="hv-skip">Saltar intro
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5l7 7-7 7M13 5l7 7-7 7"/></svg>
+                    </button>
+                    <button type="button" class="hv-replay" id="hv-replay" title="Ver a introdução de novo" aria-label="Ver a introdução de novo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+                    </button>
                 </div>
             </header>
 
             <div class="ms-glass-zone">
             <section class="ms-feature">
-                <!-- Doca vertical (como os ícones à esquerda da referência) -->
-                <!-- Palco da galeria: fundo próprio (foto desfocada) só nesta parte -->
-                <div class="gw-stage">
-                <div class="gw-stage-bg" aria-hidden="true"></div>
-
-                <!-- Título fora da janela, por cima -->
-                <header class="music-head gw-stage-head">
-                    <span class="music-head-kicker">Galeria</span>
-                    <h3 class="music-head-title">Galeria pública</h3>
-                    <p class="music-head-sub">Os teus atalhos, o quadro em destaque e um espreitar ao que a comunidade anda a criar. Abre um quadro público e edita-o à vontade.</p>
-                </header>
-                <!-- Doca + janela lado a lado -->
-                <div class="gw-stage-row">
-                <nav class="gw-dock" aria-label="Atalhos">
-                    <button type="button" class="gw-dock-btn" data-dock="top" title="Início"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></button>
-                    <a class="gw-dock-btn" href="#explore" title="Explorar a comunidade"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg></a>
-                    <button type="button" class="gw-dock-btn gw-dock-accent" data-dock="new" title="Novo quadro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-                    <button type="button" class="gw-dock-btn" data-dock="open" title="Abrir quadro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></button>
-                    <a class="gw-dock-btn" href="#profile" data-dock="profile" title="O meu perfil"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>
-                </nav>
-                <div class="glass-window">
-
-                <!-- Barra superior da janela: pesquisa + chips -->
-                <div class="gw-toolbar" data-reveal data-reveal-delay="1">
-                    <div class="home-search">
-                        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                        <input type="search" id="search-projetos" placeholder="Procurar na comunidade…" autocomplete="off">
-                    </div>
-                    <div class="gw-chips" role="tablist" aria-label="Secções">
-                        <button type="button" class="gw-chip active" data-chip="all">Tudo</button>
-                        <button type="button" class="gw-chip" data-chip="quadros-publicos">Públicos</button>
-                        <a class="gw-chip" href="#profile" data-dock="profile">Os meus</a>
-                        <a class="gw-chip" href="#explore">Comunidade</a>
-                    </div>
-                </div>
-
-                <div class="gw-dashboard">
-                    <!-- Coluna de widgets -->
-                    <aside class="gw-side" data-reveal data-reveal-delay="2">
-                        <div class="gw-widget gw-clock" aria-label="Hora em Lisboa">
-                            <span class="gw-w-kicker">Lisboa · agora</span>
-                            <div class="gw-clock-time" id="w-clock-time">--:--</div>
-                            <div class="gw-clock-date" id="w-clock-date"></div>
-                            <div class="gw-clock-stats">
-                                <span><b id="w-stat-local">0</b> neste dispositivo</span>
-                                <span><b id="w-stat-public">0</b> na galeria</span>
-                            </div>
-                        </div>
-
-                        <div class="gw-widget gw-continue">
-                            <div class="gw-w-head">
-                                <h5>Continuar a editar</h5>
-                                <a class="gw-mini" href="#profile" data-dock="profile">ver todos</a>
-                            </div>
-                            <ul class="gw-list" id="w-continue"></ul>
-                        </div>
-
-                        <div class="gw-widget gw-weather" id="w-weather" aria-label="Previsão do tempo em Lisboa" hidden>
-                            <div class="gw-w-head"><h5>Tempo · Lisboa</h5><span class="gw-mini-note" id="w-weather-hl"></span></div>
-                            <div class="gw-weather-body">
-                                <div class="gw-weather-now">
-                                    <span class="gw-weather-icon" id="w-weather-icon" aria-hidden="true">·</span>
-                                    <div class="gw-weather-temp"><b id="w-weather-temp">--°</b><small id="w-weather-desc">a carregar…</small></div>
-                                </div>
-                                <ol class="gw-weather-days" id="w-weather-days"></ol>
-                            </div>
-                        </div>
-
-                        <div class="gw-widget gw-tip">
-                            <span class="gw-w-kicker">✦ Dica</span>
-                            <p id="w-tip">Arrasta imagens diretamente do computador para o quadro.</p>
-                            <button type="button" class="gw-mini" id="w-tip-next">outra dica →</button>
-                        </div>
-                    </aside>
-
-                    <!-- Conteúdo principal -->
-                    <div class="gw-content">
-                        <article class="gw-featured" id="w-featured" data-reveal data-reveal-delay="2" aria-roledescription="carrossel" aria-label="Quadros em destaque">
-                            <div class="gw-featured-bg" id="w-featured-bg"></div>
-                            <div class="gw-featured-body">
-                                <span class="gw-pill gw-pill-hot">🔥 Em destaque</span>
-                                <div class="gw-featured-tags" id="w-featured-tags"></div>
-                                <h3 class="gw-featured-title" id="w-featured-title">A carregar quadros…</h3>
-                                <p class="gw-featured-meta" id="w-featured-meta">Quadros públicos da comunidade aparecem aqui.</p>
-                                <div class="gw-featured-actions">
-                                    <button type="button" class="gw-btn-white" id="w-featured-open" disabled>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
-                                        Abrir e editar
-                                    </button>
-                                    <a class="gw-btn-glass" href="#explore">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>
-                                        Explorar
-                                    </a>
-                                    <button type="button" class="gw-btn-round" data-dock="new" title="Criar o meu quadro" aria-label="Criar o meu quadro">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="gw-featured-nav">
-                                <div class="gw-dots" id="w-featured-dots"></div>
-                                <button type="button" class="gw-btn-round" id="w-featured-prev" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
-                                <button type="button" class="gw-btn-round" id="w-featured-next" aria-label="Seguinte"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
-                            </div>
-                        </article>
-
-                        <!-- Vista pequena da comunidade: clicar leva a Explorar -->
-                        <a href="#explore" class="gw-community" id="quadros-publicos" data-reveal data-reveal-delay="2">
-                            <span class="gw-community-text">
-                                <span class="gw-w-kicker">Comunidade</span>
-                                <strong>Vê o que a comunidade está a criar</strong>
-                                <small>Quadros públicos, reposts e novos perfis</small>
-                            </span>
-                            <span class="gw-community-thumbs" id="gw-community-thumbs" aria-hidden="true"></span>
-                            <span class="gw-community-go" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
-                        </a>
-                        <!-- Lista escondida: continua a alimentar as miniaturas -->
-                        <div id="lista-publicos" hidden></div>
-
-                    </div>
-                </div>
-                </div>
-                </div><!-- /gw-stage-row -->
-                </div><!-- /gw-stage -->
 
                 <!-- =====================================================
                      Música (SoundCloud): caixa de ligação + coverflow +
@@ -227,7 +115,7 @@
                                 <svg viewBox="0 0 32 14" width="34" height="15" fill="currentColor"><path d="M0 10.9c0 .9.3 1.6 1 2.1l.2-2.1-.2-2.2c-.7.5-1 1.3-1 2.2zm2.1-3.4L1.8 10.9l.3 3.1h.5l.3-3.1-.3-3.4zm1.6-.6-.3 4 .3 3.1h.5l.3-3.1-.3-4zm1.6-.3-.3 4.3.3 3.1h.5l.3-3.1-.3-4.3zm1.6-.2-.3 4.5.3 3.1h.5l.3-3.1-.3-4.5zm1.6-.6-.2 5.1.2 3.1h.6l.2-3.1-.2-5.1zm1.7-1-.2 6.1.2 3.1h.6l.2-3.1-.2-6.1zm1.7-.6-.2 6.7.2 3.1h.6l.2-3.1-.2-6.7zm1.8-.4c-.1 0-.2 0-.3.1v10.1h.1l.3-3.1-.1-7.1zm.7-.8V14h12.3c2.2 0 4-1.8 4-4s-1.8-4-4-4c-.5 0-1 .1-1.5.3C24.4 3 21.8.6 18.6.6c-.8 0-1.6.2-2.3.5-.3.1-.4.2-.4.4z"/></svg>
                             </span>
                             <div>
-                                <span class="gw-w-kicker">SoundCloud</span>
+                                <span class="music-kicker">SoundCloud</span>
                                 <h4 class="music-connect-title" id="music-connect-title">Liga o teu SoundCloud</h4>
                                 <p class="music-connect-sub" id="music-connect-sub">Até lá, ouve as novidades da semana. Depois de ligares, segue o teu feed.</p>
                             </div>
@@ -239,9 +127,9 @@
                             </button>
                             <form class="music-link-form" id="music-link-form" hidden>
                                 <input type="text" id="music-link-input" placeholder="soundcloud.com/o-teu-nome" autocomplete="off" spellcheck="false" aria-label="Link do teu perfil SoundCloud">
-                                <button type="submit" class="gw-btn-white">Ligar</button>
+                                <button type="submit" class="music-btn-white">Ligar</button>
                             </form>
-                            <button type="button" class="gw-mini" id="music-link-toggle">ou usar o link do perfil</button>
+                            <button type="button" class="music-mini" id="music-link-toggle">ou usar o link do perfil</button>
                         </div>
                         <p class="music-connect-error" id="music-connect-error" role="alert" hidden></p>
                     </div>
@@ -309,57 +197,29 @@
                 </section>
             </section>
 
-            <div class="ms-marquee" aria-hidden="true">
-                <div class="ms-marquee-track">
-                    <div class="ms-marquee-run">
-                        <span class="ms-marquee-word">pin space</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">create</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">stay curious</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">collage</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">vision boards</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">mood boards</span><span class="ms-marquee-dot">·</span>
-                    </div>
-                    <div class="ms-marquee-run" aria-hidden="true">
-                        <span class="ms-marquee-word">pin space</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">create</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">stay curious</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">collage</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">vision boards</span><span class="ms-marquee-dot">·</span>
-                        <span class="ms-marquee-word">mood boards</span><span class="ms-marquee-dot">·</span>
-                    </div>
-                </div>
-            </div>
-
             </div><!-- /.ms-glass-zone -->
 
-            <footer class="ms-footer">
-                <div class="ms-footer-top" data-reveal>
-                    <div>
-                        <span class="ms-kicker">Mais projetos em</span>
-                        <a class="ms-footer-link" href="https://github.com/arthrtx" target="_blank" rel="noopener">
-                            github.com/arthrtx
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
-                        </a>
-                    </div>
-                    <div class="ms-footer-icons" aria-hidden="true">
-                        <svg class="spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="48 15"/></svg>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="15" fill="currentColor"/><path d="M16 9c-2 0-3.6 1.6-3.6 3.6 0 2.4 3.6 8.1 3.6 8.1s3.6-5.7 3.6-8.1C19.6 10.6 18 9 16 9z" fill="#0A0A0A"/></svg>
-                    </div>
+            <!-- Rodapé: barra de vidro "PinSpace Create." que se inclina com o rato (js/footer-glass.js) -->
+            <footer class="ms-footer fg" id="fg">
+                <div class="fg-scene" id="fg-scene">
+                    <button type="button" class="fg-key" id="fg-key" aria-label="PinSpace Create.">
+                        <img class="fg-img" src="img/footer-bar.jpg" width="2848" height="660" alt="PinSpace Create." decoding="async" loading="lazy">
+                    </button>
                 </div>
-                <div class="ms-mask" data-reveal-mask data-reveal-delay="1">
-                    <div class="ms-footer-word" data-reveal-cycle>pin space.</div>
+                <p class="fg-line">O teu espaço para guardar ideias — colagens, moodboards e vision boards.</p>
+                <div class="fg-cta">
+                    <button type="button" class="fg-btn fg-btn-main" data-fg-new>
+                        Criar colagem
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                    <a class="fg-btn" href="#explore">Explorar a comunidade</a>
                 </div>
-                <div class="ms-footer-tags" data-reveal data-reveal-delay="2">
-                    <span class="ms-tag">vision boards</span>
-                    <span class="ms-tag">mood boards</span>
-                    <span class="ms-tag">collage</span>
-                    <span class="ms-tag">inspiração</span>
-                </div>
-                <div class="ms-footer-bottom" data-reveal data-reveal-delay="3">
-                    <span>© PinSpace Create — o teu espaço para guardar ideias.</span>
-                    <span>Feito para criar, sem limites.</span>
+                <div class="fg-bottom">
+                    <span>© PinSpace Create · <a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos</a></span>
+                    <span class="fg-tags"><i>vision boards</i><i>mood boards</i><i>collage</i></span>
+                    <a class="fg-gh" href="https://github.com/arthrtx" target="_blank" rel="noopener">Mais projetos em github.com/arthrtx
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
+                    </a>
                 </div>
             </footer>
 
@@ -432,7 +292,7 @@
                 </div>
                 <div class="ps-footer-word">pin space.</div>
                 <div class="ms-footer-bottom">
-                    <span>© PinSpace Create — o teu espaço para guardar ideias.</span>
+                    <span>© PinSpace Create — o teu espaço para guardar ideias. · <a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos</a></span>
                     <span>Feito para criar, sem limites.</span>
                 </div>
             </footer>
@@ -528,11 +388,17 @@
                         </span>
                         <span class="tool-label">Ferramentas</span>
                     </button>
-                    <button class="tool-btn" data-tool="design" title="Elementos e molduras">
+                    <button class="tool-btn" data-tool="design" title="Studio e galeria de stickers">
                         <span class="tool-icon">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M12 3c.8 4.6 3.4 7.2 8 8-4.6.8-7.2 3.4-8 8-.8-4.6-3.4-7.2-8-8 4.6-.8 7.2-3.4 8-8z"/></svg>
                         </span>
-                        <span class="tool-label">Elementos</span>
+                        <span class="tool-label">Studio</span>
+                    </button>
+                    <button class="tool-btn tool-btn-templates" id="btn-templates" type="button" title="Templates — elementos dos quadros públicos">
+                        <span class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg>
+                        </span>
+                        <span class="tool-label">Templates</span>
                     </button>
                     </div>
                 <div class="toolbar-divider"></div>
@@ -677,11 +543,20 @@
                     <header class="ed-card-head">
                         <h3>Camadas</h3>
                         <span class="ed-count" id="ed-layers-count">0</span>
+                        <button type="button" class="edl-merge-toggle" id="edl-merge-toggle" title="Escolher camadas para juntar numa só">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>
+                            <span>Juntar</span>
+                        </button>
                         <button type="button" class="btn-icon-only ed-right-close" id="ed-right-close" aria-label="Fechar camadas">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                         </button>
                     </header>
                     <div class="ed-layers" id="ed-layers"></div>
+                    <div class="edl-merge-bar" id="edl-merge-bar" hidden>
+                        <span id="edl-merge-hint">Escolhe camadas</span>
+                        <button type="button" class="edl-merge-cancel" id="edl-merge-cancel">Cancelar</button>
+                        <button type="button" class="edl-merge-go" id="edl-merge-go" disabled>Juntar</button>
+                    </div>
                 </section>
                 <section class="ed-card ed-sel-card" id="ed-sel-card">
                     <header class="ed-card-head"><h3 id="ed-sel-title">Quadro</h3></header>
@@ -804,7 +679,7 @@
                 <p class="auth-error" role="alert" hidden></p>
                 <label class="auth-terms">
                     <input type="checkbox" id="auth-terms">
-                    <span>Aceito os <button type="button" class="auth-terms-link" id="auth-terms-toggle">termos de uso</button></span>
+                    <span>Aceito os <a class="auth-terms-link" href="termos.html" target="_blank" rel="noopener">Termos</a> e a <a class="auth-terms-link" href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a> (<button type="button" class="auth-terms-link" id="auth-terms-toggle">resumo</button>)</span>
                 </label>
                 <ul class="auth-terms-detail" id="auth-terms-detail" hidden></ul>
             </div>
@@ -832,6 +707,69 @@
         </div>
     </dialog>
 
+    <!-- Denunciar quadro ou perfil -->
+    <dialog id="modal-report" class="modal" aria-labelledby="report-title">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="report-title">Denunciar</h2>
+                <button class="modal-close btn-icon-only" data-close-modal aria-label="Fechar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="modal-desc" id="report-desc">A denúncia é anónima para o autor. Conteúdo com várias denúncias fica escondido até ser revisto.</p>
+            <form id="form-report">
+                <fieldset class="report-reasons">
+                    <legend>Qual é o problema?</legend>
+                    <label><input type="radio" name="reason" value="sexual" required> Conteúdo sexual</label>
+                    <label><input type="radio" name="reason" value="odio"> Ódio ou discriminação</label>
+                    <label><input type="radio" name="reason" value="violencia"> Violência</label>
+                    <label><input type="radio" name="reason" value="assedio"> Assédio ou bullying</label>
+                    <label><input type="radio" name="reason" value="direitos"> Usa imagens minhas ou sem direitos</label>
+                    <label><input type="radio" name="reason" value="spam"> Spam ou burla</label>
+                    <label><input type="radio" name="reason" value="outro"> Outro</label>
+                </fieldset>
+                <div class="form-group">
+                    <label for="report-details">Detalhes (opcional)</label>
+                    <textarea id="report-details" rows="3" maxlength="500" placeholder="Explica em poucas palavras"></textarea>
+                </div>
+                <p class="auth-error" role="alert" hidden></p>
+                <button type="submit" class="btn btn-primary auth-submit">Enviar denúncia</button>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- Ajustar foto / banner (enquadrar e fazer zoom) -->
+    <dialog id="modal-crop" class="modal" aria-labelledby="crop-title">
+        <div class="modal-content crop-content">
+            <div class="modal-header">
+                <h2 id="crop-title">Ajustar</h2>
+                <button class="modal-close btn-icon-only" data-crop="cancel" aria-label="Fechar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="modal-desc">Arrasta para enquadrar e usa o zoom.</p>
+            <div class="crop-stage" id="crop-stage"><img id="crop-img" alt="" draggable="false"></div>
+            <label class="crop-zoom">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M8 11h6"/></svg>
+                <input type="range" id="crop-zoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M11 8v6"/></svg>
+            </label>
+            <div class="crop-actions">
+                <button type="button" class="btn btn-secondary" data-crop="cancel">Cancelar</button>
+                <button type="button" class="btn btn-primary" data-crop="ok">Aplicar</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Ver foto / banner em grande -->
+    <dialog id="modal-lightbox" class="ps-lightbox" aria-label="Imagem em grande">
+        <button type="button" class="ps-lightbox-close" data-lb="close" aria-label="Fechar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <img id="lightbox-img" alt="">
+        <button type="button" class="ps-lightbox-edit" data-lb="edit" hidden>Mudar</button>
+    </dialog>
+
     <!-- Editar perfil -->
     <dialog id="modal-perfil" class="modal" aria-labelledby="perfil-title">
         <div class="modal-content">
@@ -846,14 +784,17 @@
                     <div class="perfil-cover-preview" id="perfil-cover-preview"><span>Sem banner</span></div>
                     <div class="perfil-cover-btns">
                         <button type="button" class="btn btn-secondary" id="perfil-cover-pick">Mudar banner</button>
+                        <button type="button" class="btn btn-secondary" id="perfil-cover-adjust">Ajustar</button>
                         <button type="button" class="btn btn-secondary" id="perfil-cover-remove">Remover</button>
                         <input type="file" id="perfil-cover-file" accept="image/*" hidden>
                     </div>
+                    <p class="auth-field-hint perfil-gif-hint">Podes usar um GIF animado no banner (até 4 MB).</p>
                 </div>
                 <div class="perfil-avatar-row">
                     <img id="perfil-avatar-preview" alt="Pré-visualização do avatar">
                     <div>
                         <button type="button" class="btn btn-secondary" id="perfil-avatar-pick">Mudar foto</button>
+                        <button type="button" class="btn btn-secondary" id="perfil-avatar-adjust">Ajustar</button>
                         <button type="button" class="btn btn-secondary" id="perfil-avatar-remove">Remover</button>
                         <input type="file" id="perfil-avatar-file" accept="image/*" hidden>
                     </div>
@@ -872,6 +813,14 @@
                 </div>
                 <p class="auth-error" role="alert" hidden></p>
                 <button type="submit" class="btn btn-primary auth-submit">Guardar perfil</button>
+                <details class="perfil-danger">
+                    <summary>Apagar conta</summary>
+                    <p>Apaga para sempre o teu perfil, quadros, imagens, likes, reposts e seguidores. Não dá para desfazer.</p>
+                    <label class="perfil-danger-confirm">Escreve o teu nome de utilizador para confirmar
+                        <input type="text" id="perfil-delete-confirm" autocomplete="off" spellcheck="false">
+                    </label>
+                    <button type="button" class="btn perfil-danger-btn" id="perfil-delete-account" disabled>Apagar a minha conta</button>
+                </details>
             </form>
         </div>
     </dialog>
@@ -893,6 +842,10 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22l-3-7H2l5.5-4.5L6 3l6 4 6-4-1.5 7.5L22 15h-7z"/></svg>
             Enviar para trás
         </button>
+        <button data-action="merge-down">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>
+            Juntar com a de baixo
+        </button>
         <hr>
         <button data-action="lock">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -911,23 +864,30 @@
 
     <div id="toast" class="toast hidden"></div>
 
-    <script src="js/i18n.js?v=1.9"></script>
-    <script src="js/core.js?v=2.8"></script>
-    <script src="js/reveal.js?v=2.5"></script>
+    <script src="js/i18n.js?v=f9"></script>
+    <script src="js/core.js?v=f5"></script>
+    <script src="js/reveal.js?v=2.7"></script>
     <script src="js/smooth-scroll.js?v=1.4"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="js/data.js?v=3.5.1.2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js" integrity="sha384-BWcjm9OdFth9TbhCxZPdm+gAOUMAzQy9nmTs12ioXdCcbVnJaPMn+fMUoQCLt60R" crossorigin="anonymous"></script>
+    <script src="js/data.js?v=f6"></script>
     <script src="js/color-palettes.js?v=2.4"></script>
-    <script src="js/editor.js?v=3.0"></script>
-    <script src="js/elements.js?v=1.2"></script>
-    <script src="js/tools.js?v=2.8"></script>
-    <script src="js/board.js?v=3.1"></script>
-    <script src="js/ui.js?v=3.2.1.c"></script>
-    <script src="js/editor-layout.js?v=1.2"></script>
-    <script src="js/social-ui.js?v=3.7"></script>
-    <script src="js/home-widgets.js?v=1.34"></script>
-    <script src="js/music.js?v=1.5"></script>
-    <script src="js/app.js?v=4.2.1.c"></script>
+    <script src="js/editor.js?v=f5"></script>
+    <script src="js/elements.js?v=1.5"></script>
+    <script src="js/tools.js?v=f5"></script>
+    <script src="js/editor-fx.js?v=sec1"></script>
+    <script src="js/board.js?v=f5"></script>
+    <script src="js/ui.js?v=sec3"></script>
+    <script src="js/editor-layout.js?v=f4"></script>
+    <script src="js/social-ui.js?v=f5"></script>
+    <script src="js/glass-bg.js?v=1"></script>
+    <script src="js/hero-intro.js?v=9"></script>
+    <script src="js/footer-glass.js?v=3"></script>
+    <script src="js/music-anim.js?v=1"></script>
+    <script src="js/music.js?v=sec1"></script>
+    <script src="js/app.js?v=f5"></script>
+    <script src="js/editor-plus.js?v=f4"></script>
+    <script src="js/collab.js?v=1"></script>
+    <script src="js/mobile-guard.js?v=1"></script>
     <script src="js/crop-inline.js?v=1.0"></script>
     <script src="js/bg-manual.js?v=1.0"></script>
 </body>

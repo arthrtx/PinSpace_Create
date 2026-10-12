@@ -179,8 +179,9 @@ begin
     left(coalesce(nullif(new.raw_user_meta_data ->> 'display_name', ''),
                   nullif(new.raw_user_meta_data ->> 'full_name', ''),
                   nullif(new.raw_user_meta_data ->> 'name', '')), 60),
-    coalesce(nullif(new.raw_user_meta_data ->> 'avatar_url', ''),
-             nullif(new.raw_user_meta_data ->> 'picture', ''))
+    (select u from (select coalesce(nullif(new.raw_user_meta_data ->> 'avatar_url', ''),
+                                    nullif(new.raw_user_meta_data ->> 'picture', '')) as u) a
+      where u ~ '^https://[^[:space:]"''<>`\\()]+$' and char_length(u) <= 2000)
   )
   on conflict (id) do nothing;
 
@@ -491,7 +492,7 @@ end $$;
 -- ---------------------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('quadros', 'quadros', true, 10485760, array['image/jpeg', 'image/png', 'image/webp']),
-       ('avatars', 'avatars', true, 2097152,  array['image/jpeg', 'image/png', 'image/webp'])
+       ('avatars', 'avatars', true, 4194304,  array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 on conflict (id) do update set public = true,
     file_size_limit = excluded.file_size_limit,
     allowed_mime_types = excluded.allowed_mime_types;
@@ -661,5 +662,390 @@ join public.profiles p on p.id = b.author_id
 order by b.updated_at desc;
 
 revoke all on public.ver_quadros from anon, authenticated;
+
+notify pgrst, 'reload schema';
+
+-- =====================================================================
+-- 12. Segurança extra (revisão de segurança)
+--     Seguro de voltar a correr. Não apaga dados.
+-- =====================================================================
+
+-- 12a. Visitantes sem conta (anon) só podem LER — nunca escrever.
+--      (o Supabase dá todas as permissões por defeito; a RLS já bloqueava,
+--       mas assim há duas barreiras em vez de uma)
+revoke insert, update, delete, truncate, references, trigger on all tables in schema public from anon;
+revoke truncate, references, trigger on all tables in schema public from authenticated;
+
+-- 12b. Colunas que cada utilizador pode escrever (os contadores, "verificado"
+--      e datas nunca vêm do site)
+revoke insert on public.profiles from authenticated;
+grant insert (id, username, display_name, bio, image) on public.profiles to authenticated;
+
+revoke insert on public.boards from authenticated;
+grant insert (id, author_id, title, description, image_url, image_full, projeto, is_public,
+              board_width, board_height, elements_count, tags, copied_from) on public.boards to authenticated;
+
+revoke update on public.notifications from authenticated;
+grant update (read_at) on public.notifications to authenticated;
+
+-- 12c. Quadros: contadores começam a zero e o dono/id não podem mudar
+create or replace function public.boards_guard()
+returns trigger language plpgsql as $$
+begin
+  if tg_op = 'INSERT' then
+    new.likes_count := 0;
+    new.retweets_count := 0;
+    new.views_count := 0;
+  elsif new.id is distinct from old.id or new.author_id is distinct from old.author_id then
+    raise exception 'Não é possível mudar o dono ou o id de um quadro.' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists boards_guard on public.boards;
+create trigger boards_guard before insert or update on public.boards
+  for each row execute function public.boards_guard();
+
+-- 12d. Tamanhos máximos e formato dos links de imagem
+--      (NOT VALID: não mexe nos dados antigos, só vale para o que entra a partir de agora)
+do $$
+begin
+  begin
+    alter table public.profiles add constraint profiles_image_safe check (
+      image is null or (char_length(image) <= 400000 and image ~ '^(https://[^[:space:]"''<>`\\()]+|data:image/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/=]+)$')
+    ) not valid;
+  exception when duplicate_object then null; end;
+  begin
+    alter table public.profiles add constraint profiles_cover_safe check (
+      cover_image is null or (char_length(cover_image) <= 900000 and cover_image ~ '^(https://[^[:space:]"''<>`\\()]+|data:image/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/=]+)$')
+    ) not valid;
+  exception when duplicate_object then null; end;
+  begin
+    alter table public.profiles add constraint profiles_website_safe check (
+      website is null or website ~ '^https://[^[:space:]"''<>`\\]+$'
+    ) not valid;
+  exception when duplicate_object then null; end;
+  begin
+    alter table public.boards add constraint boards_projeto_size check (
+      projeto is null or pg_column_size(projeto) <= 20000000
+    ) not valid;
+  exception when duplicate_object then null; end;
+  begin
+    alter table public.boards add constraint boards_image_url_safe check (
+      image_url is null or (char_length(image_url) <= 2500000 and image_url ~ '^(https://[^[:space:]"''<>`\\()]+|data:image/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/=]+)$')
+    ) not valid;
+  exception when duplicate_object then null; end;
+  begin
+    alter table public.boards add constraint boards_image_full_safe check (
+      image_full is null or (char_length(image_full) <= 2048 and image_full ~ '^https://[^[:space:]"''<>`\\()]+$')
+    ) not valid;
+  exception when duplicate_object then null; end;
+  begin
+    alter table public.boards add constraint boards_tags_limit check (cardinality(tags) <= 20) not valid;
+  exception when duplicate_object then null; end;
+  begin
+    alter table public.notifications add constraint notifications_comment_len check (comment is null or char_length(comment) <= 280) not valid;
+  exception when duplicate_object then null; end;
+end $$;
+
+-- 12e. Limite de ações por hora (contra spam e contas automáticas)
+create or replace function public.ps_rate_limit()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  n int := 0;
+  lim int := 1000000;
+begin
+  if uid is null then return new; end if;  -- operações internas (triggers, painel)
+  if tg_table_name = 'boards' then
+    -- guardar um quadro que já existe (upsert) não conta como novo
+    if exists (select 1 from public.boards where id = new.id) then return new; end if;
+    select count(*) into n from public.boards where author_id = uid and created_at > now() - interval '1 hour';
+    lim := 60;
+    if (select count(*) from public.boards where author_id = uid) >= 1000 then
+      raise exception 'Chegaste ao limite de quadros na conta.' using errcode = 'P0001';
+    end if;
+  elsif tg_table_name = 'likes' then
+    select count(*) into n from public.likes where user_id = uid and created_at > now() - interval '1 hour';
+    lim := 500;
+  elsif tg_table_name = 'retweets' then
+    select count(*) into n from public.retweets where user_id = uid and created_at > now() - interval '1 hour';
+    lim := 200;
+  elsif tg_table_name = 'follows' then
+    select count(*) into n from public.follows where follower_id = uid and created_at > now() - interval '1 hour';
+    lim := 200;
+  end if;
+  if n >= lim then
+    raise exception 'Demasiadas ações seguidas. Espera um pouco e tenta de novo.' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists boards_rate_limit on public.boards;
+create trigger boards_rate_limit before insert on public.boards for each row execute function public.ps_rate_limit();
+drop trigger if exists likes_rate_limit on public.likes;
+create trigger likes_rate_limit before insert on public.likes for each row execute function public.ps_rate_limit();
+drop trigger if exists retweets_rate_limit on public.retweets;
+create trigger retweets_rate_limit before insert on public.retweets for each row execute function public.ps_rate_limit();
+drop trigger if exists follows_rate_limit on public.follows;
+create trigger follows_rate_limit before insert on public.follows for each row execute function public.ps_rate_limit();
+
+-- 12f. Funções internas não podem ser chamadas pelo site
+revoke execute on function public.refresh_profile_counts(uuid) from public, anon, authenticated;
+revoke execute on function public.refresh_board_counts(uuid) from public, anon, authenticated;
+revoke execute on function public.ps_rate_limit() from public, anon, authenticated;
+revoke execute on function public.touch_session(text, text, text, text) from public, anon;
+grant execute on function public.touch_session(text, text, text, text) to authenticated;
+
+-- 12g. Apagar a própria conta (direito ao apagamento — RGPD).
+--      Apaga a conta e, em cascata, perfil, quadros, likes, reposts,
+--      seguidores e notificações. As imagens do Storage são apagadas pelo
+--      site antes de chamar esta função.
+create or replace function public.delete_my_account()
+returns void language plpgsql security definer set search_path = public, auth as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then raise exception 'Sessão inválida.' using errcode = '42501'; end if;
+  delete from auth.users where id = uid;
+end;
+$$;
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;
+
+-- 12h. Storage: as imagens continuam públicas pelo link, mas ninguém pode
+--      listar as pastas dos outros (antes qualquer pessoa via a lista de ficheiros)
+drop policy if exists "pinspace_img_read" on storage.objects;
+drop policy if exists "pinspace_img_read_own" on storage.objects;
+create policy "pinspace_img_read_own" on storage.objects
+  for select to authenticated
+  using (bucket_id in ('quadros', 'avatars') and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- 12i. Galeria antiga ("quadros"): só leitura das colunas públicas.
+--      Ninguém escreve diretamente e o owner_token nunca é visível.
+do $$
+declare
+  cols text;
+begin
+  if to_regclass('public.quadros') is not null then
+    execute 'revoke all on public.quadros from anon, authenticated';
+    select string_agg(quote_ident(column_name), ', ') into cols
+      from information_schema.columns
+     where table_schema = 'public' and table_name = 'quadros'
+       and column_name in ('id', 'titulo', 'autor', 'thumb', 'publicado', 'atualizado', 'projeto');
+    if cols is not null then
+      execute format('grant select (%s) on public.quadros to anon, authenticated', cols);
+    end if;
+  end if;
+end $$;
+
+-- =====================================================================
+-- 13. Denúncias e moderação
+--     Quem tem conta pode denunciar um quadro ou perfil (uma vez cada).
+--     Um quadro com 3 denúncias abertas de pessoas diferentes fica
+--     escondido automaticamente até ser revisto (ver LEIA-ME).
+-- =====================================================================
+alter table public.boards add column if not exists hidden boolean not null default false;
+
+create table if not exists public.reports (
+  id          bigint generated always as identity primary key,
+  reporter_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  board_id    uuid references public.boards (id) on delete cascade,
+  profile_id  uuid references public.profiles (id) on delete cascade,
+  reason      text not null check (reason in ('sexual', 'odio', 'violencia', 'assedio', 'direitos', 'spam', 'outro')),
+  details     text check (char_length(details) <= 500),
+  status      text not null default 'aberta' check (status in ('aberta', 'resolvida', 'rejeitada')),
+  created_at  timestamptz not null default now(),
+  constraint reports_one_target check ((board_id is not null) <> (profile_id is not null))
+);
+create unique index if not exists reports_once_board   on public.reports (reporter_id, board_id)   where board_id is not null;
+create unique index if not exists reports_once_profile on public.reports (reporter_id, profile_id) where profile_id is not null;
+create index if not exists reports_open_idx on public.reports (status, created_at desc);
+
+alter table public.reports enable row level security;
+drop policy if exists "reports_insert_own" on public.reports;
+create policy "reports_insert_own" on public.reports for insert to authenticated
+  with check (reporter_id = auth.uid() and (profile_id is null or profile_id <> auth.uid()));
+drop policy if exists "reports_select_own" on public.reports;
+create policy "reports_select_own" on public.reports for select to authenticated using (reporter_id = auth.uid());
+
+revoke all on public.reports from anon, authenticated;
+grant insert (board_id, profile_id, reason, details) on public.reports to authenticated;
+grant select (id, board_id, profile_id, reason, created_at) on public.reports to authenticated;
+
+-- Quadros escondidos deixam de aparecer para os outros (o autor continua a vê-los)
+drop policy if exists "boards_select" on public.boards;
+create policy "boards_select" on public.boards for select using ((is_public and not hidden) or author_id = auth.uid());
+
+create or replace function public.board_visible(b uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.boards where id = b and ((is_public and not hidden) or author_id = auth.uid()));
+$$;
+
+-- Esconde automaticamente com 3 denúncias abertas
+create or replace function public.reports_autohide()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.board_id is not null and
+     (select count(distinct reporter_id) from public.reports where board_id = new.board_id and status = 'aberta') >= 3 then
+    update public.boards set hidden = true where id = new.board_id;
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.reports_autohide() from public, anon, authenticated;
+drop trigger if exists reports_autohide on public.reports;
+create trigger reports_autohide after insert on public.reports for each row execute function public.reports_autohide();
+
+-- Limite: 30 denúncias por hora por pessoa
+create or replace function public.reports_rate_limit()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is not null and
+     (select count(*) from public.reports where reporter_id = auth.uid() and created_at > now() - interval '1 hour') >= 30 then
+    raise exception 'Demasiadas denúncias seguidas. Tenta mais tarde.' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.reports_rate_limit() from public, anon, authenticated;
+drop trigger if exists reports_rate_limit on public.reports;
+create trigger reports_rate_limit before insert on public.reports for each row execute function public.reports_rate_limit();
+
+-- Lista para rever no painel do Supabase (Table Editor → reports_review).
+-- Não é acessível pelo site.
+drop view if exists public.reports_review;
+create view public.reports_review with (security_invoker = true) as
+select r.id, r.created_at, r.status, r.reason, r.details,
+       rp.username as denunciado_por,
+       r.board_id, b.title as quadro, b.hidden as quadro_escondido, ba.username as autor_do_quadro,
+       r.profile_id, p.username as perfil_denunciado,
+       (select count(*) from public.reports r2 where r2.board_id = r.board_id and r2.status = 'aberta') as denuncias_abertas_do_quadro
+  from public.reports r
+  left join public.profiles rp on rp.id = r.reporter_id
+  left join public.boards b    on b.id = r.board_id
+  left join public.profiles ba on ba.id = b.author_id
+  left join public.profiles p  on p.id = r.profile_id
+ order by (r.status = 'aberta') desc, r.created_at desc;
+revoke all on public.reports_review from anon, authenticated;
+
+-- =====================================================================
+-- 14. Comentários nas publicações
+--     Qualquer pessoa vê os comentários dos quadros que pode ver; quem tem
+--     conta comenta (até 500 caracteres, 60 por hora). Apaga quem escreveu
+--     ou o dono do quadro. O dono recebe notificação.
+-- =====================================================================
+create table if not exists public.comments (
+  id          bigint generated always as identity primary key,
+  board_id    uuid not null references public.boards (id) on delete cascade,
+  user_id     uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  body        text not null check (char_length(btrim(body)) between 1 and 500),
+  created_at  timestamptz not null default now()
+);
+create index if not exists comments_board_idx on public.comments (board_id, created_at);
+create index if not exists comments_user_idx  on public.comments (user_id, created_at desc);
+
+alter table public.boards add column if not exists comments_count integer not null default 0;
+
+alter table public.comments enable row level security;
+drop policy if exists "comments_select" on public.comments;
+create policy "comments_select" on public.comments for select using (public.board_visible(board_id));
+drop policy if exists "comments_insert_own" on public.comments;
+create policy "comments_insert_own" on public.comments for insert to authenticated
+  with check (user_id = auth.uid() and public.board_visible(board_id));
+drop policy if exists "comments_delete" on public.comments;
+create policy "comments_delete" on public.comments for delete to authenticated
+  using (user_id = auth.uid() or exists (select 1 from public.boards b where b.id = board_id and b.author_id = auth.uid()));
+
+revoke all on public.comments from anon, authenticated;
+grant select (id, board_id, user_id, body, created_at) on public.comments to anon, authenticated;
+grant insert (board_id, body) on public.comments to authenticated;
+grant delete on public.comments to authenticated;
+
+-- Notificação de comentário
+alter table public.notifications drop constraint if exists notifications_type_check;
+alter table public.notifications add constraint notifications_type_check
+  check (type in ('like', 'repost', 'follow', 'comment'));
+
+-- Contador + notificação + limite por hora
+create or replace function public.on_comment_change()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  b uuid := coalesce(new.board_id, old.board_id);
+  owner uuid;
+begin
+  update public.boards set comments_count = (select count(*) from public.comments c where c.board_id = b) where id = b;
+  if tg_op = 'INSERT' then
+    select author_id into owner from public.boards where id = b;
+    if owner is not null and owner <> new.user_id then
+      insert into public.notifications (user_id, actor_id, type, board_id, comment)
+      values (owner, new.user_id, 'comment', b, left(new.body, 140));
+    end if;
+  end if;
+  return null;
+end;
+$$;
+revoke execute on function public.on_comment_change() from public, anon, authenticated;
+drop trigger if exists comments_counts on public.comments;
+create trigger comments_counts after insert or delete on public.comments
+  for each row execute function public.on_comment_change();
+
+create or replace function public.comments_rate_limit()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  new.body := btrim(new.body);
+  if auth.uid() is not null and
+     (select count(*) from public.comments where user_id = auth.uid() and created_at > now() - interval '1 hour') >= 60 then
+    raise exception 'Demasiados comentários seguidos. Espera um pouco.' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.comments_rate_limit() from public, anon, authenticated;
+drop trigger if exists comments_rate_limit on public.comments;
+create trigger comments_rate_limit before insert on public.comments
+  for each row execute function public.comments_rate_limit();
+
+-- O contador começa a 0 em quadros novos
+create or replace function public.boards_guard()
+returns trigger language plpgsql as $$
+begin
+  if tg_op = 'INSERT' then
+    new.likes_count := 0;
+    new.retweets_count := 0;
+    new.views_count := 0;
+    new.comments_count := 0;
+  elsif new.id is distinct from old.id or new.author_id is distinct from old.author_id then
+    raise exception 'Não é possível mudar o dono ou o id de um quadro.' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+-- Denunciar comentários
+alter table public.reports add column if not exists comment_id bigint references public.comments (id) on delete cascade;
+alter table public.reports drop constraint if exists reports_one_target;
+alter table public.reports add constraint reports_one_target check (num_nonnulls(board_id, profile_id, comment_id) = 1);
+create unique index if not exists reports_once_comment on public.reports (reporter_id, comment_id) where comment_id is not null;
+grant insert (board_id, profile_id, comment_id, reason, details) on public.reports to authenticated;
+grant select (id, board_id, profile_id, comment_id, reason, created_at) on public.reports to authenticated;
+
+drop view if exists public.reports_review;
+create view public.reports_review with (security_invoker = true) as
+select r.id, r.created_at, r.status, r.reason, r.details,
+       rp.username as denunciado_por,
+       r.board_id, b.title as quadro, b.hidden as quadro_escondido, ba.username as autor_do_quadro,
+       r.profile_id, p.username as perfil_denunciado,
+       r.comment_id, c.body as comentario, cu.username as autor_do_comentario,
+       (select count(*) from public.reports r2 where r2.board_id = r.board_id and r2.status = 'aberta') as denuncias_abertas_do_quadro
+  from public.reports r
+  left join public.profiles rp on rp.id = r.reporter_id
+  left join public.boards b    on b.id = r.board_id
+  left join public.profiles ba on ba.id = b.author_id
+  left join public.profiles p  on p.id = r.profile_id
+  left join public.comments c  on c.id = r.comment_id
+  left join public.profiles cu on cu.id = c.user_id
+ order by (r.status = 'aberta') desc, r.created_at desc;
+revoke all on public.reports_review from anon, authenticated;
 
 notify pgrst, 'reload schema';

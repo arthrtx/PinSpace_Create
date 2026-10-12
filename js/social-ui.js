@@ -39,7 +39,10 @@ const GH_ICONS = {
     more: '<circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/>',
     send: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
     music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-    sort: '<path d="M3 6h18M6 12h12M10 18h4"/>'
+    sort: '<path d="M3 6h18M6 12h12M10 18h4"/>',
+    flag: '<path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/>',
+    chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/>',
+    palette: '<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7H16a5 5 0 0 0 5-5c0-4-4-7.2-9-7.2z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="14.5" cy="7" r="1.2"/>'
 };
 
 // Ícones cheios (leitor de música).
@@ -66,10 +69,17 @@ function ghIcon(name, size = 16, extraClass = '') {
     return `<svg class="ps-icon ${extraClass}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GH_ICONS[name] || ''}</svg>`;
 }
 
+// Só aceita imagens https:// ou data:image — e nunca caracteres que permitam
+// sair do atributo/CSS onde o link é escrito (aspas, <, >, espaços, parênteses…).
 function safeImgSrc(src) {
-    const s = String(src || '');
-    if (/^data:image\/(png|jpe?g|gif|webp|svg\+xml)[;,]/i.test(s)) return s;
-    if (/^https:\/\//i.test(s)) return s;
+    const s = String(src || '').trim();
+    if (!s || s.length > 3000000) return '';
+    if (/^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=\s]+$/i.test(s)) return s.replace(/\s+/g, '');
+    if (/^data:image\/svg\+xml[;,]/i.test(s)) return /["'<>`\\\s]/.test(s.replace(/^data:image\/svg\+xml;charset=utf-8,/i, '')) ? '' : s;
+    if (/^https:\/\//i.test(s)) {
+        if (/["'<>`\\\s()]/.test(s)) return '';
+        try { return new URL(s).href; } catch { return ''; }
+    }
     return '';
 }
 
@@ -176,6 +186,7 @@ class SocialUI {
         this._bindTopbar();
         this._bindAuthModal();
         this._bindRepostModal();
+        this._bindReportModal();
         this._bindProfileModal();
         this._bindNotifPopup();
         this.renderAuthAreas();
@@ -196,9 +207,9 @@ class SocialUI {
         const form = document.getElementById('ps-search-form');
         form?.addEventListener('submit', (e) => {
             e.preventDefault();
-            const q = form.querySelector('input').value.trim();
-            window.location.hash = '#explore' + (q ? '?q=' + encodeURIComponent(q) : '');
+            this._liveSearch(form.querySelector('input').value, true);
         });
+        form?.querySelector('input')?.addEventListener('input', (e) => this._liveSearch(e.target.value));
 
         // "/" foca a pesquisa.
         document.addEventListener('keydown', (e) => {
@@ -305,6 +316,22 @@ class SocialUI {
     /* ---------------- Delegação de cliques ---------------- */
 
     _bindDelegation(container) {
+        container.addEventListener('submit', (e) => {
+            const f = e.target.closest('[data-comment-form]');
+            if (!f) return;
+            e.preventDefault();
+            this._submitComment(f);
+        });
+        container.addEventListener('keydown', (e) => {
+            const ta = e.target.closest('.fd-c-form textarea');
+            if (ta && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this._submitComment(ta.form); }
+        });
+        container.addEventListener('input', (e) => {
+            const ta = e.target.closest('.fd-c-form textarea');
+            if (!ta) return;
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(140, ta.scrollHeight) + 'px';
+        });
         container.addEventListener('click', (e) => {
             // Links normais (perfil do autor, etc.) dentro de um cartão clicável seguem o href.
             const link = e.target.closest('a[href]');
@@ -325,6 +352,20 @@ class SocialUI {
                 case 'repost': e.preventDefault(); e.stopPropagation(); this.toggleRepost(el.dataset.boardId); break;
                 case 'follow': e.preventDefault(); e.stopPropagation(); this.toggleFollow(el.dataset.userId); break;
                 case 'delete-board': e.preventDefault(); e.stopPropagation(); this.deleteBoard(el.dataset.boardId); break;
+                case 'report-board': e.preventDefault(); e.stopPropagation(); this.openReport({ boardId: el.dataset.boardId }); break;
+                case 'comments': e.preventDefault(); e.stopPropagation(); this.toggleComments(el.dataset.boardId); break;
+                case 'draft-open': e.preventDefault(); this.app.ui.callbacks.onOpenProject?.(el.dataset.draftId); break;
+                case 'draft-publish': e.preventDefault(); e.stopPropagation(); this.app.ui.callbacks.onPublishDraft?.(el.dataset.draftId); break;
+                case 'draft-delete':
+                    e.preventDefault(); e.stopPropagation();
+                    if (confirm('Apagar este rascunho deste dispositivo?')) {
+                        this.app.ui.callbacks.onDeleteProject?.(el.dataset.draftId);
+                        el.closest('.is-draft')?.remove();
+                    }
+                    break;
+                case 'comment-del': e.preventDefault(); e.stopPropagation(); this._deleteComment(el.dataset.commentId, el); break;
+                case 'comment-report': e.preventDefault(); e.stopPropagation(); this.openReport({ commentId: el.dataset.commentId }); break;
+                case 'report-profile': e.preventDefault(); e.stopPropagation(); this.openReport({ profileId: el.dataset.userId }); break;
                 case 'retry': e.preventDefault(); if (this.route) this.render(this.route); break;
             }
             el.closest('details.ps-menu')?.removeAttribute('open');
@@ -334,16 +375,27 @@ class SocialUI {
     /* ---------------- Router ---------------- */
 
     async render(route) {
+        const prev = this.route;
         this.route = route;
         const token = ++this._renderToken;
         this._setActiveNav(route.name);
-        if (this.scroller) this.scroller.scrollTop = 0;
+        // Trocar de separador no mesmo perfil (Quadros / Seguidores / A seguir / Reposts):
+        // não volta ao topo nem pisca — desce suavemente até ao conteúdo.
+        const sameProfile = prev && prev.name === 'profile' && route.name === 'profile'
+            && String(prev.username || (this.user && this.user.username) || '').toLowerCase() === String(route.username || (this.user && this.user.username) || '').toLowerCase();
+        const tabSwitch = !!(sameProfile && (prev.tab || 'boards') !== (route.tab || 'boards')) || (route.name === 'profile' && this._scrollAfterRender);
+        this._scrollAfterRender = false;
+        if (this.scroller && !tabSwitch) this.scroller.scrollTop = 0;
 
         const searchInput = document.querySelector('#ps-search-form input');
         if (searchInput && route.name !== 'explore') searchInput.value = '';
 
-        this.main.classList.remove('is-feed', 'is-profile');
-        this.main.innerHTML = '<div class="ps-loading"><span class="ps-spinner"></span><em>a carregar…</em></div>';
+        if (tabSwitch && this.main.querySelector('#pf-content')) {
+            this.main.querySelector('#pf-content').classList.add('is-loading');
+        } else {
+            this.main.classList.remove('is-feed', 'is-profile');
+            this.main.innerHTML = '<div class="ps-loading"><span class="ps-spinner"></span><em>a carregar…</em></div>';
+        }
         await this.app.authReady;
         if (token !== this._renderToken) return;
 
@@ -362,7 +414,10 @@ class SocialUI {
                     await this._renderExplore(token, '');
                     this.openNotifPopup(this.root?.querySelector('.ps-link[data-route="notifications"]'));
                     break;
-                case 'profile': await this._renderProfile(token, route.username, route.tab || 'boards'); break;
+                case 'profile':
+                    await this._renderProfile(token, route.username, route.tab || 'boards');
+                    if (tabSwitch && token === this._renderToken) requestAnimationFrame(() => this._scrollToProfileContent());
+                    break;
                 default: await this._renderExplore(token, '');
             }
         } catch (err) {
@@ -469,7 +524,7 @@ class SocialUI {
                 </section>
 
                 <aside class="fd-side fd-right">
-                    ${q ? this._feedPeople('Pessoas', people, q ? 'Ninguém com esse nome.' : '') : ''}
+                    <div id="fd-people-slot">${q ? this._feedPeople('Pessoas', people, 'Ninguém com esse nome.') : ''}</div>
                     ${me ? this._feedActivity(notifs) : this._feedJoin()}
                     ${suggestions.length ? this._feedPeople('Sugestões para ti', suggestions.slice(0, 5)) : ''}
                 </aside>
@@ -481,11 +536,54 @@ class SocialUI {
             const list = this.main.querySelector('#fd-posts');
             if (list) list.innerHTML = this._feedPosts(q);
         }));
-        this.main.querySelector('#fd-search')?.addEventListener('submit', (e) => {
+        const fdForm = this.main.querySelector('#fd-search');
+        fdForm?.addEventListener('submit', (e) => {
             e.preventDefault();
-            const v = e.currentTarget.q.value.trim();
-            window.location.hash = '#explore' + (v ? '?q=' + encodeURIComponent(v) : '');
+            this._liveSearch(fdForm.q.value, true);
         });
+        // Resultados aparecem enquanto se escreve (sem carregar em Enter).
+        fdForm?.q.addEventListener('input', () => this._liveSearch(fdForm.q.value));
+    }
+
+    // Pesquisa ao vivo: atualiza só a lista de posts e as pessoas, sem
+    // redesenhar a página (o cursor fica na caixa de pesquisa).
+    _liveSearch(value, now = false) {
+        const v = String(value || '').trim();
+        clearTimeout(this._liveSearchTimer);
+        const run = async () => {
+            if (!this.route || this.route.name !== 'explore') {
+                window.location.hash = '#explore' + (v ? '?q=' + encodeURIComponent(v) : '');
+                return;
+            }
+            const seq = (this._liveSearchSeq = (this._liveSearchSeq || 0) + 1);
+            const list = this.main.querySelector('#fd-posts');
+            list?.classList.add('is-searching');
+            try {
+                const [explore, people] = await Promise.all([
+                    getExploreAll(v, 60),
+                    v && authAvailable() ? searchProfiles(v, 8).catch(() => []) : Promise.resolve([])
+                ]);
+                if (seq !== this._liveSearchSeq) return;   // chegou uma pesquisa mais recente
+                await this._loadInteractions(explore.items.filter(b => !b.legacy)).catch(() => {});
+                if (seq !== this._liveSearchSeq) return;
+                this._exploreItems = explore.items;
+                this.route.q = v;
+                history.replaceState(null, '', '#explore' + (v ? '?q=' + encodeURIComponent(v) : ''));
+                const box = this.main.querySelector('#fd-posts');
+                if (box) box.innerHTML = this._feedPosts(v);
+                const slot = this.main.querySelector('#fd-people-slot');
+                if (slot) slot.innerHTML = v ? this._feedPeople('Pessoas', people, 'Ninguém com esse nome.') : '';
+                const top = document.querySelector('#ps-search-form input');
+                if (top && document.activeElement !== top) top.value = v;
+                const mine = this.main.querySelector('#fd-search input[name="q"]');
+                if (mine && document.activeElement !== mine) mine.value = v;
+            } catch (err) {
+                console.warn('Pesquisa falhou', err);
+            } finally {
+                if (seq === this._liveSearchSeq) this.main.querySelector('#fd-posts')?.classList.remove('is-searching');
+            }
+        };
+        if (now) run(); else this._liveSearchTimer = setTimeout(run, 220);
     }
 
     _feedMeCard(me, stats) {
@@ -499,7 +597,7 @@ class SocialUI {
                 </div>
             </div>`;
         }
-        const cover = safeImgSrc(me.cover_image);
+        const cover = psSafeImageUrl(me.cover_image);
         const st = stats || { boards: 0, followers: 0, following: 0 };
         const base = '#profile/' + encodeURIComponent(me.username || '');
         return `<div class="fd-card fd-me">
@@ -526,6 +624,7 @@ class SocialUI {
             ${me ? item('#profile/' + encodeURIComponent(me.username || ''), 'board', 'Os meus quadros') : item('#', 'user', 'Entrar', 'login')}
             ${item('#notifications', 'bell', 'Notificações')}
             ${item('#', 'home', 'Página inicial')}
+            <p class="fd-legal"><a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos</a></p>
         </div>`;
     }
 
@@ -559,7 +658,116 @@ class SocialUI {
         if (!items.length) {
             return `<div class="fd-card fd-empty">${q ? 'Nenhum quadro encontrado.' : 'Ainda não há quadros públicos. Sê o primeiro!'}</div>`;
         }
+        setTimeout(() => this._fillCommentCounts(items), 0);
         return items.map(b => this.feedPost(b)).join('');
+    }
+
+    /* ---------------- Comentários ---------------- */
+    async _fillCommentCounts(items) {
+        const ids = items.filter(b => !b.legacy).map(b => b.id);
+        if (!ids.length) return;
+        const counts = await getCommentCounts(ids);
+        this.state.commentCounts = Object.assign(this.state.commentCounts || {}, counts);
+        Object.entries(counts).forEach(([id, n]) => {
+            document.querySelectorAll(`[data-comment-count="${CSS.escape(id)}"]`).forEach(el => { el.textContent = n ? _fmtCount(n) : ''; });
+        });
+    }
+
+    async toggleComments(boardId) {
+        const box = this.main.querySelector(`[data-comments-for="${CSS.escape(boardId)}"]`);
+        if (!box) return;
+        const btn = this.main.querySelector(`.comment-btn[data-board-id="${CSS.escape(boardId)}"]`);
+        if (!box.hidden) { box.hidden = true; btn?.setAttribute('aria-expanded', 'false'); return; }
+        box.hidden = false;
+        btn?.setAttribute('aria-expanded', 'true');
+        box.innerHTML = '<p class="fd-c-empty">A carregar comentários…</p>';
+        try {
+            const list = await getComments(boardId);
+            this._renderComments(box, boardId, list);
+            if (this.user) box.querySelector('textarea')?.focus();
+        } catch (err) {
+            box.innerHTML = `<p class="fd-c-empty">${escapeHTML(_socialErrMsg(err))}</p>`;
+        }
+    }
+
+    _commentHTML(c, boardOwnerId) {
+        const a = c.author || { username: '?' };
+        const mine = !!(this.user && this.user.id === c.user_id);
+        const canDel = mine || !!(this.user && this.user.id === boardOwnerId);
+        const href = '#profile/' + encodeURIComponent(a.username || '');
+        return `<li class="fd-c" data-comment-id="${escapeHTML(String(c.id))}">
+            <a href="${href}" class="fd-c-avatar"><img src="${avatarSrc(a)}" alt=""></a>
+            <div class="fd-c-main">
+                <div class="fd-c-head">
+                    <a href="${href}" class="fd-c-name ps-uname">${unameHTML(a.display_name || a.username || '?')}</a>
+                    <span class="fd-c-time">${timeAgo(c.created_at)}</span>
+                    <span class="fd-c-tools">
+                        ${canDel ? `<button type="button" data-act="comment-del" data-comment-id="${escapeHTML(String(c.id))}" title="Apagar comentário" aria-label="Apagar comentário">${ghIcon('trash', 13)}</button>` : ''}
+                        ${!mine && this.user ? `<button type="button" data-act="comment-report" data-comment-id="${escapeHTML(String(c.id))}" title="Denunciar comentário" aria-label="Denunciar comentário">${ghIcon('flag', 13)}</button>` : ''}
+                    </span>
+                </div>
+                <p class="fd-c-body">${escapeHTML(c.body)}</p>
+            </div>
+        </li>`;
+    }
+
+    _renderComments(box, boardId, list) {
+        const board = (this._exploreItems || []).find(b => b.id === boardId) || {};
+        box._ownerId = board.author_id;
+        const form = this.user
+            ? `<form class="fd-c-form" data-comment-form="${escapeHTML(boardId)}">
+                   <img class="fd-c-me" src="${avatarSrc(this.user)}" alt="">
+                   <textarea name="body" rows="2" maxlength="500" placeholder="Escreve um comentário…" aria-label="Escreve um comentário"></textarea>
+                   <button type="submit" class="fd-c-send" aria-label="Enviar comentário">${ghIcon('send', 16)}</button>
+               </form>`
+            : `<button type="button" class="fd-c-login" data-act="login">Entra para comentar</button>`;
+        box.innerHTML = `
+            <ul class="fd-c-list">${list.length ? list.map(c => this._commentHTML(c, box._ownerId)).join('') : ''}</ul>
+            ${list.length ? '' : '<p class="fd-c-empty">Ainda não há comentários. Sê o primeiro!</p>'}
+            ${form}`;
+    }
+
+    _setCommentCount(boardId, delta) {
+        const counts = this.state.commentCounts || (this.state.commentCounts = {});
+        counts[boardId] = Math.max(0, (counts[boardId] || 0) + delta);
+        document.querySelectorAll(`[data-comment-count="${CSS.escape(boardId)}"]`).forEach(el => { el.textContent = counts[boardId] ? _fmtCount(counts[boardId]) : ''; });
+    }
+
+    async _submitComment(form) {
+        const boardId = form.dataset.commentForm;
+        const ta = form.querySelector('textarea');
+        const btn = form.querySelector('button[type="submit"]');
+        const text = ta.value;
+        if (!text.trim() || btn.disabled) return;
+        btn.disabled = true;
+        try {
+            const c = await addComment(boardId, text);
+            const box = form.closest('.fd-comments');
+            box.querySelector('.fd-c-empty')?.remove();
+            box.querySelector('.fd-c-list').insertAdjacentHTML('beforeend', this._commentHTML(c, box._ownerId));
+            ta.value = '';
+            ta.style.height = '';
+            this._setCommentCount(boardId, +1);
+        } catch (err) {
+            this.app.ui.showToast(_socialErrMsg(err));
+        } finally {
+            btn.disabled = false;
+            ta.focus();
+        }
+    }
+
+    async _deleteComment(id, el) {
+        const li = el.closest('.fd-c');
+        const box = el.closest('.fd-comments');
+        if (!li || !box || !confirm('Apagar este comentário?')) return;
+        try {
+            await deleteComment(id);
+            li.remove();
+            this._setCommentCount(box.dataset.commentsFor, -1);
+            if (!box.querySelector('.fd-c')) box.querySelector('.fd-c-list').insertAdjacentHTML('afterend', '<p class="fd-c-empty">Ainda não há comentários. Sê o primeiro!</p>');
+        } catch (err) {
+            this.app.ui.showToast(_socialErrMsg(err));
+        }
     }
 
     feedPost(b) {
@@ -592,6 +800,11 @@ class SocialUI {
         let actions;
         if (b.legacy) {
             actions = `<button type="button" class="fd-act" data-act="open-legacy" data-board-id="${id}">${ghIcon('open', 17)}<span>Abrir e editar</span></button>`;
+        } else if (isMine && !b.is_public) {
+            // Quadro privado: mesmo cartão, sem likes/reposts/comentários.
+            actions = `<span class="fd-badge">${ghIcon('lock', 13)}<span>Privado</span></span>
+                <span class="fd-act-spacer"></span>
+                <button type="button" class="fd-act" data-act="open" data-board-id="${id}" title="Abrir quadro">${ghIcon('send', 17)}<span>Abrir</span></button>`;
         } else {
             const liked = this.state.likeState[b.id] === 'liked';
             const rted = this.state.retweetState[b.id] === 'retweeted';
@@ -603,7 +816,11 @@ class SocialUI {
                 <button type="button" class="fd-act retweet-btn ${rted ? 'is-on' : ''}" data-act="repost" data-board-id="${id}" aria-pressed="${rted}" title="${rted ? 'Desfazer repost' : 'Repostar'}">
                     ${ghIcon('repeat', 18)}<span class="repo-stat-count" data-retweet-count="${id}">${_fmtCount(counts.retweets)}</span>
                 </button>
+                <button type="button" class="fd-act comment-btn" data-act="comments" data-board-id="${id}" aria-expanded="false" title="Comentários">
+                    ${ghIcon('chat', 18)}<span class="repo-stat-count" data-comment-count="${id}">${this.state.commentCounts && this.state.commentCounts[b.id] ? _fmtCount(this.state.commentCounts[b.id]) : ''}</span>
+                </button>
                 <span class="fd-act-spacer"></span>
+                ${isMine ? '' : `<button type="button" class="fd-act fd-act-report" data-act="report-board" data-board-id="${id}" title="Denunciar" aria-label="Denunciar">${ghIcon('flag', 16)}</button>`}
                 <button type="button" class="fd-act" data-act="open" data-board-id="${id}" title="Abrir quadro">${ghIcon('send', 17)}<span>Abrir</span></button>`;
         }
 
@@ -619,13 +836,42 @@ class SocialUI {
                 ${thumb ? `<img src="${thumb}" alt="" loading="lazy" decoding="async">` : '<span class="fd-media-empty">📌</span>'}
             </a>
             <footer class="fd-post-actions">${actions}</footer>
+            ${b.legacy || (isMine && !b.is_public) ? '' : `<div class="fd-comments" data-comments-for="${id}" hidden></div>`}
+        </article>`;
+    }
+
+    // Rascunho guardado neste navegador, no mesmo cartão pequeno dos quadros.
+    draftPost(p) {
+        const id = escapeHTML(String(p.id));
+        const me = this.user || { username: 'tu' };
+        const thumb = safeImgSrc(p.thumbnail);
+        const title = escapeHTML(p.titulo || 'Sem título');
+        return `<article class="fd-card fd-post is-draft" data-draft-id="${id}">
+            <header class="fd-post-head">
+                <span class="fd-post-avatar"><img src="${avatarSrc(me)}" alt=""></span>
+                <div class="fd-post-who">
+                    <span class="fd-post-name ps-uname">${unameHTML(me.display_name || me.username || 'tu')}</span>
+                    <span class="fd-post-sub"><span>Rascunho</span> · ${timeAgo(p.ultimaEdicao || p.dataCriacao)}</span>
+                </div>
+                <span class="fd-post-side"><button type="button" class="fd-icon-btn fd-danger" data-act="draft-delete" data-draft-id="${id}" title="Apagar deste dispositivo" aria-label="Apagar deste dispositivo">${ghIcon('trash', 16)}</button></span>
+            </header>
+            <div class="fd-post-text"><a href="#" class="fd-post-title" data-act="draft-open" data-draft-id="${id}">${title}</a></div>
+            <a href="#" class="fd-post-media" data-act="draft-open" data-draft-id="${id}" aria-label="Abrir ${title}">
+                ${thumb ? `<img src="${escapeHTML(thumb)}" alt="" loading="lazy" decoding="async">` : '<span class="fd-media-empty">📌</span>'}
+            </a>
+            <footer class="fd-post-actions">
+                <span class="fd-badge">${ghIcon('board', 13)}<span>Neste dispositivo</span></span>
+                <span class="fd-act-spacer"></span>
+                ${this.user ? `<button type="button" class="fd-act" data-act="draft-publish" data-draft-id="${id}" title="Publicar">${ghIcon('globe', 16)}</button>` : ''}
+                <button type="button" class="fd-act" data-act="draft-open" data-draft-id="${id}" title="Abrir">${ghIcon('send', 17)}<span>Abrir</span></button>
+            </footer>
         </article>`;
     }
 
     _feedActivity(items) {
         const row = (n) => {
             const who = `<a href="#profile/${encodeURIComponent(n.user.username)}" class="fd-strong ps-uname">${unameHTML(n.user.display_name || n.user.username)}</a>`;
-            const text = n.type === 'like' ? 'gostou do teu quadro' : n.type === 'repost' ? 'repostou o teu quadro' : 'começou a seguir-te';
+            const text = n.type === 'like' ? 'gostou do teu quadro' : n.type === 'repost' ? 'repostou o teu quadro' : n.type === 'comment' ? 'comentou o teu quadro' : 'começou a seguir-te';
             const thumb = n.board && safeImgSrc(n.board.image_url);
             const side = n.type === 'follow'
                 ? this.followButton(n.user.id, 'fd-follow fd-follow-sm')
@@ -815,7 +1061,7 @@ class SocialUI {
                     </nav>
 
                     <div class="pf-card pf-me">
-                        <button type="button" class="pf-me-avatar" ${isMe ? 'data-act="edit-profile" title="Mudar foto"' : 'data-pf="noop" tabindex="-1"'}>
+                        <button type="button" class="pf-me-avatar" data-pf="view-avatar" title="Ver foto">
                             <img id="profile-avatar" src="${avatarSrc(profile)}" alt="Avatar de ${escapeHTML(profile.username)}">
                         </button>
                         <span class="pf-label">Perfil</span>
@@ -826,8 +1072,10 @@ class SocialUI {
                     <div class="pf-opts-ic">
                         <button type="button" class="pf-round" data-pf="copy-link" title="Copiar link do perfil" aria-label="Copiar link do perfil">${ghIcon('link', 16)}</button>
                         ${isMe
-                            ? `<button type="button" class="pf-round" data-act="logout" title="Sair" aria-label="Sair">${ghIcon('logout', 16)}</button>`
-                            : `<a class="pf-round" href="#explore" title="Explorar" aria-label="Explorar">${ghIcon('explore', 16)}</a>`}
+                            ? `<button type="button" class="pf-round" data-pf="accent" title="Cor do meu perfil" aria-label="Cor do meu perfil">${ghIcon('palette', 16)}</button>
+                               <button type="button" class="pf-round" data-act="logout" title="Sair" aria-label="Sair">${ghIcon('logout', 16)}</button>`
+                            : `<a class="pf-round" href="#explore" title="Explorar" aria-label="Explorar">${ghIcon('explore', 16)}</a>
+                               ${profile.id && !profile._offline ? `<button type="button" class="pf-round" data-act="report-profile" data-user-id="${escapeHTML(profile.id)}" title="Denunciar perfil" aria-label="Denunciar perfil">${ghIcon('flag', 16)}</button>` : ''}`}
                     </div>
                     <div class="pf-lang no-i18n" role="group" aria-label="Idioma">
                         <button type="button" data-pf-lang="en" class="${lang === 'en' ? 'on' : ''}">EN</button>
@@ -866,7 +1114,10 @@ class SocialUI {
                     <strong class="no-i18n">${escapeHTML(dateBottom)}</strong>
                 </div>
 
-                ${isMe ? `<button type="button" class="pf-cover-btn" data-pf="cover" title="Mudar banner">${ghIcon('image', 15)}<span>Banner</span></button>` : ''}
+                <div class="pf-cover-tools">
+                    ${cover ? `<button type="button" class="pf-cover-btn pf-cover-view" data-pf="view-cover" title="Ver banner" aria-label="Ver banner">${ghIcon('open', 15)}</button>` : ''}
+                    ${isMe ? `<button type="button" class="pf-cover-btn" data-pf="cover" title="Mudar banner">${ghIcon('image', 15)}<span>Banner</span></button>` : ''}
+                </div>
 
                 <div class="pf-cut pf-cut-left">
                     <div class="pf-card pf-feat">${featCard}</div>
@@ -930,9 +1181,78 @@ class SocialUI {
         hero.classList.add('is-shaped');
     }
 
+    _scrollToProfileContent() {
+        const target = this.main.querySelector('#pf-content');
+        if (!target || !this.scroller) return;
+        const top = target.getBoundingClientRect().top - this.scroller.getBoundingClientRect().top + this.scroller.scrollTop - 90;
+        this.scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+
+    /* ---------------- Cor do meu perfil (só para mim, neste navegador) ---------------- */
+    _accentKey() { return this.user ? 'ps_pf_accent_' + this.user.id : null; }
+
+    _getAccent() {
+        try { const v = localStorage.getItem(this._accentKey()); return /^#[0-9a-f]{6}$/i.test(v || '') ? v : null; } catch { return null; }
+    }
+
+    _applyAccent(root, color) {
+        if (!root) return;
+        if (color) {
+            root.style.setProperty('--pf-red', color);
+            root.style.setProperty('--pf-red-hover', `color-mix(in srgb, ${color} 82%, white)`);
+            root.classList.add('has-accent');
+        } else {
+            root.style.removeProperty('--pf-red');
+            root.style.removeProperty('--pf-red-hover');
+            root.classList.remove('has-accent');
+        }
+    }
+
+    _toggleAccentPicker(btn) {
+        const root = this.main.querySelector('.pf');
+        let pop = this.main.querySelector('.pf-accent-pop');
+        if (pop) { pop.remove(); return; }
+        const colors = ['#C8372D', '#E60023', '#E76F51', '#E9C46A', '#6B8F71', '#2A9D8F', '#3A86FF', '#5B5BD6', '#8E7DBE', '#D16BA5', '#B08968', '#9AA0A6'];
+        const cur = this._getAccent() || '#C8372D';
+        pop = document.createElement('div');
+        pop.className = 'pf-accent-pop';
+        pop.innerHTML = `<b>Cor do meu perfil</b><p>Só tu vês esta cor.</p>
+            <div class="pf-accent-grid">${colors.map(c => `<button type="button" data-c="${c}" style="--c:${c}" class="${c.toLowerCase() === cur.toLowerCase() ? 'on' : ''}" aria-label="${c}"></button>`).join('')}</div>
+            <div class="pf-accent-row"><label class="pf-accent-custom"><input type="color" value="${cur}" aria-label="Outra cor"><span>Outra cor</span></label><button type="button" data-reset>Repor</button></div>`;
+        btn.closest('.pf-opts')?.appendChild(pop);
+        const save = (c) => {
+            try { if (c) localStorage.setItem(this._accentKey(), c); else localStorage.removeItem(this._accentKey()); } catch { /* ok */ }
+            this._applyAccent(root, c);
+            pop.querySelectorAll('[data-c]').forEach(b => b.classList.toggle('on', !!c && b.dataset.c.toLowerCase() === c.toLowerCase()));
+        };
+        pop.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const sw = e.target.closest('[data-c]');
+            if (sw) save(sw.dataset.c);
+            if (e.target.closest('[data-reset]')) save(null);
+        });
+        pop.querySelector('input[type="color"]').addEventListener('input', (e) => {
+            if (/^#[0-9a-f]{6}$/i.test(e.target.value)) save(e.target.value);
+        });
+        setTimeout(() => {
+            const close = (e) => { if (!pop.contains(e.target) && !e.target.closest('[data-pf="accent"]')) { pop.remove(); document.removeEventListener('click', close, true); } };
+            document.addEventListener('click', close, true);
+        }, 0);
+    }
+
     _bindProfileHero(profile) {
         const root = this.main.querySelector('.pf');
         if (!root) return;
+        if (this.user && profile && this.user.id === profile.id) this._applyAccent(root, this._getAccent());
+        // Quadros / Seguidores / A seguir: mostra o conteúdo descendo suavemente.
+        root.querySelectorAll('.pf-stats a, .pf-nav-ic[href*="/reposts"]').forEach(a => a.addEventListener('click', (e) => {
+            const href = a.getAttribute('href') || '';
+            if (!href.startsWith('#')) return;
+            e.preventDefault();
+            if (decodeURIComponent(window.location.hash) === decodeURIComponent(href)) { this._scrollToProfileContent(); return; }
+            this._scrollAfterRender = true;
+            window.location.hash = href;
+        }));
         this._pfRO?.disconnect();
         const hero = root.querySelector('.pf-hero');
         if (hero && typeof ResizeObserver === 'function') {
@@ -966,8 +1286,7 @@ class SocialUI {
             e.preventDefault();
             const act = el.dataset.pf;
             if (act === 'scroll') {
-                const target = this.main.querySelector('#pf-content');
-                if (target && this.scroller) this.scroller.scrollTo({ top: target.getBoundingClientRect().top - this.scroller.getBoundingClientRect().top + this.scroller.scrollTop - 90, behavior: 'smooth' });
+                this._scrollToProfileContent();
             } else if (act === 'copy-link') {
                 const url = window.location.origin + window.location.pathname + '#profile/' + encodeURIComponent(profile.username);
                 (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
@@ -975,6 +1294,15 @@ class SocialUI {
                     .catch(() => window.prompt('Copia o link:', url));
             } else if (act === 'cover') {
                 this.openProfileEditor(true);
+            } else if (act === 'accent') {
+                this._toggleAccentPicker(el);
+            } else if (act === 'view-avatar') {
+                const isMine = !!(this.user && this.user.id === profile.id);
+                if (!safeImgSrc(profile.image)) { if (isMine) this.openProfileEditor(); return; }
+                this.openLightbox(profile.image, { round: true, onEdit: isMine ? () => this.openProfileEditor() : null });
+            } else if (act === 'view-cover') {
+                const isMine = !!(this.user && this.user.id === profile.id);
+                this.openLightbox(profile.cover_image, { onEdit: isMine ? () => this.openProfileEditor(true) : null });
             }
         });
     }
@@ -984,14 +1312,11 @@ class SocialUI {
         if (!projects || !projects.length) return '';
         return `<section class="ps-local">
             ${this._sectionHead('Rascunhos', `${projects.length} ${projects.length === 1 ? 'quadro' : 'quadros'} · guardados neste navegador${this.user ? ' — publica-os no editor (Publicar)' : ' — entra para os publicares'}`, 'sky')}
-            <div id="lista-projetos" class="projects-grid ps-grid ps-local-grid"></div>
+            <div class="pf-posts" id="lista-projetos">${projects.map(p => this.draftPost(p)).join('')}</div>
         </section>`;
     }
 
-    _fillLocal(projects) {
-        if (!projects || !projects.length) return;
-        this.app.ui.renderProjectsList(projects, 'lista-projetos', { publish: !!this.user });
-    }
+    _fillLocal() { /* os rascunhos já vêm desenhados em _localSection */ }
 
     /* ---------------- Notificações ---------------- */
 
@@ -1020,8 +1345,10 @@ class SocialUI {
                 ? `${who} gostou de ${board}`
                 : n.type === 'repost'
                     ? `${who} repostou ${board}${n.comment ? `<span class="ps-quote">“${escapeHTML(n.comment)}”</span>` : ''}`
-                    : `${who} começou a seguir-te`;
-            const icon = n.type === 'like' ? 'heart' : n.type === 'repost' ? 'repeat' : 'userPlus';
+                    : n.type === 'comment'
+                        ? `${who} comentou ${board}${n.comment ? `<span class="ps-quote">“${escapeHTML(n.comment)}”</span>` : ''}`
+                        : `${who} começou a seguir-te`;
+            const icon = n.type === 'like' ? 'heart' : n.type === 'repost' ? 'repeat' : n.type === 'comment' ? 'chat' : 'userPlus';
             return `<li class="ps-notif ps-notif-${n.type}">
                 <span class="ps-notif-icon">${ghIcon(icon, 15)}</span>
                 <img class="ps-avatar-sm" src="${avatarSrc(n.user)}" alt="">
@@ -1181,8 +1508,10 @@ class SocialUI {
             ? `${who} gostou de ${board}`
             : n.type === 'repost'
                 ? `${who} repostou ${board}${n.comment ? `<span class="ps-quote">“${escapeHTML(n.comment)}”</span>` : ''}`
-                : `${who} começou a seguir-te`;
-        const icon = n.type === 'like' ? 'heart' : n.type === 'repost' ? 'repeat' : 'userPlus';
+                : n.type === 'comment'
+                    ? `${who} comentou ${board}${n.comment ? `<span class="ps-quote">“${escapeHTML(n.comment)}”</span>` : ''}`
+                    : `${who} começou a seguir-te`;
+        const icon = n.type === 'like' ? 'heart' : n.type === 'repost' ? 'repeat' : n.type === 'comment' ? 'chat' : 'userPlus';
         return `<li class="ps-notif ps-notif-${n.type}">
             <span class="ps-notif-icon">${ghIcon(icon, 12)}</span>
             <img class="ps-avatar-sm" src="${avatarSrc(n.user)}" alt="">
@@ -1280,7 +1609,7 @@ class SocialUI {
             const counts = this.state.counts[b.id] || { likes: b.likes_count || 0, retweets: b.retweets_count || 0 };
             const extra = isMine
                 ? `<button type="button" class="ps-act ps-act-icon ps-act-danger" data-act="delete-board" data-board-id="${id}" title="Apagar da conta" aria-label="Apagar da conta">${ghIcon('trash', 13)}</button>`
-                : (author.id ? this.followButton(author.id, 'ps-act follow-btn') : '');
+                : (author.id ? this.followButton(author.id, 'ps-act follow-btn') + `<button type="button" class="ps-act ps-act-icon" data-act="report-board" data-board-id="${id}" title="Denunciar" aria-label="Denunciar">${ghIcon('flag', 13)}</button>` : '');
             actions = `
                 <button type="button" class="ps-act like-btn ${liked ? 'is-on' : ''}" data-act="like" data-board-id="${id}" aria-pressed="${liked}" title="${liked ? 'Remover like' : 'Gostar'}">
                     ${ghIcon('heart', 13)}<span class="repo-stat-count" data-like-count="${id}">${_fmtCount(counts.likes)}</span>
@@ -1576,6 +1905,163 @@ class SocialUI {
         });
     }
 
+    /* ---------------- Ajustar imagem (enquadrar + zoom) ---------------- */
+    // Devolve um data URL JPEG do tamanho pedido, ou null se cancelar.
+    _openCropper(src, { aspect = 1, round = false, outW = 512, outH = 512, title = 'Ajustar' } = {}) {
+        const modal = document.getElementById('modal-crop');
+        const stage = modal.querySelector('#crop-stage');
+        const img = modal.querySelector('#crop-img');
+        const zoom = modal.querySelector('#crop-zoom');
+        modal.querySelector('#crop-title').textContent = title;
+        stage.style.aspectRatio = String(aspect);
+        stage.classList.toggle('is-round', !!round);
+        return new Promise((resolve) => {
+            let iw = 0, ih = 0, s0 = 1, z = 1, ox = 0, oy = 0, drag = null;
+            const size = () => ({ w: stage.clientWidth, h: stage.clientHeight });
+            const clampPos = () => {
+                const { w, h } = size(), sc = s0 * z;
+                ox = Math.min(0, Math.max(w - iw * sc, ox));
+                oy = Math.min(0, Math.max(h - ih * sc, oy));
+            };
+            const paint = () => {
+                clampPos();
+                const sc = s0 * z;
+                img.style.width = (iw * sc) + 'px';
+                img.style.height = (ih * sc) + 'px';
+                img.style.transform = `translate(${ox}px, ${oy}px)`;
+            };
+            const setZoom = (nz, cx, cy) => {
+                const { w, h } = size();
+                cx = cx ?? w / 2; cy = cy ?? h / 2;
+                const before = s0 * z, after = s0 * nz;
+                ox = cx - (cx - ox) * (after / before);
+                oy = cy - (cy - oy) * (after / before);
+                z = nz;
+                zoom.value = String(z);
+                paint();
+            };
+            const onDown = (e) => { drag = { x: e.clientX, y: e.clientY, ox, oy }; stage.setPointerCapture(e.pointerId); stage.classList.add('dragging'); };
+            const onMove = (e) => { if (!drag) return; ox = drag.ox + e.clientX - drag.x; oy = drag.oy + e.clientY - drag.y; paint(); };
+            const onUp = () => { drag = null; stage.classList.remove('dragging'); };
+            const onWheel = (e) => {
+                e.preventDefault();
+                const r = stage.getBoundingClientRect();
+                setZoom(Math.min(4, Math.max(1, z * (e.deltaY < 0 ? 1.08 : 1 / 1.08))), e.clientX - r.left, e.clientY - r.top);
+            };
+            const onZoom = () => setZoom(parseFloat(zoom.value) || 1);
+            const finish = (val) => {
+                stage.removeEventListener('pointerdown', onDown);
+                stage.removeEventListener('pointermove', onMove);
+                stage.removeEventListener('pointerup', onUp);
+                stage.removeEventListener('pointercancel', onUp);
+                stage.removeEventListener('wheel', onWheel);
+                zoom.removeEventListener('input', onZoom);
+                modal.removeEventListener('click', onClick);
+                modal.removeEventListener('cancel', onCancel);
+                if (modal.open) modal.close();
+                resolve(val);
+            };
+            const onClick = (e) => {
+                const b = e.target.closest('[data-crop]');
+                if (!b) return;
+                if (b.dataset.crop === 'cancel') return finish(null);
+                const { w } = size(), f = outW / w, sc = s0 * z;
+                const c = document.createElement('canvas');
+                c.width = outW; c.height = outH;
+                const ctx = c.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, outW, outH);
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, ox * f, oy * f, iw * sc * f, ih * sc * f);
+                let out = null;
+                try { out = c.toDataURL('image/jpeg', 0.9); } catch { /* imagem de outro site */ }
+                if (!out) { this.app.ui.showToast('Não foi possível ajustar esta imagem. Escolhe outra do teu computador.'); return finish(null); }
+                finish(out);
+            };
+            const onCancel = (e) => { e.preventDefault(); finish(null); };
+            img.onload = () => {
+                iw = img.naturalWidth; ih = img.naturalHeight;
+                const { w, h } = size();
+                s0 = Math.max(w / iw, h / ih);
+                z = 1; zoom.value = '1';
+                ox = (w - iw * s0) / 2; oy = (h - ih * s0) / 2;
+                paint();
+            };
+            img.onerror = () => { this.app.ui.showToast('Não foi possível abrir a imagem.'); finish(null); };
+            stage.addEventListener('pointerdown', onDown);
+            stage.addEventListener('pointermove', onMove);
+            stage.addEventListener('pointerup', onUp);
+            stage.addEventListener('pointercancel', onUp);
+            stage.addEventListener('wheel', onWheel, { passive: false });
+            zoom.addEventListener('input', onZoom);
+            modal.addEventListener('click', onClick);
+            modal.addEventListener('cancel', onCancel);
+            modal.showModal();
+            img.crossOrigin = /^https:/i.test(src) ? 'anonymous' : null;
+            img.src = /^https:/i.test(src) ? safeImgSrc(src) : src;
+            if (img.complete && img.naturalWidth) img.onload();
+        });
+    }
+
+    /* ---------------- Ver imagem em grande ---------------- */
+    openLightbox(src, { round = false, onEdit = null } = {}) {
+        src = safeImgSrc(src);
+        if (!src) return;
+        const modal = document.getElementById('modal-lightbox');
+        const img = modal.querySelector('#lightbox-img');
+        const edit = modal.querySelector('[data-lb="edit"]');
+        img.src = src;
+        img.classList.toggle('is-round', !!round);
+        edit.hidden = !onEdit;
+        this._lbEdit = onEdit;
+        if (!modal._bound) {
+            modal._bound = true;
+            modal.addEventListener('click', (e) => {
+                const b = e.target.closest('[data-lb]');
+                if (b && b.dataset.lb === 'edit') { modal.close(); this._lbEdit && this._lbEdit(); return; }
+                if (b || e.target === modal) modal.close();
+            });
+        }
+        modal.showModal();
+    }
+
+    openReport(target) {
+        if (this._needLogin()) return;
+        const modal = document.getElementById('modal-report');
+        if (!modal) return;
+        this._reportTarget = target;
+        const form = modal.querySelector('#form-report');
+        form.reset();
+        modal.querySelector('.auth-error').hidden = true;
+        modal.querySelector('#report-title').textContent = target.profileId ? 'Denunciar perfil' : target.commentId ? 'Denunciar comentário' : 'Denunciar quadro';
+        modal.showModal();
+    }
+
+    _bindReportModal() {
+        const modal = document.getElementById('modal-report');
+        if (!modal) return;
+        const form = modal.querySelector('#form-report');
+        const err = modal.querySelector('.auth-error');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reason = (form.querySelector('input[name="reason"]:checked') || {}).value;
+            if (!reason) { err.textContent = 'Escolhe um motivo.'; err.hidden = false; return; }
+            const btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            err.hidden = true;
+            try {
+                const res = await reportContent({ ...this._reportTarget, reason, details: modal.querySelector('#report-details').value });
+                modal.close();
+                this.app.ui.showToast(res && res.already ? 'Já tinhas denunciado isto. Obrigado.' : 'Denúncia enviada. Obrigado por ajudares.');
+            } catch (ex) {
+                err.textContent = _socialErrMsg(ex);
+                err.hidden = false;
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    }
+
     _bindRepostModal() {
         const modal = document.getElementById('modal-repost');
         if (!modal) return;
@@ -1602,9 +2088,12 @@ class SocialUI {
         form.display_name.value = u.display_name || '';
         this._pendingAvatar = undefined;
         this._pendingCover = undefined;
+        this._pendingCoverFile = undefined;
         modal.querySelector('#perfil-avatar-preview').src = avatarSrc(u);
         this._paintCoverPreview(safeImgSrc(u.cover_image));
         modal.querySelector('.auth-error').hidden = true;
+        const danger = modal.querySelector('.perfil-danger');
+        if (danger) { danger.open = false; modal.querySelector('#perfil-delete-confirm').value = ''; modal.querySelector('#perfil-delete-account').disabled = true; }
         modal.showModal();
         if (focusCover) setTimeout(() => modal.querySelector('#perfil-cover-pick')?.focus(), 30);
     }
@@ -1612,6 +2101,7 @@ class SocialUI {
     _paintCoverPreview(src) {
         const box = document.getElementById('perfil-cover-preview');
         if (!box) return;
+        src = /^blob:/.test(String(src || '')) && src === this._coverBlobUrl ? src : psSafeImageUrl(src);
         box.style.backgroundImage = src ? `url("${src}")` : '';
         box.classList.toggle('has-img', !!src);
     }
@@ -1625,28 +2115,68 @@ class SocialUI {
         const err = modal.querySelector('.auth-error');
 
         const coverFile = modal.querySelector('#perfil-cover-file');
+        const showErr = (t) => { err.textContent = t; err.hidden = false; };
+        const setCoverGif = (fileObj) => {
+            if (this._coverBlobUrl) URL.revokeObjectURL(this._coverBlobUrl);
+            this._coverBlobUrl = fileObj ? URL.createObjectURL(fileObj) : null;
+            this._pendingCoverFile = fileObj || undefined;
+        };
+        const cropCover = async (src) => {
+            const out = await this._openCropper(src, { aspect: 3, outW: 1800, outH: 600, title: 'Ajustar banner' });
+            if (!out) return;
+            setCoverGif(null);
+            this._pendingCover = out;
+            this._paintCoverPreview(out);
+        };
         modal.querySelector('#perfil-cover-pick')?.addEventListener('click', () => coverFile.click());
         modal.querySelector('#perfil-cover-remove')?.addEventListener('click', () => {
+            setCoverGif(null);
             this._pendingCover = null;
             this._paintCoverPreview('');
+        });
+        modal.querySelector('#perfil-cover-adjust')?.addEventListener('click', async () => {
+            err.hidden = true;
+            if (this._pendingCoverFile) { showErr('Os GIFs ficam como estão (recortar tirava a animação).'); return; }
+            const cur = this._pendingCover !== undefined ? this._pendingCover : (this.user && this.user.cover_image);
+            if (!cur) { coverFile.click(); return; }
+            if (/\.gif(\?|$)/i.test(cur)) { showErr('Os GIFs ficam como estão (recortar tirava a animação).'); return; }
+            await cropCover(cur);
         });
         coverFile?.addEventListener('change', async () => {
             const f = coverFile.files[0];
             coverFile.value = '';
             if (!f) return;
+            err.hidden = true;
+            // GIF animado: vai tal como está (sem recorte, para não perder a animação).
+            if (f.type === 'image/gif') {
+                if (f.size > 4 * 1024 * 1024) { showErr('O GIF é grande demais (máx. 4 MB).'); return; }
+                setCoverGif(f);
+                this._pendingCover = undefined;
+                this._paintCoverPreview(this._coverBlobUrl);
+                return;
+            }
             try {
-                // Banner largo: até 1600 px, ~450 KB.
-                const src = await compactarFicheiroImagem(f, { maxLado: 1600, maxBytes: 450000 });
+                const src = await compactarFicheiroImagem(f, { maxLado: 2400, maxBytes: 1500000 });
                 if (!src) throw new Error('Imagem inválida');
-                this._pendingCover = src;
-                this._paintCoverPreview(src);
+                await cropCover(src);
             } catch {
-                err.textContent = 'Não foi possível ler essa imagem.';
-                err.hidden = false;
+                showErr('Não foi possível ler essa imagem.');
             }
         });
 
+        const cropAvatar = async (src) => {
+            const out = await this._openCropper(src, { aspect: 1, round: true, outW: 512, outH: 512, title: 'Ajustar foto' });
+            if (!out) return;
+            this._pendingAvatar = out;
+            preview.src = out;
+        };
         modal.querySelector('#perfil-avatar-pick').addEventListener('click', () => file.click());
+        modal.querySelector('#perfil-avatar-adjust')?.addEventListener('click', async () => {
+            err.hidden = true;
+            const cur = this._pendingAvatar !== undefined ? this._pendingAvatar : (this.user && this.user.image);
+            if (!cur) { file.click(); return; }
+            await cropAvatar(cur);
+        });
         modal.querySelector('#perfil-avatar-remove').addEventListener('click', () => {
             this._pendingAvatar = null;
             preview.src = identicon(form.username.value || (this.user && this.user.username));
@@ -1655,15 +2185,37 @@ class SocialUI {
             const f = file.files[0];
             file.value = '';
             if (!f) return;
+            err.hidden = true;
             try {
-                // Avatar pequeno guardado como data URL na coluna profiles.image.
-                const src = await compactarFicheiroImagem(f, { maxLado: 512, maxBytes: 200000 });
+                const src = await compactarFicheiroImagem(f, { maxLado: 1600, maxBytes: 900000 });
                 if (!src) throw new Error('Imagem inválida');
-                this._pendingAvatar = src;
-                preview.src = src;
+                await cropAvatar(src);
             } catch {
-                err.textContent = 'Não foi possível ler essa imagem.';
+                showErr('Não foi possível ler essa imagem.');
+            }
+        });
+
+        const delInput = modal.querySelector('#perfil-delete-confirm');
+        const delBtn = modal.querySelector('#perfil-delete-account');
+        delInput?.addEventListener('input', () => {
+            const name = String((this.user && this.user.username) || '');
+            delBtn.disabled = !name || delInput.value.trim().toLowerCase() !== name.toLowerCase();
+        });
+        delBtn?.addEventListener('click', async () => {
+            if (delBtn.disabled) return;
+            delBtn.disabled = true;
+            delBtn.textContent = 'A apagar…';
+            err.hidden = true;
+            try {
+                await deleteMyAccount();
+                modal.close();
+                window.location.hash = '#';
+                window.location.reload();
+            } catch (ex) {
+                err.textContent = _socialErrMsg(ex);
                 err.hidden = false;
+                delBtn.disabled = false;
+                delBtn.textContent = 'Apagar a minha conta';
             }
         });
 
@@ -1677,6 +2229,7 @@ class SocialUI {
                 const patch = { username: form.username.value, bio: form.bio.value, display_name: form.display_name.value };
                 if (this._pendingAvatar !== undefined) patch.image = this._pendingAvatar;
                 if (this._pendingCover !== undefined) patch.cover_image = this._pendingCover;
+                if (this._pendingCoverFile) patch.cover_file = this._pendingCoverFile;
                 const updated = await updateMyProfile(patch);
                 const oldName = this.user.username;
                 Object.assign(this.app.currentUser, { username: updated.username, bio: updated.bio, image: updated.image, cover_image: updated.cover_image, display_name: updated.display_name });

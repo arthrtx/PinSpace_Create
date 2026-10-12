@@ -703,7 +703,7 @@ class MusicPlayer {
             bar.querySelectorAll('[data-music-artist]').forEach(el => { el.textContent = artist; });
             if (bar.dataset.art !== src) {
                 bar.dataset.art = src;
-                bar.querySelectorAll('[data-music-art]').forEach(el => { el.innerHTML = src ? `<img src="${src}" alt="">` : ''; });
+                bar.querySelectorAll('[data-music-art]').forEach(el => { el.innerHTML = src ? `<img src="${escapeHTML(src)}" alt="">` : ''; });
             }
             bar.classList.toggle('is-playing', this.playing);
             bar.classList.toggle('has-track', !!t);
@@ -771,7 +771,7 @@ class MusicPlayer {
     _cardHTML(t, i) {
         const art = t.artwork && typeof safeImgSrc === 'function' ? safeImgSrc(t.artwork) : '';
         return `<button type="button" class="music-card" data-i="${i}" role="option" aria-label="${escapeHTML(t.title)} — ${escapeHTML(t.artist)}">
-            <span class="music-card-art">${art ? `<img src="${art}" alt="" loading="lazy" decoding="async">` : '<span class="music-card-ph">♪</span>'}</span>
+            <span class="music-card-art">${art ? `<img src="${escapeHTML(art)}" alt="" loading="lazy" decoding="async">` : '<span class="music-card-ph">♪</span>'}</span>
             <span class="music-card-text">
                 <strong>${escapeHTML(t.title)}</strong>
                 <small>${escapeHTML(t.artist || ' ')}</small>
@@ -852,7 +852,7 @@ class MusicPlayer {
         title.textContent = t.title;
         artist.textContent = this.current >= 0 ? t.artist : 'carrega em ▶ para ouvir';
         const src = t.artwork && typeof safeImgSrc === 'function' ? safeImgSrc(t.artwork) : '';
-        art.innerHTML = src ? `<img src="${src}" alt="">` : '';
+        art.innerHTML = src ? `<img src="${escapeHTML(src)}" alt="">` : '';
         const link = this.$('music-open-sc');
         if (link && t.url) link.href = t.url;
         this._renderQueue();

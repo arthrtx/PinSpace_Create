@@ -601,4 +601,62 @@ body:has(#editor-view.active) .ms-coords { display: none !important; }
 body:has(#editor-view.active) .toast { bottom: 88px; }
 
 /* Etiqueta "SoundCloud" no tom verde acinzentado (sem laranja) */
-.music .gw-w-kicker { color: #A9BCAE; }
+
+
+/* Pequenos elementos da caixa de ligação (antes partilhados com a galeria) */
+.music-kicker {
+    display: block;
+    font-family: var(--font-eyebrow);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #A9BCAE;
+}
+.music-mini {
+    padding: 4px 10px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+}
+.music-mini:hover { background: rgba(255, 255, 255, 0.16); color: #FFF; }
+.music-btn-white {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 999px;
+    background: #FFF;
+    color: #111;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform var(--transition-fast), background var(--transition-fast);
+}
+.music-btn-white:hover { transform: translateY(-1px); background: var(--color-cream); }
+.music-btn-white:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+/* barra do leitor da página inicial: mais estreita e mais baixa */
+.music .music-bar {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+    gap: clamp(10px, 1.4vw, 18px);
+    padding: 4px clamp(8px, 1.2vw, 14px);
+}
+.music .music-bar .music-ctl { width: 36px; height: 36px; }
+.music .music-bar .music-ctl-sm { width: 30px; height: 30px; }
+.music .music-bar .music-ctl svg { width: 17px; height: 17px; }
+.music .music-now { max-width: 360px; gap: 9px; padding: 4px 9px 7px 4px; border-radius: 12px; }
+.music .music-now-art { width: 28px; height: 28px; border-radius: 7px; }
+.music .music-now-text strong { font-size: 12.5px; line-height: 1.2; }
+.music .music-now-text small { font-size: 10.5px; line-height: 1.2; }
+.music .music-bar .music-progress { left: 8px; right: 8px; bottom: 3px; }

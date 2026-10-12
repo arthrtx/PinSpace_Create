@@ -62,3 +62,28 @@ O botão passa a dizer "Entrar com SoundCloud" e, depois do login, o carrossel m
 ## Publicar
 
 Só se publica com sessão iniciada: o autor é sempre o utilizador da sessão e o quadro fica na tabela `boards` (público). Os rascunhos ficam no navegador e aparecem no teu perfil em **Rascunhos**.
+
+## Moderação (denúncias)
+
+- As denúncias ficam na tabela `reports`. Para rever: **Table Editor → `reports_review`** (mostra motivo, quem denunciou, quadro/perfil e nº de denúncias abertas).
+- Um quadro com **3 denúncias abertas** de pessoas diferentes fica escondido automaticamente (`boards.hidden = true`). O autor continua a vê-lo.
+- **Repor um quadro** (denúncia sem razão): em `boards`, mudar `hidden` para `false`; em `reports`, mudar o `status` dessas denúncias para `rejeitada`.
+- **Remover um quadro**: apagar a linha em `boards` (as denúncias desaparecem com ele).
+- **Conta abusiva**: Authentication → Users → apagar o utilizador (apaga perfil, quadros e tudo o resto).
+- Marca como `resolvida` as denúncias tratadas, para não contarem para o esconder automático.
+
+## Comentários
+
+- Tabela `comments` (secção 14 do `social.sql`). Quem tem conta comenta nos quadros que pode ver (até 500 caracteres, 60 por hora); apaga quem escreveu ou o dono do quadro. O dono recebe notificação.
+- Comentários também se podem denunciar — aparecem em `reports_review` com o texto e o autor.
+
+## Banner GIF
+
+- O bucket `avatars` passa a aceitar `image/gif` até 4 MB (volta a correr o `social.sql`). O GIF sobe tal como está, sem recorte, para não perder a animação.
+
+## Edição em grupo (tempo real)
+
+- Usa o **Realtime** do Supabase (Broadcast + Presence). Não precisa de tabelas novas nem de configuração.
+- O anfitrião carrega em **Grupo → Começar sessão** e partilha o link `#collab/<chave>` (chave aleatória de 128 bits). Só quem tem o link e conta entra. Para tirar alguém: terminar e começar uma sessão nova.
+- Imagens grandes sobem para `quadros/<id-do-utilizador>/collab/` para viajarem como link.
+- Quem entra fica com uma cópia local ("Em grupo · …"); o quadro na conta é o do anfitrião.

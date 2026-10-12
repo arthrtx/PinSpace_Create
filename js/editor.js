@@ -67,7 +67,8 @@ function captureState(project) {
     return {
         elementos: deepClone(project.elementos),
         background: deepClone(project.background),
-        titulo: project.titulo
+        titulo: project.titulo,
+        numPaginas: project.numPaginas || 1
     };
 }
 
@@ -75,6 +76,7 @@ function applyState(project, state) {
     project.elementos = deepClone(state.elementos);
     project.background = deepClone(state.background);
     if (state.titulo !== undefined) project.titulo = state.titulo;
+    if (state.numPaginas !== undefined) project.numPaginas = state.numPaginas;
 }
 
 function sortByLayer(elementos) {
@@ -357,132 +359,105 @@ function bindImageToolsEvents(panel, callbacks) {
 }
 
 function getImagePanelHTML(el) {
-    const filtroVal = (el && el.filtro) || 'none';
-    return getImageToolsHTML() + `
-        <div class="panel-section">
-            <h4>Imagem</h4>
-            <div class="form-group">
-                <label>Opacidade</label>
-                <input type="range" id="prop-opacidade" min="0" max="1" step="0.05" value="${el?.opacidade ?? 1}">
-            </div>
-            <div class="form-group">
-                <label>Largura</label>
-                <input type="number" id="prop-width" value="${el?.width || 200}" min="20">
-            </div>
-            <div class="form-group">
-                <label>Altura</label>
-                <input type="number" id="prop-height" value="${el?.height || 180}" min="20">
-            </div>
-            <div class="form-group">
-                <label>Rotação</label>
-                <input type="number" id="prop-rotation" value="${el?.rotation || 0}" min="-360" max="360">
-            </div>
-            <div class="form-group">
-                <label>Espelhar</label>
-                <div class="form-row">
-                    <button class="btn btn-secondary btn-sm" id="prop-flip-h" style="width:50%">↔ Inverter H</button>
-                    <button class="btn btn-secondary btn-sm" id="prop-flip-v" style="width:50%">↕ Inverter V</button>
-                </div>
-            </div>
-        </div>
-        <div class="panel-section">
-            <h4>Cor e Efeitos</h4>
-            <div class="form-group">
-                <label>Filtro</label>
-                <select id="prop-filtro">
-                    ${Object.entries(FILTROS).map(([k, f]) => `<option value="${k}" ${k === filtroVal ? 'selected' : ''}>${f.label}</option>`).join('')}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Brilho</label>
-                <input type="range" id="prop-brilho" min="0.3" max="2" step="0.05" value="${el?.brilho ?? 1}">
-            </div>
-            <div class="form-group">
-                <label>Contraste</label>
-                <input type="range" id="prop-contraste" min="0.3" max="2" step="0.05" value="${el?.contraste ?? 1}">
-            </div>
-            <div class="form-group">
-                <label>Saturação</label>
-                <input type="range" id="prop-saturacao" min="0" max="2" step="0.05" value="${el?.saturacao ?? 1}">
-            </div>
-        </div>
-        <div class="panel-section">
-            <h4>Bordas</h4>
-            <div class="form-group">
-                <label>Bordas arredondadas</label>
-                <input type="range" id="prop-raio" min="0" max="120" step="1" value="${el?.raio ?? 8}">
-                <span class="range-value" id="prop-raio-val">${el?.raio ?? 8} px</span>
-            </div>
-        </div>
-    `;
+    if (!el) return getImageToolsHTML();
+    const filtroVal = el.filtro || 'none';
+    const src = typeof safeImgSrc === 'function' ? (safeImgSrc(el.src) || el.src) : el.src;
+    const shadowLabel = el.sombra && el.sombra.preset && IMG_SHADOWS[el.sombra.preset] ? IMG_SHADOWS[el.sombra.preset].label : '';
+    const filterTiles = `<div class="fx-grid fx-grid-3">
+        ${Object.entries(FILTROS).map(([k, f]) => `
+            <button type="button" class="fx-tile fx-tile-img ${k === filtroVal ? 'on' : ''}" data-img-filter="${k}">
+                <span class="fx-img-demo"><img src="${fxEsc(src)}" alt="" style="filter:${f.css}" draggable="false"></span>
+                <span>${f.label}</span>
+            </button>`).join('')}
+    </div>`;
+    const raio = el.raio ?? 8;
+    const corners = [[0, 'Retos'], [12, 'Suaves'], [32, 'Redondos'], [9999, 'Círculo']];
+    const ratio = el.width && el.height ? el.width / el.height : 1;
+    return getImageToolsHTML()
+        + fxSectionHTML('img-shadow', 'Sombra', imgShadowTilesHTML(el) + `<div data-fx-host="img-shadow">${imgShadowControlsHTML(el)}</div>`, { icon: FX_ICON.shadow, open: true, badge: shadowLabel })
+        + fxSectionHTML('img-rotate', 'Rodar e virar', fxRotateHTML(el, true), { icon: FX_ICON.rotate, open: true })
+        + fxSectionHTML('img-filter', 'Filtros', filterTiles, { icon: FX_ICON.filter, badge: filtroVal !== 'none' && FILTROS[filtroVal] ? FILTROS[filtroVal].label : '' })
+        + fxSectionHTML('img-adjust', 'Ajustes de cor', `
+            ${fxSliderHTML('ad-brilho', 'Brilho', 30, 200, 1, Math.round((el.brilho ?? 1) * 100), '%')}
+            ${fxSliderHTML('ad-contraste', 'Contraste', 30, 200, 1, Math.round((el.contraste ?? 1) * 100), '%')}
+            ${fxSliderHTML('ad-saturacao', 'Saturação', 0, 200, 1, Math.round((el.saturacao ?? 1) * 100), '%')}
+            <button type="button" class="fx-link" data-ad-reset>Repor ajustes</button>`, { icon: FX_ICON.sliders })
+        + fxSectionHTML('img-corner', 'Cantos', `
+            <div class="fx-chips">${corners.map(([v, l]) => `<button type="button" class="fx-chip ${(v === 9999 ? raio >= 999 : raio === v) ? 'on' : ''}" data-corner="${v}"><i class="fx-corner-demo" style="border-radius:${v === 9999 ? '50%' : Math.min(v, 14) + 'px'}"></i>${l}</button>`).join('')}</div>
+            ${fxSliderHTML('raio', 'Arredondar', 0, 300, 1, Math.min(raio, 300), ' px')}`, { icon: FX_ICON.corner })
+        + fxSectionHTML('img-size', 'Tamanho e opacidade', `
+            ${fxSliderHTML('img-op', 'Opacidade', 0, 100, 1, Math.round((el.opacidade ?? 1) * 100), '%')}
+            <div class="fx-size-row">
+                <label><span>L</span><input type="number" id="prop-width" value="${Math.round(el.width || 200)}" min="20"></label>
+                <button type="button" class="fx-lock on" id="prop-lock" title="Manter proporção" aria-pressed="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                </button>
+                <label><span>A</span><input type="number" id="prop-height" value="${Math.round(el.height || 180)}" min="20" data-ratio="${ratio}"></label>
+            </div>`, { icon: FX_ICON.size });
 }
 
 function bindImagePanelEvents(panel, el, callbacks) {
-    panel.querySelector('#prop-opacidade')?.addEventListener('input', (e) => {
-        el.opacidade = parseFloat(e.target.value);
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-width')?.addEventListener('change', (e) => {
-        el.width = parseInt(e.target.value) || 200;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-height')?.addEventListener('change', (e) => {
-        el.height = parseInt(e.target.value) || 180;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-rotation')?.addEventListener('change', (e) => {
-        el.rotation = parseInt(e.target.value) || 0;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-filtro')?.addEventListener('change', (e) => {
-        el.filtro = e.target.value;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-brilho')?.addEventListener('input', (e) => {
-        el.brilho = parseFloat(e.target.value) || 1;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-contraste')?.addEventListener('input', (e) => {
-        el.contraste = parseFloat(e.target.value) || 1;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-saturacao')?.addEventListener('input', (e) => {
-        el.saturacao = parseFloat(e.target.value) || 1;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-flip-h')?.addEventListener('click', () => {
-        el.flipX = !el.flipX;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-flip-v')?.addEventListener('click', () => {
-        el.flipY = !el.flipY;
-        callbacks.onUpdate(el);
-    });
-
     bindImageToolsEvents(panel, callbacks);
+    if (!el) return;
+    fxBindSections(panel);
+    imgShadowBind(panel, el, callbacks);
+    fxBindRotate(panel, el, callbacks);
 
-    const raioInput = panel.querySelector('#prop-raio');
-    if (raioInput) {
-        const showAtual = () => {
-            const val = panel.querySelector('#prop-raio-val');
-            if (val) val.textContent = raioInput.value + ' px';
-        };
-        raioInput.addEventListener('input', () => {
-            el.raio = parseInt(raioInput.value, 10) || 0;
-            showAtual();
-            callbacks.onUpdate(el);
+    panel.querySelectorAll('[data-img-filter]').forEach(b => b.addEventListener('click', () => {
+        el.filtro = b.dataset.imgFilter;
+        panel.querySelectorAll('[data-img-filter]').forEach(x => x.classList.toggle('on', x === b));
+        callbacks.onUpdate(el);
+    }));
+
+    const adj = (id, key) => fxBindSlider(panel, id, '%', (v) => { el[key] = v / 100; callbacks.onUpdate(el, false); }, () => callbacks.onUpdate(el));
+    adj('ad-brilho', 'brilho');
+    adj('ad-contraste', 'contraste');
+    adj('ad-saturacao', 'saturacao');
+    panel.querySelector('[data-ad-reset]')?.addEventListener('click', () => {
+        el.brilho = 1; el.contraste = 1; el.saturacao = 1;
+        ['ad-brilho', 'ad-contraste', 'ad-saturacao'].forEach(id => {
+            const r = panel.querySelector(`[data-fx-range="${id}"]`);
+            const o = panel.querySelector(`[data-fx-out="${id}"]`);
+            if (r) r.value = 100;
+            if (o) o.textContent = '100%';
         });
-    }
+        callbacks.onUpdate(el);
+    });
 
+    panel.querySelectorAll('[data-corner]').forEach(b => b.addEventListener('click', () => {
+        const v = parseInt(b.dataset.corner, 10);
+        el.raio = v === 9999 ? Math.ceil(Math.max(el.width, el.height)) : v;
+        panel.querySelectorAll('[data-corner]').forEach(x => x.classList.toggle('on', x === b));
+        const r = panel.querySelector('[data-fx-range="raio"]');
+        const o = panel.querySelector('[data-fx-out="raio"]');
+        if (r) r.value = Math.min(el.raio, 300);
+        if (o) o.textContent = Math.min(el.raio, 300) + ' px';
+        callbacks.onUpdate(el);
+    }));
+    fxBindSlider(panel, 'raio', ' px', (v) => { el.raio = v; callbacks.onUpdate(el, false); }, () => callbacks.onUpdate(el));
+    fxBindSlider(panel, 'img-op', '%', (v) => { el.opacidade = v / 100; callbacks.onUpdate(el, false); }, () => callbacks.onUpdate(el));
+
+    const wIn = panel.querySelector('#prop-width');
+    const hIn = panel.querySelector('#prop-height');
+    const lock = panel.querySelector('#prop-lock');
+    const ratio = parseFloat(hIn?.dataset.ratio) || 1;
+    lock?.addEventListener('click', () => {
+        const on = !lock.classList.contains('on');
+        lock.classList.toggle('on', on);
+        lock.setAttribute('aria-pressed', String(on));
+    });
+    wIn?.addEventListener('keydown', e => e.stopPropagation());
+    hIn?.addEventListener('keydown', e => e.stopPropagation());
+    wIn?.addEventListener('change', () => {
+        el.width = Math.max(20, parseInt(wIn.value, 10) || el.width);
+        if (lock?.classList.contains('on')) { el.height = Math.round(el.width / ratio); hIn.value = el.height; }
+        callbacks.onUpdate(el);
+    });
+    hIn?.addEventListener('change', () => {
+        el.height = Math.max(20, parseInt(hIn.value, 10) || el.height);
+        if (lock?.classList.contains('on')) { el.width = Math.round(el.height * ratio); wIn.value = el.width; }
+        callbacks.onUpdate(el);
+    });
 }
 
 function duplicateImage(el, layer) {
@@ -716,311 +691,165 @@ function measureTextBlock(el) {
 }
 
 function getTextPanelHTML(el) {
-    const currentFont = el?.fonte || 'Segoe UI';
-    const fontOptions = FONTES.map(f => {
-        const sel = el?.fonte === f ? ' selected' : '';
-        return `<option value="${f}" style="font-family:'${f}';font-size:13px"${sel}>${f}</option>`;
-    }).join('');
-
-    return `
+    const addCards = `
         <div class="panel-section">
             <h4>Adicionar texto</h4>
+            <p class="panel-hint fx-drag-hint">Clica ou arrasta para o quadro.</p>
             <div class="text-add-grid">
-                <button class="text-add-card" data-add="titulo" title="Adicionar título">
+                <button class="text-add-card" data-add="titulo" data-ps-drag="text:titulo" title="Adicionar título">
                     <span class="text-add-sample" style="font-family:'Playfair Display';font-weight:700;font-size:30px">Adicione um título</span>
                     <span class="text-add-label">Título</span>
                 </button>
-                <button class="text-add-card" data-add="subtitulo" title="Adicionar subtítulo">
+                <button class="text-add-card" data-add="subtitulo" data-ps-drag="text:subtitulo" title="Adicionar subtítulo">
                     <span class="text-add-sample" style="font-family:'Montserrat';font-weight:600;font-size:20px">Adicione um subtítulo</span>
                     <span class="text-add-label">Subtítulo</span>
                 </button>
-                <button class="text-add-card" data-add="texto" title="Adicionar texto">
+                <button class="text-add-card" data-add="texto" data-ps-drag="text:texto" title="Adicionar texto">
                     <span class="text-add-sample" style="font-family:'Segoe UI';font-weight:400;font-size:15px">Adicione algum texto</span>
                     <span class="text-add-label">Texto</span>
                 </button>
-                <button class="text-add-card" data-add="citacao" title="Adicionar citação">
+                <button class="text-add-card" data-add="citacao" data-ps-drag="text:citacao" title="Adicionar citação">
                     <span class="text-add-sample" style="font-family:'Lora';font-style:italic;font-size:16px">"Uma citação"</span>
                     <span class="text-add-label">Citação</span>
                 </button>
             </div>
+        </div>`;
+    if (!el) return addCards;
+
+    const currentFont = psSafeFont(el.fonte || 'Segoe UI');
+    const fx = textEffectOf(el);
+    const fxLabel = fx.tipo && fx.tipo !== 'nenhum' && TEXT_EFFECTS[fx.tipo] ? TEXT_EFFECTS[fx.tipo].label : '';
+    const tr = el.textTransform || 'none';
+    return `
+        <div class="panel-section fx-text-edit">
+            <label class="fx-label" for="prop-conteudo">Conteúdo</label>
+            <textarea id="prop-conteudo" rows="3">${escapeHTML(el.conteudo || '')}</textarea>
         </div>
-        ${el ? `
-        <div class="panel-section" style="margin-top:16px">
-            <div class="form-group">
-                <label>Conteúdo</label>
-                <textarea id="prop-conteudo" rows="3">${escapeHTML(el.conteudo || '')}</textarea>
-            </div>
-            <div class="form-group">
-                <label>Fonte</label>
-                <div id="font-preview" style="font-family:'${currentFont}';font-size:18px;color:var(--text-primary);background:var(--bg-secondary);padding:8px 12px;border-radius:8px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(currentFont)}</div>
-                <select id="prop-fonte">${fontOptions}</select>
-            </div>
-            <div class="form-group">
-                <label>Tamanho</label>
+        ${fxSectionHTML('tx-font', 'Fonte e estilo', `
+            <button type="button" class="fx-font-btn" id="prop-font-btn" style="font-family:'${escapeHTML(currentFont)}'">
+                <span>${escapeHTML(currentFont)}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="fx-row">
                 <div class="text-size-group">
                     <button type="button" class="toggle-btn text-size-step" id="prop-tamanho-men" title="Diminuir">A−</button>
-                    <input type="number" id="prop-tamanho" value="${el.tamanho || 24}" min="8" max="400">
+                    <input type="number" id="prop-tamanho" value="${Math.round(el.tamanho || 24)}" min="6" max="800" step="1" inputmode="numeric">
                     <button type="button" class="toggle-btn text-size-step" id="prop-tamanho-mais" title="Aumentar">A+</button>
                 </div>
             </div>
-            <div class="form-group">
-                <label>Cor do texto</label>
-                <input type="color" id="prop-cor" value="${el.cor || '#0f172a'}">
-            </div>
-            <div class="form-group">
-                <label>Estilo</label>
+            <div class="fx-row fx-row-split">
                 <div class="toggle-group">
                     <button class="toggle-btn ${el.negrito ? 'active' : ''}" id="prop-negrito" title="Negrito"><b>B</b></button>
                     <button class="toggle-btn ${el.italico ? 'active' : ''}" id="prop-italico" title="Itálico"><i>I</i></button>
                     <button class="toggle-btn ${el.sublinhado ? 'active' : ''}" id="prop-sublinhado" title="Sublinhado"><u>U</u></button>
                     <button class="toggle-btn ${el.riscado ? 'active' : ''}" id="prop-riscado" title="Riscado"><s>S</s></button>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>Alinhamento</label>
                 <div class="toggle-group">
                     <button class="toggle-btn ${el.alinhamento === 'left' ? 'active' : ''}" data-align="left" title="Esquerda">${uiIcon('alignL')}</button>
                     <button class="toggle-btn ${el.alinhamento === 'center' ? 'active' : ''}" data-align="center" title="Centro">${uiIcon('alignC')}</button>
                     <button class="toggle-btn ${el.alinhamento === 'right' ? 'active' : ''}" data-align="right" title="Direita">${uiIcon('alignR')}</button>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>Espaçamento entre linhas</label>
-                <input type="range" id="prop-line-height" min="0.8" max="2.5" step="0.1" value="${el.lineHeight || 1.2}">
-                <span style="font-size:11px;color:var(--text-muted)">${(el.lineHeight || 1.2).toFixed(1)}</span>
-            </div>
-            <div class="form-group">
-                <label>Espaçamento entre letras</label>
-                <input type="range" id="prop-letter-spacing" min="-5" max="20" step="0.5" value="${el.letterSpacing || 0}">
-                <span style="font-size:11px;color:var(--text-muted)">${(el.letterSpacing || 0).toFixed(1)}px</span>
-            </div>
-            <div class="form-group">
-                <label>Transformação</label>
-                <div class="toggle-group">
-                    <button class="toggle-btn ${!el.textTransform || el.textTransform === 'none' ? 'active' : ''}" data-transform="none" title="Normal">Aa</button>
-                    <button class="toggle-btn ${el.textTransform === 'uppercase' ? 'active' : ''}" data-transform="uppercase" title="Maiúsculas">AA</button>
-                    <button class="toggle-btn ${el.textTransform === 'lowercase' ? 'active' : ''}" data-transform="lowercase" title="Minúsculas">aa</button>
-                    <button class="toggle-btn ${el.textTransform === 'capitalize' ? 'active' : ''}" data-transform="capitalize" title="Capitalizar">Aa</button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Cor de fundo do texto</label>
-                <div style="display:flex;gap:8px;align-items:center">
-                    <input type="checkbox" id="prop-has-bg" ${el.bgColor ? 'checked' : ''} style="margin:0">
-                    <input type="color" id="prop-bg-color" value="${el.bgColor || '#ffffff'}" ${!el.bgColor ? 'disabled' : ''} style="flex:1">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Sombra do texto</label>
-                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-                    <input type="checkbox" id="prop-has-shadow" ${el.textShadow ? 'checked' : ''} style="margin:0">
-                    <span style="font-size:12px;color:var(--text-muted)">Ativar sombra</span>
-                </div>
-                <div id="shadow-controls" style="display:${el.textShadow ? 'block' : 'none'}">
-                    <div class="form-row">
-                        <div class="form-group" style="flex:1">
-                            <label style="font-size:11px">Desfoque</label>
-                            <input type="range" id="prop-shadow-blur" min="0" max="20" value="${el.textShadowBlur || 4}">
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label style="font-size:11px">Cor</label>
-                            <input type="color" id="prop-shadow-color" value="${el.textShadowColor || '#000000'}">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="prop-autoajustar" ${el.autoAjustar !== false ? 'checked' : ''} style="margin-right:6px"> Auto-ajustar caixa ao conteúdo</label>
-            </div>
-            <div class="form-group">
-                <label>Opacidade</label>
-                <input type="range" id="prop-opacidade" min="0" max="1" step="0.05" value="${el.opacidade ?? 1}">
-                <span style="font-size:11px;color:var(--text-muted)">${Math.round((el.opacidade ?? 1) * 100)}%</span>
-            </div>
-            <div class="form-group">
-                <label>Rotação</label>
-                <input type="number" id="prop-rotation" value="${el.rotation || 0}" min="-360" max="360">
-            </div>
-        </div>` : ''}
+            </div>`, { icon: FX_ICON.type, open: true })}
+        ${fxSectionHTML('tx-color', 'Cor do texto', fxSwatchesHTML('tx-color', el.cor || '#0f172a'), { icon: FX_ICON.palette, open: true })}
+        ${fxSectionHTML('tx-fx', 'Efeitos', textEffectTilesHTML(el) + `<div data-fx-host="text-fx">${textEffectControlsHTML(el)}</div>`, { icon: FX_ICON.sparkle, open: true, badge: fxLabel })}
+        ${fxSectionHTML('tx-bg', 'Fundo do texto', fxSwatchesHTML('tx-bg', el.bgColor || '', { allowNone: true }), { icon: FX_ICON.palette })}
+        ${fxSectionHTML('tx-space', 'Espaçamento e maiúsculas', `
+            ${fxSliderHTML('tx-lh', 'Entre linhas', 0.8, 2.5, 0.05, (el.lineHeight || 1.2).toFixed(2), '')}
+            ${fxSliderHTML('tx-ls', 'Entre letras', -5, 30, 0.5, el.letterSpacing || 0, ' px')}
+            <div class="fx-chips">
+                ${[['none', 'Normal', 'Aa'], ['uppercase', 'Maiúsculas', 'AA'], ['lowercase', 'Minúsculas', 'aa'], ['capitalize', 'Iniciais', 'Ab']].map(([v, l, d]) => `<button type="button" class="fx-chip ${tr === v ? 'on' : ''}" data-transform="${v}" title="${l}"><b>${d}</b>${l}</button>`).join('')}
+            </div>`, { icon: FX_ICON.spacing })}
+        ${fxSectionHTML('tx-rot', 'Rodar', fxRotateHTML(el, false), { icon: FX_ICON.rotate })}
+        ${fxSectionHTML('tx-more', 'Mais opções', `
+            ${fxSliderHTML('tx-op', 'Opacidade', 0, 100, 1, Math.round((el.opacidade ?? 1) * 100), '%')}
+            <label class="fx-switch"><input type="checkbox" id="prop-autoajustar" ${el.autoAjustar !== false ? 'checked' : ''}><span></span>Ajustar a caixa ao texto</label>`, { icon: FX_ICON.sliders })}
+        ${addCards}
     `;
 }
 
 function bindTextPanelEvents(panel, el, callbacks) {
     panel.querySelectorAll('[data-add]').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            if (btn._psDragged) { btn._psDragged = false; return; }
             callbacks.onAddTextPreset?.(btn.dataset.add);
         });
     });
 
     if (!el) return;
+    fxBindSections(panel);
 
-    panel.querySelector('#prop-tamanho-men')?.addEventListener('click', () => {
-        const input = panel.querySelector('#prop-tamanho');
-        const val = Math.max(8, (parseInt(input.value, 10) || 24) - 2);
-        input.value = val;
-        el.tamanho = val;
+    const sizeInput = panel.querySelector('#prop-tamanho');
+    const setSize = (v) => {
+        el.tamanho = clamp(Math.round(v), 6, 800);
+        if (sizeInput) sizeInput.value = el.tamanho;
         callbacks.onUpdate(el);
-    });
+    };
+    panel.querySelector('#prop-tamanho-men')?.addEventListener('click', () => setSize((el.tamanho || 24) - 2));
+    panel.querySelector('#prop-tamanho-mais')?.addEventListener('click', () => setSize((el.tamanho || 24) + 2));
+    sizeInput?.addEventListener('keydown', e => e.stopPropagation());
+    sizeInput?.addEventListener('change', () => setSize(parseFloat(String(sizeInput.value).replace(',', '.')) || 24));
 
-    panel.querySelector('#prop-tamanho-mais')?.addEventListener('click', () => {
-        const input = panel.querySelector('#prop-tamanho');
-        const val = Math.min(400, (parseInt(input.value, 10) || 24) + 2);
-        input.value = val;
-        el.tamanho = val;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-conteudo')?.addEventListener('input', (e) => {
+    const content = panel.querySelector('#prop-conteudo');
+    content?.addEventListener('keydown', e => e.stopPropagation());
+    content?.addEventListener('input', (e) => {
         el.conteudo = e.target.value;
-        callbacks.onUpdate(el);
+        callbacks.onUpdate(el, false);
+    });
+    content?.addEventListener('change', () => callbacks.onUpdate(el));
+
+    const fontBtn = panel.querySelector('#prop-font-btn');
+    fontBtn?.addEventListener('click', () => {
+        fxOpenFontPicker(fontBtn, el.fonte, (f) => {
+            el.fonte = f;
+            fontBtn.style.fontFamily = `'${f}'`;
+            fontBtn.querySelector('span').textContent = f;
+            panel.querySelectorAll('.fx-text-demo b').forEach(b => { b.style.fontFamily = `'${f}'`; });
+            callbacks.onUpdate(el);
+        });
     });
 
-    panel.querySelector('#prop-fonte')?.addEventListener('change', (e) => {
-        el.fonte = e.target.value;
-        const sel = e.target;
-        sel.style.fontFamily = `'${el.fonte}'`;
-        const preview = panel.querySelector('#font-preview');
-        if (preview) {
-            preview.style.fontFamily = `'${el.fonte}'`;
-            preview.textContent = el.fonte;
-        }
+    const toggle = (id, key) => panel.querySelector(id)?.addEventListener('click', (e) => {
+        el[key] = !el[key];
+        e.currentTarget.classList.toggle('active', !!el[key]);
         callbacks.onUpdate(el);
     });
-
-    panel.querySelector('#prop-tamanho')?.addEventListener('change', (e) => {
-        el.tamanho = parseInt(e.target.value) || 24;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-cor')?.addEventListener('input', (e) => {
-        el.cor = e.target.value;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-negrito')?.addEventListener('click', (e) => {
-        el.negrito = !el.negrito;
-        e.target.classList.toggle('active');
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-italico')?.addEventListener('click', (e) => {
-        el.italico = !el.italico;
-        e.target.classList.toggle('active');
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-sublinhado')?.addEventListener('click', (e) => {
-        el.sublinhado = !el.sublinhado;
-        e.target.classList.toggle('active');
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-riscado')?.addEventListener('click', (e) => {
-        el.riscado = !el.riscado;
-        e.target.classList.toggle('active');
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-autoajustar')?.addEventListener('change', (e) => {
-        el.autoAjustar = e.target.checked;
-        callbacks.onUpdate(el);
-    });
+    toggle('#prop-negrito', 'negrito');
+    toggle('#prop-italico', 'italico');
+    toggle('#prop-sublinhado', 'sublinhado');
+    toggle('#prop-riscado', 'riscado');
 
     panel.querySelectorAll('[data-align]').forEach(btn => {
         btn.addEventListener('click', () => {
             el.alinhamento = btn.dataset.align;
-            panel.querySelectorAll('[data-align]').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            panel.querySelectorAll('[data-align]').forEach(b => b.classList.toggle('active', b === btn));
             callbacks.onUpdate(el);
         });
     });
 
-    panel.querySelector('#prop-opacidade')?.addEventListener('input', (e) => {
-        el.opacidade = parseFloat(e.target.value);
+    fxBindSwatches(panel, 'tx-color', (c) => {
+        el.cor = c || '#000000';
+        panel.querySelectorAll('.fx-text-demo b').forEach(b => {
+            if (!b.style.webkitTextStroke || b.style.color !== 'transparent') b.style.color = el.cor;
+        });
         callbacks.onUpdate(el);
     });
+    textEffectBind(panel, el, callbacks);
+    fxBindSwatches(panel, 'tx-bg', (c) => { el.bgColor = c || null; callbacks.onUpdate(el); });
 
-    panel.querySelector('#prop-rotation')?.addEventListener('change', (e) => {
-        el.rotation = parseInt(e.target.value) || 0;
-        callbacks.onUpdate(el);
-    });
-
-    // Novos event handlers para opções avançadas de texto
-    panel.querySelector('#prop-line-height')?.addEventListener('input', (e) => {
-        el.lineHeight = parseFloat(e.target.value);
-        e.target.nextElementSibling.textContent = el.lineHeight.toFixed(1);
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-letter-spacing')?.addEventListener('input', (e) => {
-        el.letterSpacing = parseFloat(e.target.value);
-        e.target.nextElementSibling.textContent = el.letterSpacing.toFixed(1) + 'px';
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelectorAll('[data-transform]')?.forEach(btn => {
+    fxBindSlider(panel, 'tx-lh', '', (v) => { el.lineHeight = v; callbacks.onUpdate(el, false); }, () => callbacks.onUpdate(el));
+    fxBindSlider(panel, 'tx-ls', ' px', (v) => { el.letterSpacing = v; callbacks.onUpdate(el, false); }, () => callbacks.onUpdate(el));
+    panel.querySelectorAll('[data-transform]').forEach(btn => {
         btn.addEventListener('click', () => {
             el.textTransform = btn.dataset.transform;
-            panel.querySelectorAll('[data-transform]').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            panel.querySelectorAll('[data-transform]').forEach(b => b.classList.toggle('on', b === btn));
             callbacks.onUpdate(el);
         });
     });
 
-    panel.querySelector('#prop-has-bg')?.addEventListener('change', (e) => {
-        const colorInput = panel.querySelector('#prop-bg-color');
-        if (e.target.checked) {
-            el.bgColor = colorInput.value;
-            colorInput.disabled = false;
-        } else {
-            el.bgColor = null;
-            colorInput.disabled = true;
-        }
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-bg-color')?.addEventListener('input', (e) => {
-        if (panel.querySelector('#prop-has-bg').checked) {
-            el.bgColor = e.target.value;
-            callbacks.onUpdate(el);
-        }
-    });
-
-    panel.querySelector('#prop-has-shadow')?.addEventListener('change', (e) => {
-        const shadowControls = panel.querySelector('#shadow-controls');
-        if (e.target.checked) {
-            el.textShadow = true;
-            el.textShadowBlur = parseInt(panel.querySelector('#prop-shadow-blur')?.value) || 4;
-            el.textShadowColor = panel.querySelector('#prop-shadow-color')?.value || '#000000';
-            shadowControls.style.display = 'block';
-        } else {
-            el.textShadow = false;
-            el.textShadowBlur = 0;
-            el.textShadowColor = '#000000';
-            shadowControls.style.display = 'none';
-        }
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-shadow-blur')?.addEventListener('input', (e) => {
-        if (el.textShadow) {
-            el.textShadowBlur = parseInt(e.target.value) || 0;
-            callbacks.onUpdate(el);
-        }
-    });
-
-    panel.querySelector('#prop-shadow-color')?.addEventListener('input', (e) => {
-        if (el.textShadow) {
-            el.textShadowColor = e.target.value;
-            callbacks.onUpdate(el);
-        }
-    });
-
-    // Atualizar displays de valores dos sliders
-    panel.querySelector('#prop-opacidade')?.addEventListener('input', (e) => {
-        el.opacidade = parseFloat(e.target.value);
-        const display = e.target.nextElementSibling;
-        if (display) display.textContent = Math.round(el.opacidade * 100) + '%';
+    fxBindRotate(panel, el, callbacks);
+    fxBindSlider(panel, 'tx-op', '%', (v) => { el.opacidade = v / 100; callbacks.onUpdate(el, false); }, () => callbacks.onUpdate(el));
+    panel.querySelector('#prop-autoajustar')?.addEventListener('change', (e) => {
+        el.autoAjustar = e.target.checked;
         callbacks.onUpdate(el);
     });
 }
@@ -1128,9 +957,9 @@ function createShape(type, x = 300, y = 300, layer = 0) {
         bloqueada: false,
         visivel: true,
         nome: SHAPE_LABELS[type] || type,
-        cor: '#6366f1',
-        corContorno: '#6366f1',
-        espessura: isGuide ? 3 : 2,
+        cor: isGuide ? '#111111' : '#E60023',
+        corContorno: '#111111',
+        espessura: isGuide ? 4 : 0,
         preenchimento: type !== 'linha'
     };
 }
@@ -1177,6 +1006,15 @@ function shapeGeometry(forma, w, h) {
     }
 }
 
+// Espessura do contorno que se vê de facto (contorno só, linha e seta
+// nunca ficam invisíveis com espessura 0).
+function shapeStrokeWidth(el) {
+    const sw = Math.max(0, Number(el.espessura) || 0);
+    if (el.forma === 'linha' || el.forma === 'seta') return Math.max(1, sw || 3);
+    if (el.preenchimento === false) return Math.max(1, sw || 3);
+    return sw;
+}
+
 function renderShapeElement(dom, el) {
     let svg = dom.querySelector('.shape-svg');
     if (!svg) {
@@ -1188,72 +1026,63 @@ function renderShapeElement(dom, el) {
         });
         dom.appendChild(svg);
     }
-
+    svg.style.overflow = 'visible';
     svg.setAttribute('viewBox', `0 0 ${el.width} ${el.height}`);
     svg.innerHTML = '';
 
     const shape = el.forma;
     const fill = el.preenchimento !== false ? el.cor : 'none';
     const stroke = el.corContorno || el.cor;
-    const sw = el.espessura || 0;
-
+    const sw = shapeStrokeWidth(el);
+    // O contorno fica por dentro da caixa (não é cortado nem deforma o elemento).
+    const iw = Math.max(1, el.width - sw), ih = Math.max(1, el.height - sw);
     let node;
 
     switch (shape) {
         case 'quadrado':
         case 'retangulo':
             node = createSVGElement('rect', {
-                x: sw / 2, y: sw / 2,
-                width: el.width - sw, height: el.height - sw,
-                fill, stroke, 'stroke-width': sw, rx: shape === 'quadrado' ? 8 : 5
+                x: sw / 2, y: sw / 2, width: iw, height: ih,
+                fill, stroke: sw ? stroke : 'none', 'stroke-width': sw,
+                rx: Math.min(shape === 'quadrado' ? 8 : 5, iw / 2, ih / 2), 'stroke-linejoin': 'round'
             });
             break;
-
         case 'circulo':
             node = createSVGElement('ellipse', {
-                cx: el.width / 2, cy: el.height / 2,
-                rx: Math.max(1, el.width / 2 - sw / 2), ry: Math.max(1, el.height / 2 - sw / 2),
-                fill, stroke, 'stroke-width': sw
+                cx: el.width / 2, cy: el.height / 2, rx: iw / 2, ry: ih / 2,
+                fill, stroke: sw ? stroke : 'none', 'stroke-width': sw
             });
             break;
-
         case 'linha':
             node = createSVGElement('line', {
-                x1: 0, y1: el.height / 2,
-                x2: el.width, y2: el.height / 2,
-                stroke: stroke, 'stroke-width': sw, 'stroke-linecap': 'round'
+                x1: sw / 2, y1: el.height / 2, x2: el.width - sw / 2, y2: el.height / 2,
+                stroke, 'stroke-width': sw, 'stroke-linecap': 'round'
             });
             break;
-
-        case 'seta':
+        case 'seta': {
             const midY = el.height / 2;
-            const headSize = Math.min(22, el.height);
+            const headSize = Math.max(sw * 2.5, Math.min(Math.max(22, sw * 3), el.height, el.width / 2));
             node = createSVGElement('g', {});
-            const line = createSVGElement('line', {
-                x1: 0, y1: midY, x2: el.width - headSize, y2: midY,
-                stroke: stroke, 'stroke-width': sw, 'stroke-linecap': 'round'
-            });
-            const headFill = el.preenchimento !== false ? stroke : 'none';
-            const head = createSVGElement('polygon', {
+            node.appendChild(createSVGElement('line', {
+                x1: sw / 2, y1: midY, x2: el.width - headSize * 0.8, y2: midY,
+                stroke, 'stroke-width': sw, 'stroke-linecap': 'round'
+            }));
+            node.appendChild(createSVGElement('polygon', {
                 points: `${el.width},${midY} ${el.width - headSize},${midY - headSize / 2} ${el.width - headSize},${midY + headSize / 2}`,
-                fill: headFill
-            });
-            node.appendChild(line);
-            node.appendChild(head);
+                fill: stroke, stroke, 'stroke-width': Math.min(sw, 2), 'stroke-linejoin': 'round'
+            }));
             break;
-
+        }
         default: {
-            const geo = shapeGeometry(shape, el.width, el.height);
+            const geo = shapeGeometry(shape, iw, ih);
             if (geo) {
                 node = createSVGElement('path', {
-                    d: geo.d,
-                    fill, stroke, 'stroke-width': sw,
-                    'stroke-linejoin': 'round'
+                    d: geo.d, transform: `translate(${sw / 2} ${sw / 2})`,
+                    fill, stroke: sw ? stroke : 'none', 'stroke-width': sw, 'stroke-linejoin': 'round'
                 });
             }
         }
     }
-
     if (node) svg.appendChild(node);
 }
 
@@ -1277,116 +1106,70 @@ function getShapePreviewSVG(forma) {
     }
 }
 
+function shapeStyleOf(el) {
+    if (el.forma === 'linha' || el.forma === 'seta') return 'linha';
+    if (el.preenchimento === false) return 'contorno';
+    return (el.espessura || 0) > 0 ? 'ambos' : 'solido';
+}
+
 function getShapesPanelHTML(el) {
     const shapesHTML = SHAPE_TYPES.map(s => `
-        <button class="shape-option" data-shape="${s}" title="${SHAPE_LABELS[s]} (arrasta para o quadro)" draggable="true">
+        <button class="shape-option fx-tile" data-shape="${s}" data-ps-drag="shape:${s}" title="${SHAPE_LABELS[s]} (clica ou arrasta para o quadro)" draggable="false">
             <span class="shape-preview">
-                <svg viewBox="0 0 44 44" width="38" height="38" fill="currentColor" stroke="currentColor" stroke-width="1">
+                <svg viewBox="0 0 44 44" width="34" height="34" fill="currentColor" stroke="currentColor" stroke-width="1">
                     ${getShapePreviewSVG(s)}
                 </svg>
             </span>
             <span class="shape-name">${SHAPE_LABELS[s]}</span>
-        </button>
-    `).join('');
-
-    let propsHTML = '';
-    if (el) {
-        propsHTML = `
-            <div class="panel-section" style="margin-top:16px">
-                <h4>Propriedades</h4>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Preenchimento</label>
-                        <input type="color" id="prop-cor" value="${el.cor || '#6366f1'}">
-                    </div>
-                    <div class="form-group">
-                        <label>Contorno</label>
-                        <input type="color" id="prop-corContorno" value="${el.corContorno || el.cor || '#6366f1'}">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Espessura do contorno</label>
-                    <input type="range" id="prop-espessura" min="0" max="20" step="1" value="${el.espessura || 0}">
-                </div>
-                <div class="form-group">
-                    <label>Estilo</label>
-                    <div class="toggle-group">
-                        <button class="toggle-btn ${el.preenchimento !== false ? 'active' : ''}" id="prop-preenchimento">Sólido</button>
-                        <button class="toggle-btn ${el.preenchimento === false ? 'active' : ''}" id="prop-contorno-only">Contorno</button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Opacidade</label>
-                    <input type="range" id="prop-opacidade" min="0" max="1" step="0.05" value="${el.opacidade ?? 1}">
-                </div>
-                <div class="form-group">
-                    <label>Rotação</label>
-                    <input type="number" id="prop-rotation" value="${el.rotation || 0}" min="-360" max="360">
-                </div>
-            </div>
-        `;
-    }
-
-    return `
+        </button>`).join('');
+    const add = `
         <div class="panel-section">
             <h4>Adicionar forma</h4>
-            <div class="shape-grid">${shapesHTML}</div>
-        </div>
-        ${propsHTML}
-    `;
+            <p class="panel-hint fx-drag-hint">Clica ou arrasta para o quadro.</p>
+            <div class="fx-grid fx-grid-3 shape-grid">${shapesHTML}</div>
+        </div>`;
+    if (!el) return add;
+
+    const style = shapeStyleOf(el);
+    const isLine = style === 'linha';
+    const styleChip = (v, label, demo) => `<button type="button" class="fx-tile ${style === v ? 'on' : ''}" data-shape-style="${v}">
+        <span class="fx-shape-demo">${demo}</span><span>${label}</span></button>`;
+    const styles = isLine ? '' : fxSectionHTML('sh-style', 'Estilo', `<div class="fx-grid fx-grid-3">
+            ${styleChip('solido', 'Sólido', '<svg viewBox="0 0 40 40" width="30" height="30"><rect x="6" y="6" width="28" height="28" rx="6" fill="currentColor"/></svg>')}
+            ${styleChip('contorno', 'Contorno', '<svg viewBox="0 0 40 40" width="30" height="30"><rect x="7" y="7" width="26" height="26" rx="6" fill="none" stroke="currentColor" stroke-width="3"/></svg>')}
+            ${styleChip('ambos', 'Cor + contorno', '<svg viewBox="0 0 40 40" width="30" height="30"><rect x="7" y="7" width="26" height="26" rx="6" fill="currentColor" fill-opacity=".35" stroke="currentColor" stroke-width="3"/></svg>')}
+        </div>`, { icon: FX_ICON.sliders, open: true });
+    const fillSec = (isLine || style === 'contorno') ? '' : fxSectionHTML('sh-fill', 'Cor de preenchimento', fxSwatchesHTML('sh-fill', el.cor), { icon: FX_ICON.palette, open: true });
+    const strokeSec = (style === 'solido') ? '' : fxSectionHTML('sh-stroke', isLine ? 'Linha' : 'Contorno', `
+            ${fxSwatchesHTML('sh-stroke', el.corContorno || el.cor)}
+            ${fxSliderHTML('sh-sw', 'Espessura', 1, 40, 1, shapeStrokeWidth(el), ' px')}`, { icon: FX_ICON.corner, open: true });
+    return add + styles + fillSec + strokeSec
+        + fxSectionHTML('sh-rot', 'Rodar', fxRotateHTML(el, false), { icon: FX_ICON.rotate })
+        + fxSectionHTML('sh-more', 'Opacidade', fxSliderHTML('sh-op', 'Opacidade', 0, 100, 1, Math.round((el.opacidade ?? 1) * 100), '%'), { icon: FX_ICON.size });
 }
 
 function bindShapesPanelEvents(panel, el, callbacks) {
     panel.querySelectorAll('[data-shape]').forEach(btn => {
         btn.addEventListener('click', () => {
+            if (btn._psDragged) return;
             callbacks.onAddShape?.(btn.dataset.shape);
         });
-        btn.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('application/x-pinshape', btn.dataset.shape);
-            e.dataTransfer.effectAllowed = 'copy';
-        });
     });
-
     if (!el) return;
+    fxBindSections(panel);
 
-    panel.querySelector('#prop-cor')?.addEventListener('input', (e) => {
-        el.cor = e.target.value;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-corContorno')?.addEventListener('input', (e) => {
-        el.corContorno = e.target.value;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-espessura')?.addEventListener('input', (e) => {
-        el.espessura = parseInt(e.target.value, 10) || 0;
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-preenchimento')?.addEventListener('click', (e) => {
-        el.preenchimento = true;
-        panel.querySelector('#prop-preenchimento').classList.add('active');
-        panel.querySelector('#prop-contorno-only').classList.remove('active');
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-contorno-only')?.addEventListener('click', (e) => {
-        el.preenchimento = false;
-        panel.querySelector('#prop-contorno-only').classList.add('active');
-        panel.querySelector('#prop-preenchimento').classList.remove('active');
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-opacidade')?.addEventListener('input', (e) => {
-        el.opacidade = parseFloat(e.target.value);
-        callbacks.onUpdate(el);
-    });
-
-    panel.querySelector('#prop-rotation')?.addEventListener('change', (e) => {
-        el.rotation = parseInt(e.target.value, 10) || 0;
-        callbacks.onUpdate(el);
-    });
+    panel.querySelectorAll('[data-shape-style]').forEach(b => b.addEventListener('click', () => {
+        const v = b.dataset.shapeStyle;
+        if (v === 'solido') { el.preenchimento = true; el.espessura = 0; }
+        if (v === 'contorno') { if (el.preenchimento !== false && !(el.espessura > 0)) el.corContorno = el.cor; el.preenchimento = false; el.espessura = Math.max(3, el.espessura || 0); }
+        if (v === 'ambos') { el.preenchimento = true; el.espessura = Math.max(3, el.espessura || 0); if (!el.corContorno || el.corContorno === el.cor) el.corContorno = '#111111'; }
+        callbacks.onUpdateElement ? callbacks.onUpdateElement(el, true) : callbacks.onUpdate(el);
+    }));
+    fxBindSwatches(panel, 'sh-fill', (c) => { el.cor = c || '#E60023'; callbacks.onUpdate(el); });
+    fxBindSwatches(panel, 'sh-stroke', (c) => { el.corContorno = c || '#111111'; callbacks.onUpdate(el); });
+    fxBindSlider(panel, 'sh-sw', ' px', (v) => { el.espessura = v; callbacks.onUpdate(el, false); }, () => callbacks.onUpdate(el));
+    fxBindRotate(panel, el, callbacks);
+    fxBindSlider(panel, 'sh-op', '%', (v) => { el.opacidade = v / 100; callbacks.onUpdate(el, false); }, () => callbacks.onUpdate(el));
 }
 
 function duplicateShape(el, layer) {

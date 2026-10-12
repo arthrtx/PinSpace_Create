@@ -1,0 +1,78 @@
+/* =====================================================================
+   Secção da música: animações suaves (js/music-anim.js)
+   - ao chegar à secção: título, caixa do SoundCloud, cartões e leitor
+     entram em sequência;
+   - os cartões flutuam devagar, cada um no seu ritmo;
+   - o cartão do meio tem um brilho que passa pela capa e um halo suave;
+   - ao passar o rato, a capa aproxima-se um pouco.
+   Usa as propriedades translate/scale (não mexe no transform que o
+   coverflow põe nos cartões).
+   ===================================================================== */
+
+/* ---------- entrada ---------- */
+.music .music-head > *,
+.music .music-connect,
+.music .music-bar,
+.music .music-credit,
+.music .music-nav {
+    transition: opacity .9s ease, translate 1s cubic-bezier(.2, .7, .2, 1);
+}
+.music:not(.mu-in) .music-head > *,
+.music:not(.mu-in) .music-connect,
+.music:not(.mu-in) .music-bar,
+.music:not(.mu-in) .music-credit { opacity: 0; translate: 0 26px; }
+.music:not(.mu-in) .music-nav { opacity: 0; }
+.music .music-head > :nth-child(2) { transition-delay: .08s; }
+.music .music-head > :nth-child(3) { transition-delay: .16s; }
+.music .music-connect { transition-delay: .26s; }
+.music .music-nav { transition-delay: .7s; }
+.music .music-bar { transition-delay: .55s; }
+.music .music-credit { transition-delay: .65s; }
+
+/* cartões: abrem em leque a partir do centro */
+.music .music-flow { transition: opacity .8s ease .3s; }
+.music:not(.mu-in) .music-flow { opacity: 0; }
+.music .music-card { scale: 1; transition: transform .55s cubic-bezier(.22, 1, .36, 1), opacity .45s ease, scale 1s cubic-bezier(.2, .8, .2, 1), translate .5s ease; }
+.music:not(.mu-in) .music-card { scale: .72; }
+
+/* ---------- flutuar ---------- */
+@keyframes muFloat {
+    0%, 100% { translate: 0 -5px; }
+    50% { translate: 0 6px; }
+}
+.music.mu-in .music-card { animation: muFloat 5.6s ease-in-out infinite; }
+.music.mu-in .music-card:nth-child(3n + 1) { animation-duration: 6.4s; animation-delay: -1.6s; }
+.music.mu-in .music-card:nth-child(3n + 2) { animation-duration: 5.1s; animation-delay: -3.2s; }
+.music.mu-in .music-card.is-active { animation-duration: 6s; }
+
+/* ---------- cartão do meio: halo + brilho a passar na capa ---------- */
+.music .music-card.is-active {
+    box-shadow: 0 30px 70px rgba(0, 0, 0, .5), 0 0 0 1px rgba(143, 163, 148, .25), 0 0 60px rgba(143, 163, 148, .22), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+.music .music-card-art::before {
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .22) 48%, rgba(255, 255, 255, .05) 56%, transparent 66%);
+    background-size: 260% 100%;
+    background-position: 140% 0;
+    opacity: 0;
+}
+@keyframes muShine { 0% { background-position: 140% 0; } 45%, 100% { background-position: -60% 0; } }
+.music.mu-in .music-card.is-active .music-card-art::before { opacity: 1; animation: muShine 5s ease-in-out 1.2s infinite; }
+
+/* ---------- rato por cima ---------- */
+.music .music-card-art img { transition: scale .6s cubic-bezier(.2, .8, .2, 1), filter .4s ease; }
+.music .music-card:hover .music-card-art img { scale: 1.06; }
+.music .music-card:not(.is-active):hover { filter: brightness(1.12); }
+.music .music-card { transition-property: transform, opacity, scale, translate, filter; }
+
+.music .music-connect { transition-property: opacity, translate, border-color, background, box-shadow; }
+.music .music-connect:hover { border-color: rgba(255, 255, 255, .2); box-shadow: 0 18px 50px rgba(0, 0, 0, .35); }
+
+/* o leitor "respira" um pouco quando há música a tocar */
+@keyframes muBreath { 0%, 100% { box-shadow: 0 18px 50px rgba(0, 0, 0, .35); } 50% { box-shadow: 0 18px 50px rgba(0, 0, 0, .35), 0 0 40px rgba(143, 163, 148, .18); } }
+.music.is-playing .music-bar { animation: muBreath 3.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .music .music-head > *, .music .music-connect, .music .music-bar, .music .music-credit, .music .music-nav, .music .music-flow, .music .music-card { transition: none; opacity: 1; translate: none; scale: none; }
+    .music.mu-in .music-card, .music.mu-in .music-card.is-active .music-card-art::before, .music.is-playing .music-bar { animation: none; }
+}

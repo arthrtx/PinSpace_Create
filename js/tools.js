@@ -11,7 +11,7 @@ class BrushManager {
         this.drawing = false;
         this.points = [];
         this._sprayDots = [];
-        this.settings = { cor: '#e8572a', tamanho: 28, ponta: 'redondo', opacidade: 1, modo: 'pincel', tipo: 'acrilica' };
+        this.settings = { cor: '#E60023', tamanho: 28, ponta: 'redondo', opacidade: 1, modo: 'pincel', tipo: 'acrilica' };
         this.onStroke = null;
 
         this._bind();
@@ -59,7 +59,7 @@ class BrushManager {
     }
 
     syncSize() {
-        const w = this.board.boardWidth || 3000;
+        const w = this.board.totalWidth || this.board.boardWidth || 3000;
         const h = this.board.boardHeight || 3000;
         this.layer.style.width = w + 'px';
         this.layer.style.height = h + 'px';
@@ -374,63 +374,42 @@ function drawAcrylicOps(ctx, st, ops) {
 }
 
 function getBrushPanelHTML(settings) {
-    const active = settings || { cor: '#e8572a', tamanho: 28, ponta: 'redondo', opacidade: 1, modo: 'pincel', tipo: 'acrilica' };
+    const active = settings || { cor: '#E60023', tamanho: 28, ponta: 'redondo', opacidade: 1, modo: 'pincel', tipo: 'acrilica' };
     const tipo = active.tipo || 'acrilica';
+    const tile = (attr, v, on, icon, label) => `<button type="button" class="fx-tile fx-tile-ic ${on ? 'on' : ''}" ${attr}="${v}">${uiIcon(icon, 18)}<span>${label}</span></button>`;
     return `
         <div class="panel-section">
-            <h4>Pincel</h4>
-            <p class="panel-hint">Desenhe ou apague diretamente no quadro com o rato ou touch.</p>
-            <div class="form-group">
-                <label>Modo</label>
-                <div class="toggle-group">
-                    <button class="toggle-btn ${active.modo !== 'borracha' ? 'active' : ''}" data-brush-modo="pincel">${uiIcon('pen')} Pincel</button>
-                    <button class="toggle-btn ${active.modo === 'borracha' ? 'active' : ''}" data-brush-modo="borracha">${uiIcon('eraser')} Borracha</button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Tipo de pincel</label>
-                <div class="toggle-group tg-grid">
-                    <button class="toggle-btn ${tipo === 'acrilica' ? 'active' : ''}" data-brush-tipo="acrilica" title="Tinta acrílica">${uiIcon('brush')} Acrílica</button>
-                    <button class="toggle-btn ${tipo === 'caneta' ? 'active' : ''}" data-brush-tipo="caneta">${uiIcon('pen')} Caneta</button>
-                    <button class="toggle-btn ${tipo === 'marcador' ? 'active' : ''}" data-brush-tipo="marcador">${uiIcon('marker')} Marcador</button>
-                    <button class="toggle-btn ${tipo === 'spray' ? 'active' : ''}" data-brush-tipo="spray">${uiIcon('spray')} Spray</button>
-                </div>
-            </div>
-            <div id="brush-color-group">
-                <div class="form-group">
-                    <label>Cor</label>
-                    <input type="color" id="brush-cor" value="${active.cor}">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Espessura — <span id="brush-tamanho-label">${active.tamanho} px</span></label>
-                <input type="range" id="brush-tamanho" min="1" max="80" step="1" value="${active.tamanho}">
-            </div>
-            <div id="brush-ponta-group">
-                <div class="form-group">
-                    <label>Ponta</label>
-                    <div class="toggle-group">
-                        <button class="toggle-btn ${active.ponta === 'redondo' ? 'active' : ''}" data-brush-ponta="redondo">Redonda</button>
-                        <button class="toggle-btn ${active.ponta === 'quadrado' ? 'active' : ''}" data-brush-ponta="quadrado">Quadrada</button>
-                    </div>
-                </div>
-            </div>
-            <div id="brush-opacity-group">
-                <div class="form-group">
-                    <label>Opacidade</label>
-                    <input type="range" id="brush-opacidade" min="0.1" max="1" step="0.05" value="${active.opacidade ?? 1}">
-                </div>
-            </div>
-            <div class="brush-preview-area">
-                <span class="brush-preview" id="brush-preview" style="background:${active.cor}"></span>
+            <p class="panel-hint">Desenha ou apaga diretamente no quadro com o rato ou touch.</p>
+            <div class="fx-grid fx-grid-2 fx-modes">
+                ${tile('data-brush-modo', 'pincel', active.modo !== 'borracha', 'pen', 'Pincel')}
+                ${tile('data-brush-modo', 'borracha', active.modo === 'borracha', 'eraser', 'Borracha')}
             </div>
         </div>
+        ${fxSectionHTML('br-tipo', 'Tipo de pincel', `<div class="fx-grid fx-grid-4">
+            ${tile('data-brush-tipo', 'acrilica', tipo === 'acrilica', 'brush', 'Acrílica')}
+            ${tile('data-brush-tipo', 'caneta', tipo === 'caneta', 'pen', 'Caneta')}
+            ${tile('data-brush-tipo', 'marcador', tipo === 'marcador', 'marker', 'Marcador')}
+            ${tile('data-brush-tipo', 'spray', tipo === 'spray', 'spray', 'Spray')}
+        </div>`, { icon: FX_ICON.sparkle, open: true })}
+        <div id="brush-color-group">${fxSectionHTML('br-cor', 'Cor', fxSwatchesHTML('br-cor', active.cor), { icon: FX_ICON.palette, open: true })}</div>
+        ${fxSectionHTML('br-size', 'Tamanho e opacidade', `
+            ${fxSliderHTML('br-size', 'Espessura', 1, 80, 1, active.tamanho, ' px')}
+            <div id="brush-opacity-group">${fxSliderHTML('br-op', 'Opacidade', 10, 100, 1, Math.round((active.opacidade ?? 1) * 100), '%')}</div>
+            <div id="brush-ponta-group">
+                <div class="fx-label">Ponta</div>
+                <div class="fx-chips">
+                    <button type="button" class="fx-chip ${active.ponta === 'redondo' ? 'on' : ''}" data-brush-ponta="redondo"><i class="fx-corner-demo" style="border-radius:50%"></i>Redonda</button>
+                    <button type="button" class="fx-chip ${active.ponta === 'quadrado' ? 'on' : ''}" data-brush-ponta="quadrado"><i class="fx-corner-demo"></i>Quadrada</button>
+                </div>
+            </div>
+            <div class="brush-preview-area"><span class="brush-preview" id="brush-preview" style="background:${active.cor}"></span></div>`, { icon: FX_ICON.size, open: true })}
     `;
 }
 
 function bindBrushPanelEvents(panel, settings) {
     const isEraser = () => settings.modo === 'borracha';
     const isSpray = () => !isEraser() && (settings.tipo || 'acrilica') === 'spray';
+    fxBindSections(panel);
 
     const updatePreview = () => {
         const dot = panel.querySelector('#brush-preview');
@@ -439,7 +418,7 @@ function bindBrushPanelEvents(panel, settings) {
             dot.style.width = Math.max(6, settings.tamanho) + 'px';
             dot.style.height = Math.max(6, settings.tamanho) + 'px';
             if (isEraser()) {
-                dot.style.background = 'repeating-linear-gradient(135deg, #fda4af 0 4px, #ffffff 4px 8px)';
+                dot.style.background = 'repeating-linear-gradient(135deg, #A9BCAE 0 4px, #ffffff 4px 8px)';
                 dot.style.opacity = '1';
             } else {
                 dot.style.background = settings.cor;
@@ -447,76 +426,74 @@ function bindBrushPanelEvents(panel, settings) {
                 if (isSpray()) dot.style.opacity = Math.max(0.5, dot.style.opacity);
             }
         }
-        const colorGroup = panel.querySelector('#brush-color-group');
-        const opacityGroup = panel.querySelector('#brush-opacity-group');
-        const pontaGroup = panel.querySelector('#brush-ponta-group');
-        if (colorGroup) colorGroup.style.display = isEraser() ? 'none' : '';
-        if (opacityGroup) opacityGroup.style.display = isEraser() ? 'none' : '';
-        if (pontaGroup) pontaGroup.style.display = isEraser() || isSpray() || settings.tipo === 'acrilica' ? 'none' : '';
+        const show = (id, on) => { const g = panel.querySelector(id); if (g) g.style.display = on ? '' : 'none'; };
+        show('#brush-color-group', !isEraser());
+        show('#brush-opacity-group', !isEraser());
+        show('#brush-ponta-group', !(isEraser() || isSpray() || settings.tipo === 'acrilica'));
+        const tipoSec = panel.querySelector('[data-fx-sec="br-tipo"]');
+        if (tipoSec) tipoSec.style.display = isEraser() ? 'none' : '';
     };
 
-    panel.querySelectorAll('[data-brush-modo]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            settings.modo = btn.dataset.brushModo;
-            panel.querySelectorAll('[data-brush-modo]').forEach(b => b.classList.toggle('active', b === btn));
-            updatePreview();
-        });
-    });
-
-    panel.querySelectorAll('[data-brush-tipo]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            settings.tipo = btn.dataset.brushTipo;
-            panel.querySelectorAll('[data-brush-tipo]').forEach(b => b.classList.toggle('active', b === btn));
-            updatePreview();
-        });
-    });
-
-    panel.querySelector('#brush-cor')?.addEventListener('input', (e) => {
-        settings.cor = e.target.value;
+    const pick = (attr, key) => panel.querySelectorAll(`[${attr}]`).forEach(btn => btn.addEventListener('click', () => {
+        settings[key] = btn.getAttribute(attr);
+        panel.querySelectorAll(`[${attr}]`).forEach(b => b.classList.toggle('on', b === btn));
         updatePreview();
-    });
-
-    panel.querySelector('#brush-tamanho')?.addEventListener('input', (e) => {
-        settings.tamanho = parseInt(e.target.value, 10) || 14;
-        const label = panel.querySelector('#brush-tamanho-label');
-        if (label) label.textContent = settings.tamanho + ' px';
-        updatePreview();
-    });
-
-    panel.querySelectorAll('[data-brush-ponta]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            settings.ponta = btn.dataset.brushPonta;
-            panel.querySelectorAll('[data-brush-ponta]').forEach(b => b.classList.toggle('active', b === btn));
-            updatePreview();
-        });
-    });
-
-    panel.querySelector('#brush-opacidade')?.addEventListener('input', (e) => {
-        settings.opacidade = parseFloat(e.target.value) || 1;
-        updatePreview();
-    });
-
+    }));
+    pick('data-brush-modo', 'modo');
+    pick('data-brush-tipo', 'tipo');
+    pick('data-brush-ponta', 'ponta');
+    fxBindSwatches(panel, 'br-cor', (c) => { settings.cor = c || '#E60023'; updatePreview(); });
+    fxBindSlider(panel, 'br-size', ' px', (v) => { settings.tamanho = v; updatePreview(); });
+    fxBindSlider(panel, 'br-op', '%', (v) => { settings.opacidade = v / 100; updatePreview(); });
     updatePreview();
 }
 
-async function exportProject(project, format = 'png') {
-    const canvas = await renderToCanvas(project);
-    const filename = sanitizeFilename(project.titulo);
+// Espaço entre páginas (igual ao do editor — js/board.js).
+function boardPageGap(w) {
+    return Math.round(Math.max(60, (w || 3000) * 0.07));
+}
 
-    switch (format) {
-        case 'png':
-            canvas.toBlob(blob => downloadBlob(blob, `${filename}.png`), 'image/png');
-            break;
-        case 'jpeg':
-            canvas.toBlob(blob => downloadBlob(blob, `${filename}.jpg`), 'image/jpeg', 0.92);
-            break;
-        case 'pdf':
-            await exportPDF(canvas, filename);
-            break;
+async function exportProject(project, format = 'png') {
+    const filename = sanitizeFilename(project.titulo);
+    const pages = Math.max(1, project.numPaginas || 1);
+    if (pages === 1) {
+        const canvas = await renderToCanvas(project);
+        switch (format) {
+            case 'png':
+                canvas.toBlob(blob => downloadBlob(blob, `${filename}.png`), 'image/png');
+                break;
+            case 'jpeg':
+                canvas.toBlob(blob => downloadBlob(blob, `${filename}.jpg`), 'image/jpeg', 0.92);
+                break;
+            case 'pdf':
+                await exportPDF(canvas, filename);
+                break;
+        }
+        return;
+    }
+    // Várias páginas: um ficheiro por página (PNG/JPG) ou um PDF com todas.
+    if (format === 'pdf') {
+        const imgs = [];
+        for (let k = 0; k < pages; k++) {
+            const c = await renderToCanvas(project, k);
+            imgs.push({ bytes: dataURLToBytes(c.toDataURL('image/jpeg', 0.92)), w: c.width, h: c.height });
+        }
+        const pdf = buildPDF(imgs);
+        downloadBlob(new Blob([pdf], { type: 'application/pdf' }), `${filename}.pdf`);
+        return;
+    }
+    for (let k = 0; k < pages; k++) {
+        const c = await renderToCanvas(project, k);
+        const type = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const ext = format === 'jpeg' ? 'jpg' : 'png';
+        const blob = await new Promise(res => c.toBlob(res, type, 0.92));
+        downloadBlob(blob, `${filename} - pagina ${k + 1}.${ext}`);
+        await new Promise(r => setTimeout(r, 350)); // o browser aceita downloads seguidos
     }
 }
 
-async function renderToCanvas(project) {
+// page = índice da página (0 = primeira). Só desenha o que está nessa página.
+async function renderToCanvas(project, page = 0) {
     const w = project.boardWidth || 3000;
     const h = project.boardHeight || 3000;
     const canvas = document.createElement('canvas');
@@ -526,13 +503,43 @@ async function renderToCanvas(project) {
 
     await drawBackground(ctx, project.background, w, h);
 
+    // As páginas ficam lado a lado no editor.
+    const left = page * (w + boardPageGap(w));
+    if (left) ctx.translate(-left, 0);
     const sorted = sortByLayer(project.elementos || []);
     for (const el of sorted) {
         if (el.visivel === false) continue;
+        if (el.x + el.width < left - 2 || el.x > left + w + 2) continue;
         await drawElement(ctx, el);
     }
 
+    // Marca d'água obrigatória (igual à do editor): sai em todos os PNG, JPG,
+    // PDF, miniaturas e quadros publicados.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawPinspaceWatermark(ctx, w, h);
     return canvas;
+}
+
+const PS_WATERMARK_TEXT = 'pin space.';
+function psWatermarkSize(w, h) {
+    return Math.max(13, Math.round(Math.min(w, h) * 0.026));
+}
+function drawPinspaceWatermark(ctx, w, h) {
+    const size = psWatermarkSize(w, h);
+    const pad = Math.round(size * 1.1);
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.filter = 'none';
+    ctx.font = `600 ${size}px 'PS Grotesk', 'Montserrat', system-ui, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+    ctx.shadowBlur = Math.max(2, size * 0.25);
+    ctx.fillStyle = 'rgba(17, 17, 17, 0.62)';
+    ctx.fillText(PS_WATERMARK_TEXT, w - pad, h - pad);
+    ctx.shadowBlur = 0;
+    ctx.fillText(PS_WATERMARK_TEXT, w - pad, h - pad);
+    ctx.restore();
 }
 
 /* ---------------------------------------------------------------------
@@ -751,44 +758,45 @@ async function drawElement(ctx, el) {
 }
 
 function drawShape(ctx, el) {
-    const fill = el.preenchimento !== false ? el.cor : 'transparent';
+    const fillOn = el.preenchimento !== false;
     const stroke = el.corContorno || el.cor;
-    const sw = (el.espessura || 0) > 0 ? el.espessura : 0;
-    const hw = el.width / 2;
-    const hh = el.height / 2;
+    const sw = typeof shapeStrokeWidth === 'function' ? shapeStrokeWidth(el) : (el.espessura || 0);
+    const hw = el.width / 2, hh = el.height / 2;
+    const iw = Math.max(1, el.width - sw), ih = Math.max(1, el.height - sw);
 
-    ctx.fillStyle = fill;
+    ctx.fillStyle = el.cor;
     ctx.strokeStyle = stroke;
     ctx.lineWidth = sw;
     ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    const paint = (path) => {
+        if (fillOn) path ? ctx.fill(path) : ctx.fill();
+        if (sw > 0) path ? ctx.stroke(path) : ctx.stroke();
+    };
 
     switch (el.forma) {
         case 'quadrado':
         case 'retangulo':
-            ctx.fillRect(-hw, -hh, el.width, el.height);
-            if (sw > 0) ctx.strokeRect(-hw, -hh, el.width, el.height);
+            roundRectPath(ctx, -iw / 2, -ih / 2, iw, ih, Math.min(el.forma === 'quadrado' ? 8 : 5, iw / 2, ih / 2));
+            paint();
             break;
         case 'circulo':
             ctx.beginPath();
-            ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
-            ctx.fill();
-            if (sw > 0) ctx.stroke();
+            ctx.ellipse(0, 0, iw / 2, ih / 2, 0, 0, Math.PI * 2);
+            paint();
             break;
         case 'linha':
             ctx.beginPath();
-            ctx.moveTo(-hw, 0);
-            ctx.lineTo(hw, 0);
-            ctx.lineCap = 'round';
-            if (sw > 0) { ctx.lineWidth = sw; ctx.stroke(); }
+            ctx.moveTo(-hw + sw / 2, 0);
+            ctx.lineTo(hw - sw / 2, 0);
+            ctx.stroke();
             break;
         case 'seta': {
-            const headSize = Math.min(24, el.height);
+            const headSize = Math.max(sw * 2.5, Math.min(Math.max(22, sw * 3), el.height, el.width / 2));
             ctx.beginPath();
-            ctx.moveTo(-hw, 0);
-            ctx.lineTo(hw - headSize, 0);
-            ctx.lineCap = 'round';
-            if (sw > 0) { ctx.lineWidth = Math.max(sw, 1); ctx.stroke(); }
-            ctx.strokeStyle = stroke;
+            ctx.moveTo(-hw + sw / 2, 0);
+            ctx.lineTo(hw - headSize * 0.8, 0);
+            ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(hw, 0);
             ctx.lineTo(hw - headSize, -headSize / 2);
@@ -799,16 +807,14 @@ function drawShape(ctx, el) {
             break;
         }
         default: {
-            const geo = shapeGeometry(el.forma, el.width, el.height);
+            const geo = shapeGeometry(el.forma, iw, ih);
             if (!geo) break;
             let path;
-            try {
-                path = new Path2D(geo.d);
-            } catch {
-                break;
-            }
-            if (el.preenchimento !== false) ctx.fill(path);
-            if (sw > 0) ctx.stroke(path);
+            try { path = new Path2D(geo.d); } catch { break; }
+            ctx.save();
+            ctx.translate(-hw + sw / 2, -hh + sw / 2);
+            paint(path);
+            ctx.restore();
         }
     }
 }
@@ -835,53 +841,45 @@ function dataURLToBytes(dataURL) {
 }
 
 function buildMinimalPDF(jpegBytes, width, height) {
+    return buildPDF([{ bytes: jpegBytes, w: width, h: height }]);
+}
+
+// PDF A4 com uma imagem JPEG por página.
+function buildPDF(images) {
     const pageW = 595.28;
     const pageH = 841.89;
-    const scale = Math.min(pageW / width, pageH / height) * 0.95;
-    const imgW = width * scale;
-    const imgH = height * scale;
-    const offsetX = (pageW - imgW) / 2;
-    const offsetY = (pageH - imgH) / 2;
-
+    const enc = new TextEncoder();
     const parts = [];
     let offset = 0;
     const objOffsets = [];
+    const push = (bytes) => { parts.push(bytes); offset += bytes.length; };
+    const addObj = (content) => { objOffsets.push(offset); push(enc.encode(content)); };
 
-    function addObj(content) {
-        objOffsets.push(offset);
-        const bytes = new TextEncoder().encode(content);
-        parts.push(bytes);
-        offset += bytes.length;
-    }
-
-    const header = `%PDF-1.4\n`;
-    parts.push(new TextEncoder().encode(header));
-    offset += header.length;
-
+    push(enc.encode('%PDF-1.4\n'));
+    const n = images.length;
+    // 1 catálogo, 2 páginas, depois 3 objetos por página (page, content, image)
+    const kids = images.map((_, i) => `${3 + i * 3} 0 R`).join(' ');
     addObj(`1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`);
-    addObj(`2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`);
-    addObj(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents 4 0 R /Resources << /XObject << /Im1 5 0 R >> >> >>\nendobj\n`);
-    addObj(`4 0 obj\n<< /Length 44 >>\nstream\nq ${imgW.toFixed(2)} 0 0 ${imgH.toFixed(2)} ${offsetX.toFixed(2)} ${offsetY.toFixed(2)} cm /Im1 Do Q\nendstream\nendobj\n`);
-    addObj(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`);
-
-    parts.push(jpegBytes);
-    offset += jpegBytes.length;
-
-    const streamEnd = `\nendstream\nendobj\n`;
-    parts.push(new TextEncoder().encode(streamEnd));
-    offset += streamEnd.length;
-
-    const xrefOffset = offset;
-    let xref = `xref\n0 6\n0000000000 65535 f \n`;
-    objOffsets.forEach(off => {
-        xref += `${String(off).padStart(10, '0')} 00000 n \n`;
+    addObj(`2 0 obj\n<< /Type /Pages /Kids [${kids}] /Count ${n} >>\nendobj\n`);
+    images.forEach((im, i) => {
+        const pg = 3 + i * 3, ct = pg + 1, ix = pg + 2;
+        const scale = Math.min(pageW / im.w, pageH / im.h) * 0.95;
+        const iw = im.w * scale, ih = im.h * scale;
+        const ox = (pageW - iw) / 2, oy = (pageH - ih) / 2;
+        const stream = `q ${iw.toFixed(2)} 0 0 ${ih.toFixed(2)} ${ox.toFixed(2)} ${oy.toFixed(2)} cm /Im${i + 1} Do Q`;
+        addObj(`${pg} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents ${ct} 0 R /Resources << /XObject << /Im${i + 1} ${ix} 0 R >> >> >>\nendobj\n`);
+        addObj(`${ct} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`);
+        addObj(`${ix} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.bytes.length} >>\nstream\n`);
+        push(im.bytes);
+        push(enc.encode(`\nendstream\nendobj\n`));
     });
+    const total = objOffsets.length + 1;
+    const xrefOffset = offset;
+    let xref = `xref\n0 ${total}\n0000000000 65535 f \n`;
+    objOffsets.forEach(off => { xref += `${String(off).padStart(10, '0')} 00000 n \n`; });
+    push(enc.encode(xref + `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`));
 
-    const trailer = `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-    parts.push(new TextEncoder().encode(xref + trailer));
-
-    const totalLength = parts.reduce((sum, p) => sum + p.length, 0);
-    const result = new Uint8Array(totalLength);
+    const result = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
     let pos = 0;
     parts.forEach(p => { result.set(p, pos); pos += p.length; });
     return result;

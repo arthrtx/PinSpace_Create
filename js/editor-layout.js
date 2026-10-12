@@ -28,12 +28,12 @@ const EDL_ALIGN = [
 
 function _edlThumb(el) {
     if (el.tipo === 'imagem' && el.src) {
-        const src = String(el.src).replace(/"/g, '%22');
-        return `<img src="${src}" alt="" loading="lazy" decoding="async">`;
+        const src = safeImgSrc(el.src);
+        return src ? `<img src="${escapeHTML(src)}" alt="" loading="lazy" decoding="async">` : getElementIcon('imagem');
     }
     if (el.tipo === 'texto') {
         const t = String(el.conteudo || 'Aa').trim().slice(0, 2) || 'Aa';
-        return `<span class="edl-thumb-text" style="font-family:${escapeHTML(el.fonte || 'inherit')}">${escapeHTML(t)}</span>`;
+        return `<span class="edl-thumb-text" style="font-family:'${escapeHTML(psSafeFont(el.fonte))}'">${escapeHTML(t)}</span>`;
     }
     return getElementIcon(el.forma || el.tipo);
 }
@@ -102,16 +102,32 @@ UIManager.prototype._renderLayerItems = function (list, elementos, selectedId, c
     for (const [id, rec] of nodes) {
         if (!seen.has(id)) { rec.node.remove(); nodes.delete(id); }
     }
+    // Modo "Juntar camadas": marca as escolhidas.
+    const pick = this._mergePick;
+    if (pick) {
+        for (const id of [...pick]) if (!seen.has(id)) pick.delete(id);
+        for (const [id, rec] of nodes) rec.node.classList.toggle('picked', pick.has(id));
+        this._updateMergeBar();
+    }
 
     if (list._bound) return;
     list._bound = true;
     const find = (id) => (this._edProject && this._edProject.elementos || []).find(e => e.id === id);
+    this._bindMergeLayers(list);
 
     list.addEventListener('click', (e) => {
         const item = e.target.closest('.edl-item');
         if (!item) return;
         const el = find(item.dataset.id);
         if (!el) return;
+        if (this._mergePick) {
+            // A escolher camadas para juntar: o clique só marca/desmarca.
+            e.stopPropagation();
+            if (this._mergePick.has(el.id)) this._mergePick.delete(el.id); else this._mergePick.add(el.id);
+            item.classList.toggle('picked', this._mergePick.has(el.id));
+            this._updateMergeBar();
+            return;
+        }
         const btn = e.target.closest('[data-a]');
         if (btn) {
             e.stopPropagation();
@@ -194,6 +210,47 @@ UIManager.prototype._renderLayerItems = function (list, elementos, selectedId, c
         dragId = null;
         list.querySelectorAll('.dragging,.drop-before,.drop-after').forEach(x => x.classList.remove('dragging', 'drop-before', 'drop-after'));
     });
+};
+
+/* ---------------- Juntar camadas ---------------- */
+UIManager.prototype._bindMergeLayers = function (list) {
+    const toggle = document.getElementById('edl-merge-toggle');
+    const cancel = document.getElementById('edl-merge-cancel');
+    const go = document.getElementById('edl-merge-go');
+    if (!toggle || toggle._bound) return;
+    toggle._bound = true;
+    const setMode = (on) => {
+        this._mergePick = on ? new Set() : null;
+        list.classList.toggle('is-merging', on);
+        toggle.classList.toggle('on', on);
+        document.getElementById('edl-merge-bar').hidden = !on;
+        list.querySelectorAll('.edl-item.picked').forEach(n => n.classList.remove('picked'));
+        // Começa com a camada selecionada já marcada.
+        if (on) {
+            const sel = list.querySelector('.edl-item.selected');
+            if (sel) { this._mergePick.add(sel.dataset.id); sel.classList.add('picked'); }
+        }
+        this._updateMergeBar();
+    };
+    this._setMergeMode = setMode;
+    toggle.addEventListener('click', () => setMode(!this._mergePick));
+    cancel.addEventListener('click', () => setMode(false));
+    go.addEventListener('click', async () => {
+        if (!this._mergePick || this._mergePick.size < 2) return;
+        go.disabled = true;
+        const ok = await this._edCb?.onMergeLayers?.([...this._mergePick]);
+        if (ok) setMode(false); else this._updateMergeBar();
+    });
+};
+
+UIManager.prototype._updateMergeBar = function () {
+    const n = this._mergePick ? this._mergePick.size : 0;
+    const go = document.getElementById('edl-merge-go');
+    const hint = document.getElementById('edl-merge-hint');
+    if (!go || !hint) return;
+    go.disabled = n < 2;
+    go.textContent = n >= 2 ? `Juntar ${n}` : 'Juntar';
+    hint.textContent = n === 0 ? 'Escolhe camadas' : n === 1 ? 'Mais uma…' : `${n} escolhidas`;
 };
 
 UIManager.prototype._renderSelectionCard = function (project, selectedId, cb) {
