@@ -28,6 +28,7 @@
     const SPEED = 1.32;          // mais rápido do que o vídeo original
     const T_END = 1280 / 30;     // fim da animação (segundos de animação)
 
+    if (SMALL) pi.classList.add('is-lite');
     // posições dos elementos nas capturas do site (página 1440x900)
     const R = {"google_btn":{"x":720,"y":487.4,"w":470,"h":44},"pop_login_card":{"x":461,"y":338.0,"width":518,"height":224.0},"pop_post_first":{"x":364.9,"y":331.6,"width":680.2,"height":757.8},"comment_btn":{"x":553.9,"y":870.4,"w":57.8,"h":38},"pop_comments":{"x":383.9,"y":337.4,"width":642.2,"height":225.6},"pop_pf_me":{"x":51,"y":343.6,"width":128,"height":150.3},"pop_pf_stats":{"x":246.1,"y":363.7,"width":470,"height":64.1},"pop_pf_date":{"x":1207.2,"y":138.6,"width":172.8,"height":157.6},"accent_btn":{"x":86,"y":674.6,"w":38,"h":38},"swatch_pink":{"x":327.9,"y":634.4,"w":25.7,"h":25.7},"pop_accent":{"x":199,"y":521.7,"width":224,"height":182.5},"pop_pf_me_bunny":{"x":51,"y":343.6,"width":128,"height":150.3},"bunny_follow":{"x":289.2,"y":466.8,"w":86.1,"h":42},"pop_bunny_board1":{"x":52,"y":467.6,"width":256,"height":338.7},"pop_bunny_board2":{"x":322,"y":467.6,"width":256,"height":321.9},"pop_bunny_board3":{"x":592,"y":467.6,"width":256,"height":321.9},"sc_login":{"x":1051.7,"y":246.9,"w":185.6,"h":44},"pop_sc_connect":{"x":134.4,"y":197.1,"width":1171.2,"height":99.5},"track1":{"x":720,"y":526.7,"w":250,"h":321.6},"pop_music_flow":{"x":134.4,"y":326.7,"width":1171.2,"height":400},"tool_image":{"x":44,"y":168,"w":46,"h":46},"collage":[{"x":488.3,"y":194.4,"w":229.6,"h":326.2,"rot":"-4"},{"x":711.2,"y":183.4,"w":234.2,"h":378.2,"rot":"5"},{"x":678.3,"y":479.5,"w":188.7,"h":299.5,"rot":"-6"},{"x":511.7,"y":530.7,"w":158.5,"h":203.4,"rot":"4"},{"x":736.3,"y":705.1,"w":232.5,"h":62.0,"rot":"0"}],"pop_layers":{"x":1156,"y":82,"width":272,"height":806},"pop_toolpanel":{"x":88,"y":82,"width":300,"height":806},"pop_follow_card":{"x":240,"y":355,"width":480,"height":140}};
 
@@ -69,7 +70,7 @@
     const cube = q('.pi-cube'), cubeBody = cube.querySelector('.body'), cubeGlow = cube.querySelector('.glow'), cubePrism = cube.querySelector('.prism'), cubeShine = cube.querySelector('.shine');
     const cursor = q('.pi-cursor'), ripple = q('.pi-ripple'), cap = q('.pi-cap'), introEl = q('.pi-intro');
     const urls = new Set();
-    const img = (src, cls) => { const im = new Image(); im.decoding = 'async'; im.alt = ''; if (cls) im.className = cls; im.src = src; urls.add(src); return im; };
+    const img = (src, cls) => { const im = new Image(); im.decoding = 'async'; im.alt = ''; if (cls) im.className = cls; if (!SMALL) { im.src = src; urls.add(src); } return im; };
 
     /* ecrãs do "monitor" e do telemóvel */
     const SHOTS = [
@@ -418,7 +419,8 @@
     /* ---------- arranque: espera pelas imagens (com limite) ---------- */
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const deepLink = location.hash && location.hash !== '#' && location.hash !== '#musica';
-    if (reduce || deepLink) { finish({ still: reduce }); return; }
+    // telemóvel: vai direto ao final e fica parado (o Safari do iPhone fechava a página com a animação)
+    if (reduce || deepLink || SMALL) { finish({ still: reduce || SMALL }); return; }
 
     lock(true);
     const list = [...urls];

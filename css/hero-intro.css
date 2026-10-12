@@ -301,3 +301,25 @@ html.ps-intro-lock .hv-glow { -webkit-mask-image: none; mask-image: none; }
     .pi-cube .shine, .pi-cube .prism { -webkit-mask-image: url('../img/intro/m/cube.webp'); mask-image: url('../img/intro/m/cube.webp'); }
     .pi-cube .glow { filter: blur(24px) saturate(1.6); }
 }
+
+/* telemóvel: só o nome e o final (a demonstração 3D esgotava a memória do Safari no iPhone) */
+.pi.is-lite > :not(.pi-intro) { display: none !important; }
+@media (max-width: 900px), (pointer: coarse) and (max-width: 1180px) {
+    .hv-col { will-change: auto; }
+}
+
+/* telemóvel: versão leve do topo (sem camadas pesadas) */
+@media (max-width: 900px), (pointer: coarse) and (max-width: 1180px) {
+    .hv-back { bottom: -30vh; }
+    .hv-back::after { height: 45vh; }
+    .hv-glow { -webkit-mask-image: none; mask-image: none; }
+    .hv-skip, .hv-replay { display: none !important; }
+}
+
+/* diagnóstico (?off=...) — ver js/debug-flags.js */
+html.off-intro #hero-intro, html.off-intro #hv-back { display: none !important; }
+html.off-footer #fg { display: none !important; }
+html.off-music #musica { display: none !important; }
+html.off-grain .ms-grain { display: none !important; }
+html.off-glass .glass-bg-canvas { display: none !important; }
+html.off-anim *, html.off-anim *::before, html.off-anim *::after { animation: none !important; transition: none !important; }

@@ -124,3 +124,9 @@
 }
 
 .fg-key picture { display: block; width: 100%; height: 100%; }
+
+/* telemóvel: sem desfoque nem mistura de cores (pesados no Safari do iPhone) */
+@media (max-width: 900px), (pointer: coarse) and (max-width: 1180px) {
+    .fg-key::before { filter: none; opacity: .18; background: radial-gradient(50% 50% at 50% 50%, rgba(140, 120, 255, .9), rgba(255, 61, 110, .4) 45%, transparent 75%); }
+    .fg-img { mix-blend-mode: normal; }
+}

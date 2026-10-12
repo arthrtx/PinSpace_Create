@@ -76,3 +76,8 @@
     .music .music-head > *, .music .music-connect, .music .music-bar, .music .music-credit, .music .music-nav, .music .music-flow, .music .music-card { transition: none; opacity: 1; translate: none; scale: none; }
     .music.mu-in .music-card, .music.mu-in .music-card.is-active .music-card-art::before, .music.is-playing .music-bar { animation: none; }
 }
+
+/* telemóvel: sem animações contínuas */
+@media (max-width: 900px), (pointer: coarse) and (max-width: 1180px) {
+    .music.mu-in .music-card, .music.mu-in .music-card.is-active .music-card-art::before, .music.is-playing .music-bar { animation: none; }
+}
