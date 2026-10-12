@@ -21,7 +21,10 @@
     const titleEl = stage.querySelector('.hv-title');
     const innerEl = stage.querySelector('.hv-inner');
     const loadBar = root.querySelector('.hv-load i');
-    const IMG = 'img/intro/';
+    // telemóveis/ecrãs pequenos: imagens mais pequenas (no iPhone, imagens grandes descodificadas
+    // esgotavam a memória e o Safari fechava a página)
+    const SMALL = window.matchMedia('(max-width: 900px), (pointer: coarse) and (max-width: 1180px)').matches;
+    const IMG = SMALL ? 'img/intro/m/' : 'img/intro/';
     const SPEED = 1.32;          // mais rápido do que o vídeo original
     const T_END = 1280 / 30;     // fim da animação (segundos de animação)
 

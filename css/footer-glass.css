@@ -123,3 +123,4 @@
     .fg-scene, .fg-line, .fg-cta { transition: none; }
 }
 
+.fg-key picture { display: block; width: 100%; height: 100%; }
