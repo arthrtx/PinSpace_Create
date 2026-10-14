@@ -39,4 +39,4 @@ conteúdo e não publica conteúdo ofensivo. Conteúdo que viole direitos pode s
 
 ---
 
-Autor: **Arthur Sal**
+© Arthur Sal — todos os direitos reservados
