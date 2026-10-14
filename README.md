@@ -32,16 +32,6 @@ crias o teu quadro, publicas e partilhas com outras pessoas.
 
 HTML, CSS e JavaScript puro · Supabase (base de dados, auth e storage) · Netlify (alojamento).
 
-## Correr localmente
-
-```bash
-cd PinSpace_Create
-python -m http.server 8000
-# abrir http://127.0.0.1:8000
-```
-
-Para contas e quadros públicos é preciso configurar o Supabase — instruções em `supabase/leia-me.md`.
-
 ## Regras de publicação
 
 Ao publicar, o autor confirma que tem direitos sobre as imagens, é responsável pelo
